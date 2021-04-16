@@ -41,6 +41,8 @@
 
 #include "3dtiles/3dtiles.h"
 
+#include "3dtiles/qgs3dtileslayer.h"
+
 class RandomAmbientLineMaterialSettings : public QgsSimpleLineMaterialSettings{
 //    QColor ambient() const { return QColor(random()%255, random()%255, random()%255, 255); }
     QColor ambient() const { return QColor(5, 100, 255, 255); }
@@ -55,10 +57,11 @@ void initCanvas3D( Qgs3DMapCanvas *canvas, Qgs3DMapSettings *mapSet, QList<QgsGe
                    const QgsCoordinateTransform &coordTrans, Tileset * ts )
 {
   QgsProject::instance()->setCrs(QgsCoordinateReferenceSystem::fromEpsgId(3857));
+
   QgsLayerTree *root = QgsProject::instance()->layerTreeRoot();
   QList< QgsMapLayer * > visibleLayers = root->checkedLayers();
 
-
+  /*
   QgsVectorLayer *layerLines = new QgsVectorLayer( "LineString?crs=EPSG:3857", "lines", "memory" );
 
   QgsLine3DSymbol *lineSymbol = new QgsLine3DSymbol;
@@ -71,45 +74,44 @@ void initCanvas3D( Qgs3DMapCanvas *canvas, Qgs3DMapSettings *mapSet, QList<QgsGe
   layerLines->setRenderer3D( new QgsVectorLayer3DRenderer( lineSymbol ) );
 
   QgsFeatureList flist;
-/*
-  {
-      Q3dCube cube (QVector3D(-1.0,-1.0,-1.0), QVector3D(1.0,1.0,1.0));
-      QgsMatrix4x4 fromRotationTranslation(
-                -14.70, -212.29241603812326, 9.8252767297123391, 4044595.94874227, //
-                263.414, -11.849316119388336, 0.54840776747259878, 225587.8020203301, //
-                2.1967831930958647e-14, 174.25030423546778, 12.00761170187392, 4910108.3100663377, //
-                0.0, 0.0, 0.0, 1.0
-              );
-      qDebug() << "rot matrix: " << fromRotationTranslation << "\n";
-      cube = fromRotationTranslation*cube;
-      qDebug() << "cube: " << cube << "\n";
-      qDebug() << "BBox: " << QgsGeometry (new QgsLineString (cube.asQgsPoints())).asWkt();
-      QgsFeature f1( layerLines->fields() );
-      f1.setGeometry( QgsGeometry (new QgsLineString (cube.asQgsPoints())) );
-      flist << f1;
 
-      QgsVector4D vtest = QgsVector4D(-1.0, -1.0, -1.0, 1.0);
-      vtest = fromRotationTranslation*vtest;
-      qDebug() << "vtest: " << vtest << "\n";
-  }
-*/
+//  {
+//      Q3dCube cube (QVector3D(-1.0,-1.0,-1.0), QVector3D(1.0,1.0,1.0));
+//      QgsMatrix4x4 fromRotationTranslation(
+//                -14.70, -212.29241603812326, 9.8252767297123391, 4044595.94874227, //
+//                263.414, -11.849316119388336, 0.54840776747259878, 225587.8020203301, //
+//                2.1967831930958647e-14, 174.25030423546778, 12.00761170187392, 4910108.3100663377, //
+//                0.0, 0.0, 0.0, 1.0
+//              );
+//      qDebug() << "rot matrix: " << fromRotationTranslation << "\n";
+//      cube = fromRotationTranslation*cube;
+//      qDebug() << "cube: " << cube << "\n";
+//      qDebug() << "BBox: " << QgsGeometry (new QgsLineString (cube.asQgsPoints())).asWkt();
+//      QgsFeature f1( layerLines->fields() );
+//      f1.setGeometry( QgsGeometry (new QgsLineString (cube.asQgsPoints())) );
+//      flist << f1;
+
+//      QgsVector4D vtest = QgsVector4D(-1.0, -1.0, -1.0, 1.0);
+//      vtest = fromRotationTranslation*vtest;
+//      qDebug() << "vtest: " << vtest << "\n";
+//  }
+
+
   for (QgsGeometry & g : glist) {
       QgsFeature f1( layerLines->fields() );
       f1.setGeometry( g );
       flist << f1;
   }
   qDebug() << "geom size: " << flist.length() << "\n";
-  /*{
-    //  Q3dCube cub(QVector3D(728036.09, 901091.51, 000.0), QVector3D(721236.09, 901991.51, 100.0));
-      Q3dCube cub(QVector3D(-1000.09, -200.51, 100.0), QVector3D(500.09, 200.51, 400.0));
-      QgsFeature f1( layerLines->fields() );
-      f1.setGeometry( QgsGeometry (new QgsLineString (cub.asQgsPoints())) );
-      flist << f1;
-  }*/
 
+  layerLines->dataProvider()->addFeatures( flist );
+  visibleLayers << layerLines;*/
 
-  //layerLines->dataProvider()->addFeatures( flist );
-  visibleLayers << layerLines;
+  qDebug() << "============= CREATING Qgs3dTilesLayer \n";
+  Qgs3dTilesLayer * threedTilesLayer = new Qgs3dTilesLayer(ts);
+  threedTilesLayer->setRenderer3D(new Qgs3dTilesLayer3DRenderer(threedTilesLayer));
+  visibleLayers << threedTilesLayer;
+  qDebug() << "============= DONE Qgs3dTilesLayer \n";
 
   QgsMapSettings ms;
   ms.setDestinationCrs( QgsProject::instance()->crs() );
@@ -148,11 +150,11 @@ void initCanvas3D( Qgs3DMapCanvas *canvas, Qgs3DMapSettings *mapSet, QList<QgsGe
 
   canvas->setMap( mapSet );
 
-  Qgs3dTilesChunkLoaderFactory facto(*mapSet, coordTrans, ts);
+/*  Qgs3dTilesChunkLoaderFactory facto(*mapSet, coordTrans, ts);
   QgsChunkNode * rootNode = facto.createRootNode();
   QgsChunkLoader * loader = facto.createChunkLoader(rootNode);
   Qt3DCore::QEntity *rootEntity = loader->createEntity(canvas->scene());
-
+*/
 
  // float dist = static_cast< float >( std::max( extent.width(), extent.height() ) );
 //  canvas->setViewFromTop( extent.center(), dist * 2, 0 );
@@ -179,7 +181,7 @@ void initCanvas3D( Qgs3DMapCanvas *canvas, Qgs3DMapSettings *mapSet, QList<QgsGe
 //  canvas->scene()->cameraController()->setViewFromTop( 0, 0, 5e6, 0 );
   //canvas->setViewFromTop( QgsPointXY( 4e6, 0.25e6), 5e6, 0 );
   canvas->scene()->cameraController()->camera()->setNearPlane(1);
-  canvas->scene()->cameraController()->camera()->setFarPlane(10000.0f);
+  canvas->scene()->cameraController()->camera()->setFarPlane(100000.0f);
   canvas->scene()->cameraController()->camera()->setFieldOfView(90.0f);
 
 
@@ -192,22 +194,19 @@ void initCanvas3D( Qgs3DMapCanvas *canvas, Qgs3DMapSettings *mapSet, QList<QgsGe
   {
     qDebug() << "Camera pos:" << canvas->scene()->cameraController()->camera()->position();
   } );
-  qDebug() << "pending jobs:" << canvas->scene()->totalPendingJobsCount();
+
 }
 
 
 void createBboxes(Tile * ts, const QgsCoordinateTransform & coordTrans, QList<QgsGeometry> & glist) {
     QgsGeometry cube = ts->getBoundingVolumeAsGeometry(&coordTrans);
-    // 4978
-    //cube.translate(-4000000, 0, -4909500);
-    // 3857
-    //cube.translate(0.0, 0000000.0, 0);
-
-    //cube.transform(coordTrans);
-    qDebug() << "Tile BBox: " << cube.asWkt();
+    qDebug() << "createBboxes Tile BBox: " << cube.asWkt();
     glist << cube;
     for (std::shared_ptr<Tile> t : ts->mChildren) {
         createBboxes(t.get(), coordTrans, glist);
+    }
+    if (ts->mContent.mSubContent->mType == ThreeDTilesContent::tileset && ts->mContent.mSubContent->mDepth < 1) {
+        createBboxes(((Tileset*)ts->mContent.mSubContent.get())->mRoot.get(), coordTrans, glist);
     }
 }
 
@@ -269,7 +268,7 @@ int main( int argc, char *argv[] )
   createBboxes(((Tileset*)ts.get())->mRoot.get(), coordTrans, glist);
 
   // a hack to assign 3D renderer
-  for ( QgsMapLayer *layer : QgsProject::instance()->layerTreeRoot()->checkedLayers() )
+ /* for ( QgsMapLayer *layer : QgsProject::instance()->layerTreeRoot()->checkedLayers() )
   {
     if ( QgsPointCloudLayer *pcLayer = qobject_cast<QgsPointCloudLayer *>( layer ) )
     {
@@ -278,12 +277,14 @@ int main( int argc, char *argv[] )
       r->resolveReferences( *QgsProject::instance() );
       pcLayer->setRenderer3D( r );
     }
-  }
+  }*/
 
 
 
+  qDebug() << "============= STARTING initCanvas3D \n";
   Qgs3DMapCanvas *canvas = new Qgs3DMapCanvas;
   initCanvas3D( canvas, map, glist, coordTrans,  (Tileset *)ts.get());
+  qDebug() << "============= DONE initCanvas3D \n";
   canvas->resize( 1200, 1000 );
   canvas->show();
 
