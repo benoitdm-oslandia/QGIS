@@ -229,7 +229,7 @@ target_include_directories(qgis_3d PUBLIC
   ${CMAKE_BINARY_DIR}/src/3d
 )
 
-target_link_libraries(qgis_3d Qt5::3DCore Qt5::3DRender Qt5::3DInput Qt5::3DLogic Qt5::3DExtras)
+target_link_libraries(qgis_3d Qt5::3DCore Qt5::3DRender Qt5::3DInput Qt5::3DLogic Qt5::3DExtras tinygltf)
 
 GENERATE_EXPORT_HEADER(
    qgis_3d
