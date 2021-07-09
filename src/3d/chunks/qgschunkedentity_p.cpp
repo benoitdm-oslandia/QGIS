@@ -30,7 +30,7 @@
 #include "qgseventtracing.h"
 
 #include <queue>
-
+#include <Qt3DExtras/QPhongMaterial>
 ///@cond PRIVATE
 
 static float screenSpaceError( float epsilon, float distance, float screenSize, float fov )
@@ -182,6 +182,8 @@ void QgsChunkedEntity::update( const SceneState &state )
     mBboxesEntity->setBoxes( bboxes );
   }
 
+  if ( mRootNode != NULL && mRootNode->entity() != NULL )
+    mRootNode->entity()->setEnabled( false );
   // start a job from queue if there is anything waiting
   startJobs();
 
