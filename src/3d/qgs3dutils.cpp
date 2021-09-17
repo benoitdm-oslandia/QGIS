@@ -596,3 +596,25 @@ QgsRay3D Qgs3DUtils::rayFromScreenPoint( const QPoint &point, const QSize &windo
 
   return QgsRay3D( QVector3D( rayOriginWorld ), rayDirWorld );
 }
+
+void Qgs3DUtils::createNormal( Utils3d::VertexData *vertex, uint vSize, Utils3d::FaceByVertexId *faces, uint fSize, Utils3d::VertexData *norms )
+{
+  for ( uint i = 0; i < fSize; i++ )
+  {
+    const quint16 ia = faces[i].v1;
+    const quint16 ib = faces[i].v2;
+    const quint16 ic = faces[i].v3;
+
+    const QVector3D e1 = vertex[ia].asVector3D() - vertex[ib].asVector3D();
+    const QVector3D e2 = vertex[ic].asVector3D() - vertex[ib].asVector3D();
+    const QVector3D no = QVector3D::crossProduct( e1, e2 );
+
+    norms[ia] = norms[ia].asVector3D() + no;
+    norms[ib] = norms[ib].asVector3D() + no;
+    norms[ic] = norms[ic].asVector3D() + no;
+  }
+  for ( uint i = 0; i < vSize; i++ )
+  {
+    norms[i] = norms[i].asVector3D().normalized();
+  }
+}
