@@ -478,7 +478,7 @@ void QgsChunkedEntity::onActiveJobFinished()
 
 void QgsChunkedEntity::startJobs()
 {
-  while ( mActiveJobs.count() < 20 )
+  while ( mActiveJobs.count() < 4 )
   {
     if ( mChunkLoaderQueue->isEmpty() )
       return;
