@@ -50,6 +50,8 @@ typedef Qt3DCore::QGeometry Qt3DQGeometry;
 #include <Qt3DRender/QNoDepthMask>
 #include <Qt3DRender/QBlendEquationArguments>
 
+const QString QgsFrameGraph::AXIS3D_RENDERVIEW = "3daxis";
+
 namespace
 {
 
