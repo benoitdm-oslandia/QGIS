@@ -33,11 +33,9 @@
 #include <Qt3DRender/QPolygonOffset>
 #include <Qt3DRender/QSubtreeEnabler>
 
-QgsShadowRenderView::QgsShadowRenderView( QObject *parent, Qt3DRender::QRenderTargetOutput *targetOutput )
+QgsShadowRenderView::QgsShadowRenderView( QObject *parent )
   : QgsAbstractRenderView( parent )
-  , mTargetOutput( targetOutput )
 {
-
   mLightCamera = new Qt3DRender::QCamera;
   mLightCamera->setObjectName( "QgsShadowRenderView::LightCamera" );
   mLayer = new Qt3DRender::QLayer;
@@ -50,6 +48,20 @@ QgsShadowRenderView::QgsShadowRenderView( QObject *parent, Qt3DRender::QRenderTa
 
   // shadow rendering pass
   buildRenderPass();
+}
+
+void QgsShadowRenderView::onTargetOutputUpdate()
+{
+  if ( ! mTargetOutputs.isEmpty() && mRenderTargetSelector )
+  {
+    Qt3DRender::QRenderTarget *renderTarget = new Qt3DRender::QRenderTarget;
+    renderTarget->setObjectName( "QgsShadowRenderView::Target" );
+
+    for ( Qt3DRender::QRenderTargetOutput *targetOutput : qAsConst( mTargetOutputs ) )
+      renderTarget->addOutput( targetOutput );
+
+    mRenderTargetSelector->setTarget( renderTarget );
+  }
 }
 
 Qt3DRender::QLayer *QgsShadowRenderView::layerToFilter()
@@ -120,11 +132,8 @@ Qt3DRender::QFrameGraphNode *QgsShadowRenderView::buildRenderPass()
   mLayerFilter = new Qt3DRender::QLayerFilter( mLightCameraSelector );
   mLayerFilter->addLayer( mLayer );
 
-  Qt3DRender::QRenderTarget *renderTarget = new Qt3DRender::QRenderTarget;
-  renderTarget->addOutput( mTargetOutput );
-
   mRenderTargetSelector = new Qt3DRender::QRenderTargetSelector( mLayerFilter );
-  mRenderTargetSelector->setTarget( renderTarget );
+  // no target output for now, updateTargetOutput() will be called later
 
   mClearBuffers = new Qt3DRender::QClearBuffers( mRenderTargetSelector );
   mClearBuffers->setBuffers( Qt3DRender::QClearBuffers::BufferType::ColorDepthBuffer );

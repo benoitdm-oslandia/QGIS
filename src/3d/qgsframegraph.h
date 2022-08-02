@@ -74,8 +74,6 @@ class QgsFrameGraph : public Qt3DCore::QEntity
     Qt3DRender::QTexture2D *forwardRenderColorTexture() { return mForwardColorTexture; }
     //! Returns the depth texture of the forward rendering pass
     Qt3DRender::QTexture2D *forwardRenderDepthTexture() { return mForwardDepthTexture; }
-    //! Returns the shadow map (a depth texture for the shadow rendering pass)
-    Qt3DRender::QTexture2D *shadowMapTexture() { return mShadowMapTexture; }
 
     /**
      * Returns blurred ambient occlusion factor values texture
@@ -115,11 +113,6 @@ class QgsFrameGraph : public Qt3DCore::QEntity
     bool frustumCullingEnabled() const { return mFrustumCullingEnabled; }
     //! Sets whether frustum culling is enabled
     void setFrustumCullingEnabled( bool enabled );
-
-    //! Returns the shadow map resolution
-    int shadowMapResolution() const { return mShadowMapResolution; }
-    //! Sets the resolution of the shadow map
-    void setShadowMapResolution( int resolution );
 
 
     /**
@@ -247,8 +240,6 @@ class QgsFrameGraph : public Qt3DCore::QEntity
     // QDebugOverlay added in the forward pass
     Qt3DRender::QDebugOverlay *mDebugOverlay = nullptr;
 
-    // Shadow rendering pass texture related objects:
-    Qt3DRender::QTexture2D *mShadowMapTexture = nullptr;
     Qt3DRender::QRenderTargetOutput *mShadowRenderTargetOutput = nullptr;
 
     // - The depth buffer render pass is made to copy the depth buffer into
@@ -302,7 +293,7 @@ class QgsFrameGraph : public Qt3DCore::QEntity
     Qt3DRender::QDepthTest *mPreviewDepthTest = nullptr;
     Qt3DRender::QCullFace *mPreviewCullFace = nullptr;
 
-    int mShadowMapResolution = 2048;
+    static constexpr int mDefaultShadowMapResolution = 2048;
 
     // Ambient occlusion related settings
     bool mAmbientOcclusionEnabled = false;
@@ -339,6 +330,7 @@ class QgsFrameGraph : public Qt3DCore::QEntity
 
     QVector<QgsPreviewQuad *> mPreviewQuads;
 
+    void constructShadowRenderPass();
     Qt3DRender::QFrameGraphNode *constructForwardRenderPass();
     Qt3DRender::QFrameGraphNode *constructTexturesPreviewPass();
     Qt3DRender::QFrameGraphNode *constructPostprocessingPass();

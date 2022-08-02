@@ -68,9 +68,12 @@ Qgs3DAxisRenderView::Qgs3DAxisRenderView( QObject *parent, Qgs3DMapCanvas *canva
   Qt3DRender::QCameraSelector *cameraSelector = new Qt3DRender::QCameraSelector( objectFilter );
   cameraSelector->setCamera( mObjectCamera );
 
+  mRenderTargetSelector = new Qt3DRender::QRenderTargetSelector( cameraSelector );
+  // no target output for now, updateTargetOutput() will be called later
+
   // This ensures to have the labels (Text2DEntity) rendered after the other objects and therefore
   // avoid any transparency issue on the labels.
-  Qt3DRender::QSortPolicy *objectSortPolicy = new Qt3DRender::QSortPolicy( cameraSelector );
+  Qt3DRender::QSortPolicy *objectSortPolicy = new Qt3DRender::QSortPolicy( mRenderTargetSelector );
   QVector<Qt3DRender::QSortPolicy::SortType> objectSortTypes = QVector<Qt3DRender::QSortPolicy::SortType>();
   objectSortTypes << Qt3DRender::QSortPolicy::BackToFront;
   objectSortPolicy->setSortTypes( objectSortTypes );
@@ -102,6 +105,19 @@ Qgs3DAxisRenderView::Qgs3DAxisRenderView( QObject *parent, Qgs3DMapCanvas *canva
 
   connect( mCanvas, &Qgs3DMapCanvas::widthChanged, this, &Qgs3DAxisRenderView::onViewportSizeUpdate );
   connect( mCanvas, &Qgs3DMapCanvas::heightChanged, this, &Qgs3DAxisRenderView::onViewportSizeUpdate );
+}
+
+void Qgs3DAxisRenderView::onTargetOutputUpdate()
+{
+  if ( ! mTargetOutputs.isEmpty() && mRenderTargetSelector )
+  {
+    Qt3DRender::QRenderTarget *renderTarget = new Qt3DRender::QRenderTarget;
+
+    for ( Qt3DRender::QRenderTargetOutput *targetOutput : qAsConst( mTargetOutputs ) )
+      renderTarget->addOutput( targetOutput );
+
+    mRenderTargetSelector->setTarget( renderTarget );
+  }
 }
 
 void Qgs3DAxisRenderView::enableSubTree( bool enable )

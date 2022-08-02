@@ -39,6 +39,7 @@ namespace Qt3DRender
   class QLayer;
   class QViewport;
   class QSubtreeEnabler;
+  class QRenderTargetSelector;
 }
 
 class Qgs3DMapCanvas;
@@ -105,6 +106,10 @@ class _3D_EXPORT Qgs3DAxisRenderView : public QgsAbstractRenderView
     Qt3DRender::QViewport *mViewport = nullptr;
     Qt3DRender::QSubtreeEnabler *mRendererEnabler = nullptr;
     Qgs3DMapSettings *mMapSettings = nullptr;
+    Qt3DRender::QRenderTargetSelector *mRenderTargetSelector = nullptr;
+
+    //! Handles target outputs changes
+    virtual void onTargetOutputUpdate() override;
 };
 
 

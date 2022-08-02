@@ -66,7 +66,7 @@ class QgsShadowRenderView : public QgsAbstractRenderView
 {
     Q_OBJECT
   public:
-    QgsShadowRenderView( QObject *parent, Qt3DRender::QRenderTargetOutput *targetOutput );
+    QgsShadowRenderView( QObject *parent );
 
     //! Returns the layer to be used by entities to be included in this renderview
     virtual Qt3DRender::QLayer *layerToFilter() override;
@@ -106,7 +106,6 @@ class QgsShadowRenderView : public QgsAbstractRenderView
     float mBias = 0.00001f;
 
     Qt3DRender::QSubtreeEnabler *mRendererEnabler = nullptr;
-    Qt3DRender::QRenderTargetOutput *mTargetOutput = nullptr;
     Qt3DRender::QLayer *mLayer = nullptr;
     // Shadow rendering pass branch nodes:
     Qt3DRender::QCameraSelector *mLightCameraSelector = nullptr;
@@ -118,6 +117,9 @@ class QgsShadowRenderView : public QgsAbstractRenderView
     Qt3DRender::QCamera *mLightCamera = nullptr;
 
     Qt3DRender::QFrameGraphNode *buildRenderPass();
+
+    //! Handles target outputs changes
+    virtual void onTargetOutputUpdate() override;
 
     static void calculateViewExtent( const Qt3DRender::QCamera *camera, float shadowRenderingDistance, float y, float &minX, float &maxX, float &minY, float &maxY, float &minZ, float &maxZ );
 
