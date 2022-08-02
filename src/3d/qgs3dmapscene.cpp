@@ -79,6 +79,7 @@
 
 #include "qgswindow3dengine.h"
 #include "qgspointcloudlayer.h"
+#include "framegraph/qgsshadowrenderview.h"
 
 std::function< QMap< QString, Qgs3DMapScene * >() > Qgs3DMapScene::sOpenScenesFunction = [] { return QMap< QString, Qgs3DMapScene * >(); };
 
@@ -924,16 +925,18 @@ void Qgs3DMapScene::onShadowSettingsChanged()
 
   QgsShadowSettings shadowSettings = mMap.shadowSettings();
   int selectedLight = shadowSettings.selectedDirectionalLight();
-  if ( shadowSettings.renderShadows() && selectedLight >= 0 && selectedLight < directionalLightSources.count() )
+  if ( shadowSettings.renderShadows() && selectedLight >= 0 && selectedLight < directionalLightSources.count() &&
+       frameGraph->renderView( QgsFrameGraph::SHADOW_RENDERVIEW ) )
   {
-    frameGraph->setShadowRenderingEnabled( true );
-    frameGraph->setShadowBias( shadowSettings.shadowBias() );
+    QgsShadowRenderView *shadowRenderView = dynamic_cast<QgsShadowRenderView *>( frameGraph->renderView( QgsFrameGraph::SHADOW_RENDERVIEW ) ) ;
+    shadowRenderView->enableSubTree( true );
+    shadowRenderView->setShadowBias( shadowSettings.shadowBias() );
     frameGraph->setShadowMapResolution( shadowSettings.shadowMapResolution() );
     QgsDirectionalLightSettings light = *directionalLightSources.at( selectedLight );
-    frameGraph->setupDirectionalLight( light, shadowSettings.maximumShadowRenderingDistance() );
+    shadowRenderView->setupDirectionalLight( light, shadowSettings.maximumShadowRenderingDistance(), frameGraph->mainCamera() );
   }
   else
-    frameGraph->setShadowRenderingEnabled( false );
+    frameGraph->setEnableRenderView( QgsFrameGraph::SHADOW_RENDERVIEW, false );
 }
 
 void Qgs3DMapScene::onAmbientOcclusionSettingsChanged()
