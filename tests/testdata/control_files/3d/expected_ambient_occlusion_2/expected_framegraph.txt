@@ -20,9 +20,9 @@
       (Qt3DRender::QSubtreeEnabler{53/QgsShadowRenderView}) [D]
         (Qt3DRender::QCameraSelector{54/Shadow render view CameraSelector}) [ (Qt3DRender::QCamera:{48/QgsShadowRenderView::LightCamera}) ]
           (Qt3DRender::QLayerFilter{55/<no_name>}) [D] [ (AcceptAnyMatchingLayers:[ {51/QgsShadowRenderView::Layer} ]) ]
-            (Qt3DRender::QRenderTargetSelector{57/<no_name>}) [ (outputs:[ (Depth:{46[DepthFormat]/<no_name>) ]) ]
-              (Qt3DRender::QClearBuffers{58/<no_name>})
-                (Qt3DRender::QRenderStateSet{59/<no_name>}) [ (QDepthTest:Less), (QCullFace:Front), (QPolygonOffset:[ (scaleFactor:1.1), (depthSteps:4) ]) ]
+            (Qt3DRender::QRenderTargetSelector{56/<no_name>}) [ (outputs:[ (Depth:{46[DepthFormat]/QgsShadowRenderView::DepthTarget) ]) ]
+              (Qt3DRender::QClearBuffers{57/<no_name>})
+                (Qt3DRender::QRenderStateSet{58/<no_name>}) [ (QDepthTest:Less), (QCullFace:Front), (QPolygonOffset:[ (scaleFactor:1.1), (depthSteps:4) ]) ]
     (Qt3DRender::QCameraSelector{63/Depth render view CameraSelector}) [ (Qt3DRender::QCamera:{0/<no_name>}) ]
       (Qt3DRender::QRenderStateSet{64/<no_name>}) [ (QDepthTest:Always), (QCullFace:NoCulling) ]
         (Qt3DRender::QLayerFilter{67/<no_name>}) [ (AcceptAnyMatchingLayers:[ {9/<no_name>} ]) ]

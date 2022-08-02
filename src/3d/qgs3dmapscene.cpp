@@ -923,20 +923,22 @@ void Qgs3DMapScene::onShadowSettingsChanged()
     }
   }
 
-  QgsShadowSettings shadowSettings = mMap.shadowSettings();
-  int selectedLight = shadowSettings.selectedDirectionalLight();
-  if ( shadowSettings.renderShadows() && selectedLight >= 0 && selectedLight < directionalLightSources.count() &&
-       frameGraph->renderView( QgsFrameGraph::SHADOW_RENDERVIEW ) )
+  QgsShadowRenderView *shadowRenderView = dynamic_cast<QgsShadowRenderView *>( frameGraph->renderView( QgsFrameGraph::SHADOW_RENDERVIEW ) ) ;
+  if ( shadowRenderView )
   {
-    QgsShadowRenderView *shadowRenderView = dynamic_cast<QgsShadowRenderView *>( frameGraph->renderView( QgsFrameGraph::SHADOW_RENDERVIEW ) ) ;
-    shadowRenderView->enableSubTree( true );
-    shadowRenderView->setShadowBias( shadowSettings.shadowBias() );
-    frameGraph->setShadowMapResolution( shadowSettings.shadowMapResolution() );
-    QgsDirectionalLightSettings light = *directionalLightSources.at( selectedLight );
-    shadowRenderView->setupDirectionalLight( light, shadowSettings.maximumShadowRenderingDistance(), frameGraph->mainCamera() );
+    QgsShadowSettings shadowSettings = mMap.shadowSettings();
+    int selectedLight = shadowSettings.selectedDirectionalLight();
+    if ( shadowSettings.renderShadows() && selectedLight >= 0 && selectedLight < directionalLightSources.count() )
+    {
+      shadowRenderView->setShadowBias( shadowSettings.shadowBias() );
+      shadowRenderView->updateTargetOutputSize( shadowSettings.shadowMapResolution(), shadowSettings.shadowMapResolution() );
+      QgsDirectionalLightSettings light = *directionalLightSources.at( selectedLight );
+      shadowRenderView->setupDirectionalLight( light, shadowSettings.maximumShadowRenderingDistance(), frameGraph->mainCamera() );
+      shadowRenderView->enableSubTree( true );
+    }
+    else
+      shadowRenderView->enableSubTree( false );
   }
-  else
-    frameGraph->setEnableRenderView( QgsFrameGraph::SHADOW_RENDERVIEW, false );
 }
 
 void Qgs3DMapScene::onAmbientOcclusionSettingsChanged()

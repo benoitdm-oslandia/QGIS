@@ -55,7 +55,7 @@ QgsPostprocessingEntity::QgsPostprocessingEntity( QgsFrameGraph *frameGraph, Qt3
 
   mColorTextureParameter = new Qt3DRender::QParameter( QStringLiteral( "colorTexture" ), frameGraph->forwardRenderColorTexture() );
   mDepthTextureParameter = new Qt3DRender::QParameter( QStringLiteral( "depthTexture" ), frameGraph->forwardRenderDepthTexture() );
-  mShadowMapParameter = new Qt3DRender::QParameter( QStringLiteral( "shadowTexture" ), frameGraph->shadowMapTexture() );
+  mShadowMapParameter = new Qt3DRender::QParameter( QStringLiteral( "shadowTexture" ), shadowRenderView->outputTexture( Qt3DRender::QRenderTargetOutput::Depth ) );
   mAmbientOcclusionTextureParameter = new Qt3DRender::QParameter( QStringLiteral( "ssaoTexture" ), frameGraph->blurredAmbientOcclusionFactorMap() );
   mMaterial->addParameter( mColorTextureParameter );
   mMaterial->addParameter( mDepthTextureParameter );
