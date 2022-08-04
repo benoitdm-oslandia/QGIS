@@ -24,6 +24,7 @@ set(QGIS_3D_SRCS
   qgscamerapose.cpp
   qgsfeature3dhandler_p.cpp
   qgsframegraph.cpp
+  qgsforwardrenderview.cpp
   qgsgltf3dutils.cpp
   qgsimagetexture.cpp
   qgslayoutitem3dmap.cpp
@@ -134,6 +135,7 @@ set(QGIS_3D_HDRS
   qgscameracontroller.h
   qgscamerapose.h
   qgsframegraph.h
+  qgsforwardrenderview.h
   qgsgltf3dutils.h
   qgslayoutitem3dmap.h
   qgsmeshlayer3drenderer.h
