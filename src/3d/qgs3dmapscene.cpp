@@ -80,6 +80,7 @@
 #include "qgswindow3dengine.h"
 #include "qgspointcloudlayer.h"
 #include "qgsshadowrenderview.h"
+#include "qgsterraintileloader_p.h"
 
 std::function< QMap< QString, Qgs3DMapScene * >() > Qgs3DMapScene::sOpenScenesFunction = [] { return QMap< QString, Qgs3DMapScene * >(); };
 
@@ -654,16 +655,25 @@ void Qgs3DMapScene::addLayerEntity( QgsMapLayer *layer )
 
       finalizeNewEntity( newEntity );
 
-      if ( Qgs3DMapSceneEntity *sceneNewEntity = qobject_cast<Qgs3DMapSceneEntity *>( newEntity ) )
+      if ( QgsChunkedEntity *sceneNewEntity = qobject_cast<QgsChunkedEntity *>( newEntity ) )
       {
+        // Will apply shadow only to:
+        // * non-terrain entities
+        bool isShadowableEntity = dynamic_cast<QgsTerrainTileLoader *>( sceneNewEntity->rootNode()->loader() ) == nullptr;
+
         needsSceneUpdate = true;
         mSceneEntities.append( sceneNewEntity );
 
-        connect( sceneNewEntity, &Qgs3DMapSceneEntity::newEntityCreated, this, [this]( Qt3DCore::QEntity * entity )
+        connect( sceneNewEntity, &Qgs3DMapSceneEntity::newEntityCreated, this, [this, isShadowableEntity]( Qt3DCore::QEntity * entity )
         {
           finalizeNewEntity( entity );
           // this ensures to update the near/far planes with the exact bounding box of the new entity.
           updateCameraNearFarPlanes();
+          if ( isShadowableEntity )
+          {
+            QgsShadowRenderView *shadowRenderView = dynamic_cast<QgsShadowRenderView *>( mEngine->frameGraph()->renderView( QgsFrameGraph::SHADOW_RENDERVIEW ) ) ;
+            entity->addComponent( shadowRenderView->layerToFilter() );
+          }
         } );
 
         connect( sceneNewEntity, &Qgs3DMapSceneEntity::pendingJobsCountChanged, this, &Qgs3DMapScene::totalPendingJobsCountChanged );
