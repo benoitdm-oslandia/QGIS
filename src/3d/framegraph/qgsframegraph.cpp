@@ -17,7 +17,6 @@
 #include "qgsdirectionallightsettings.h"
 #include "qgspostprocessingentity.h"
 #include "qgsdepthentity.h"
-#include "qgspreviewquad.h"
 #include "qgs3dutils.h"
 #include "qgsabstractrenderview.h"
 
@@ -53,11 +52,14 @@ typedef Qt3DCore::QGeometry Qt3DQGeometry;
 #include "qgsshadowrenderview.h"
 #include "qgsforwardrenderview.h"
 #include "qgsdepthrenderview.h"
+#include "qgsdebugtexturerenderview.h"
+#include "qgsdebugtextureentity.h"
 
 const QString QgsFrameGraph::FORWARD_RENDERVIEW = "forward";
 const QString QgsFrameGraph::SHADOW_RENDERVIEW = "shadow";
 const QString QgsFrameGraph::AXIS3D_RENDERVIEW = "3daxis";
 const QString QgsFrameGraph::DEPTH_RENDERVIEW = "depth";
+const QString QgsFrameGraph::DEBUG_RENDERVIEW = "debug";
 
 namespace
 {
@@ -171,20 +173,10 @@ namespace
 
 } // End of namespace
 
-Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructTexturesPreviewPass()
+void QgsFrameGraph::constructDebugTexturePass()
 {
-  mPreviewLayerFilter = new Qt3DRender::QLayerFilter;
-  mPreviewLayerFilter->addLayer( mPreviewLayer );
-
-  mPreviewRenderStateSet = new Qt3DRender::QRenderStateSet( mPreviewLayerFilter );
-  mPreviewDepthTest = new Qt3DRender::QDepthTest;
-  mPreviewDepthTest->setDepthFunction( Qt3DRender::QDepthTest::Always );
-  mPreviewRenderStateSet->addRenderState( mPreviewDepthTest );
-  mPreviewCullFace = new Qt3DRender::QCullFace;
-  mPreviewCullFace->setMode( Qt3DRender::QCullFace::NoCulling );
-  mPreviewRenderStateSet->addRenderState( mPreviewCullFace );
-
-  return mPreviewLayerFilter;
+  QgsDebugTextureRenderView *depthRenderView = new QgsDebugTextureRenderView( this, mMainCamera );
+  registerRenderView( depthRenderView, DEBUG_RENDERVIEW );
 }
 
 void QgsFrameGraph::constructForwardRenderPass()
@@ -563,12 +555,8 @@ QgsFrameGraph::QgsFrameGraph( QSurface *surface, QSize s, Qt3DRender::QCamera *m
   mRootEntity = root;
   mMainCamera = mainCamera;
 
-  mPreviewLayer = new Qt3DRender::QLayer;
   mRubberBandsLayer = new Qt3DRender::QLayer;
-
   mRubberBandsLayer->setObjectName( "mRubberBandsLayer" );
-
-  mPreviewLayer->setRecursive( true );
   mRubberBandsLayer->setRecursive( true );
 
   mRenderSurfaceSelector = new Qt3DRender::QRenderSurfaceSelector;
@@ -613,23 +601,7 @@ QgsFrameGraph::QgsFrameGraph( QSurface *surface, QSize s, Qt3DRender::QCamera *m
   mRubberBandsRootEntity->addComponent( mRubberBandsLayer );
 
   // textures preview pass
-  Qt3DRender::QFrameGraphNode *previewPass = constructTexturesPreviewPass();
-  previewPass->setParent( mMainViewPort );
-
-  Qt3DRender::QParameter *depthMapIsDepthParam = new Qt3DRender::QParameter( "isDepth", true );
-  Qt3DRender::QParameter *shadowMapIsDepthParam = new Qt3DRender::QParameter( "isDepth", true );
-
-  QgsAbstractRenderView *forwardRenderView = renderView( QgsFrameGraph::FORWARD_RENDERVIEW );
-  Qt3DRender::QTexture2D *forwardDepthTexture = forwardRenderView->outputTexture( Qt3DRender::QRenderTargetOutput::Depth );
-  mDebugDepthMapPreviewQuad = this->addTexturePreviewOverlay( forwardDepthTexture, QPointF( 0.9f, 0.9f ), QSizeF( 0.1, 0.1 ), QVector<Qt3DRender::QParameter *> { depthMapIsDepthParam } );
-
-  QgsAbstractRenderView *shadowRenderView = renderView( QgsFrameGraph::SHADOW_RENDERVIEW );
-  Qt3DRender::QTexture2D *shadowDepthTexture = shadowRenderView->outputTexture( Qt3DRender::QRenderTargetOutput::Depth );
-  mDebugShadowMapPreviewQuad = this->addTexturePreviewOverlay( shadowDepthTexture, QPointF( 0.9f, 0.9f ), QSizeF( 0.1, 0.1 ), QVector<Qt3DRender::QParameter *> { shadowMapIsDepthParam } );
-
-  mDebugDepthMapPreviewQuad->setEnabled( false );
-  mDebugShadowMapPreviewQuad->setEnabled( false );
-
+  constructDebugTexturePass();
 }
 
 void QgsFrameGraph::unregisterRenderView( const QString &name )
@@ -674,16 +646,6 @@ bool QgsFrameGraph::isRenderViewEnabled( const QString &name )
 {
   return mRenderViewMap [name] != nullptr && mRenderViewMap [name]->isSubTreeEnabled();
 }
-
-QgsPreviewQuad *QgsFrameGraph::addTexturePreviewOverlay( Qt3DRender::QTexture2D *texture, const QPointF &centerTexCoords, const QSizeF &sizeTexCoords, QVector<Qt3DRender::QParameter *> additionalShaderParameters )
-{
-  QgsPreviewQuad *previewQuad = new QgsPreviewQuad( texture, centerTexCoords, sizeTexCoords, additionalShaderParameters );
-  previewQuad->addComponent( mPreviewLayer );
-  previewQuad->setParent( mRootEntity );
-  mPreviewQuads.push_back( previewQuad );
-  return previewQuad;
-}
-
 
 void QgsFrameGraph::dump()
 {
@@ -741,53 +703,6 @@ void QgsFrameGraph::setupEyeDomeLighting( bool enabled, double strength, int dis
   mPostprocessingEntity->setEyeDomeLightingEnabled( enabled );
   mPostprocessingEntity->setEyeDomeLightingStrength( strength );
   mPostprocessingEntity->setEyeDomeLightingDistance( distance );
-}
-
-void QgsFrameGraph::setupShadowMapDebugging( bool enabled, Qt::Corner corner, double size )
-{
-  mDebugShadowMapPreviewQuad->setEnabled( enabled );
-  if ( enabled )
-  {
-    switch ( corner )
-    {
-      case Qt::Corner::TopRightCorner:
-        mDebugShadowMapPreviewQuad->setViewPort( QPointF( 1.0f - size / 2, 0.0f + size / 2 ), 0.5 * QSizeF( size, size ) );
-        break;
-      case Qt::Corner::TopLeftCorner:
-        mDebugShadowMapPreviewQuad->setViewPort( QPointF( 0.0f + size / 2, 0.0f + size / 2 ), 0.5 * QSizeF( size, size ) );
-        break;
-      case Qt::Corner::BottomRightCorner:
-        mDebugShadowMapPreviewQuad->setViewPort( QPointF( 1.0f - size / 2, 1.0f - size / 2 ), 0.5 * QSizeF( size, size ) );
-        break;
-      case Qt::Corner::BottomLeftCorner:
-        mDebugShadowMapPreviewQuad->setViewPort( QPointF( 0.0f + size / 2, 1.0f - size / 2 ), 0.5 * QSizeF( size, size ) );
-        break;
-    }
-  }
-}
-
-void QgsFrameGraph::setupDepthMapDebugging( bool enabled, Qt::Corner corner, double size )
-{
-  mDebugDepthMapPreviewQuad->setEnabled( enabled );
-
-  if ( enabled )
-  {
-    switch ( corner )
-    {
-      case Qt::Corner::TopRightCorner:
-        mDebugDepthMapPreviewQuad->setViewPort( QPointF( 1.0f - size / 2, 0.0f + size / 2 ), 0.5 * QSizeF( size, size ) );
-        break;
-      case Qt::Corner::TopLeftCorner:
-        mDebugDepthMapPreviewQuad->setViewPort( QPointF( 0.0f + size / 2, 0.0f + size / 2 ), 0.5 * QSizeF( size, size ) );
-        break;
-      case Qt::Corner::BottomRightCorner:
-        mDebugDepthMapPreviewQuad->setViewPort( QPointF( 1.0f - size / 2, 1.0f - size / 2 ), 0.5 * QSizeF( size, size ) );
-        break;
-      case Qt::Corner::BottomLeftCorner:
-        mDebugDepthMapPreviewQuad->setViewPort( QPointF( 0.0f + size / 2, 1.0f - size / 2 ), 0.5 * QSizeF( size, size ) );
-        break;
-    }
-  }
 }
 
 void QgsFrameGraph::setSize( QSize s )
