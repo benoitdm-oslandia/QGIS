@@ -43,10 +43,10 @@
 
 #include <QPicture>
 #include <QTimer>
+#include <QThread>
 
 QgsVectorLayerRenderer::QgsVectorLayerRenderer( QgsVectorLayer *layer, QgsRenderContext &context )
   : QgsMapLayerRenderer( layer->id(), &context )
-  , mFeedback( std::make_unique< QgsFeedback >() )
   , mLayer( layer )
   , mFields( layer->fields() )
   , mSource( std::make_unique< QgsVectorLayerFeatureSource >( layer ) )
@@ -188,7 +188,7 @@ void QgsVectorLayerRenderer::setLayerRenderingTimeHint( int time )
 
 QgsFeedback *QgsVectorLayerRenderer::feedback() const
 {
-  return mFeedback.get();
+  return renderContext()->feedback();
 }
 
 bool QgsVectorLayerRenderer::forceRasterRender() const
@@ -222,6 +222,11 @@ bool QgsVectorLayerRenderer::render()
   bool res = true;
   for ( const std::unique_ptr< QgsFeatureRenderer > &renderer : mRenderers )
   {
+    if ( ( renderContext()->feedback() && renderContext()->feedback()->isCanceled() )
+         || !res )
+    {
+      break;
+    }
     res = renderInternal( renderer.get() ) && res;
   }
 
@@ -398,17 +403,17 @@ bool QgsVectorLayerRenderer::renderInternal( QgsFeatureRenderer *renderer )
     context.setVectorSimplifyMethod( vectorMethod );
   }
 
-  featureRequest.setFeedback( mFeedback.get() );
+  featureRequest.setFeedback( renderContext()->feedback() );
   // also set the interruption checker for the expression context, in case the renderer uses some complex expression
   // which could benefit from early exit paths...
-  context.expressionContext().setFeedback( mFeedback.get() );
+  context.expressionContext().setFeedback( renderContext()->feedback() );
 
   QgsFeatureIterator fit = mSource->getFeatures( featureRequest );
   // Attach an interruption checker so that iterators that have potentially
   // slow fetchFeature() implementations, such as in the WFS provider, can
   // check it, instead of relying on just the mContext.renderingStopped() check
   // in drawRenderer()
-  fit.setInterruptionChecker( mFeedback.get() );
+  fit.setInterruptionChecker( renderContext()->feedback() );
 
   if ( ( renderer->capabilities() & QgsFeatureRenderer::SymbolLevels ) && renderer->usingSymbolLevels() )
     drawRendererLevels( renderer, fit );
@@ -432,6 +437,7 @@ bool QgsVectorLayerRenderer::renderInternal( QgsFeatureRenderer *renderer )
 
 void QgsVectorLayerRenderer::drawRenderer( QgsFeatureRenderer *renderer, QgsFeatureIterator &fit )
 {
+  QgsDebugMsgLevel( QStringLiteral( "%1 started drawing of vector layer." ).arg( layerId() ), 1 ); // TODO to remove
   const bool isMainRenderer = renderer == mRenderer;
 
   QgsExpressionContextScope *symbolScope = QgsExpressionContextUtils::updateSymbolScope( nullptr, new QgsExpressionContextScope() );
@@ -445,14 +451,17 @@ void QgsVectorLayerRenderer::drawRenderer( QgsFeatureRenderer *renderer, QgsFeat
     clipEngine->prepareGeometry();
   }
 
+  ulong cpt = 0; // TODO to remove
   QgsFeature fet;
   while ( fit.nextFeature( fet ) )
   {
+    QThread::msleep( 50L ); // TODO to remove
     try
     {
+      cpt++; // TODO to remove
       if ( context.renderingStopped() )
       {
-        QgsDebugMsgLevel( QStringLiteral( "Drawing of vector layer %1 canceled." ).arg( layerId() ), 2 );
+        QgsDebugMsgLevel( QStringLiteral( "Drawing of vector layer %1 canceled." ).arg( layerId() ), 1 ); // TODO to remove
         break;
       }
 
@@ -535,6 +544,10 @@ void QgsVectorLayerRenderer::drawRenderer( QgsFeatureRenderer *renderer, QgsFeat
     }
   }
 
+  if ( context.renderingStopped() ) // TODO to remove
+  {
+    QgsDebugMsgLevel( QStringLiteral( "%1 WAS canceled. cpt: %2" ).arg( layerId() ).arg( cpt ), 1 );
+  }
   delete context.expressionContext().popScope();
 
   stopRenderer( renderer, nullptr );
