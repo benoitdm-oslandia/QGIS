@@ -101,6 +101,9 @@ class QgsVectorLayerRenderer : public QgsMapLayerRenderer
     bool renderInternal( QgsFeatureRenderer *renderer );
 
   private:
+
+    std::unique_ptr<QgsFeedback> mFeedback = nullptr;
+
     //! The rendered layer
     QgsVectorLayer *mLayer = nullptr;
 

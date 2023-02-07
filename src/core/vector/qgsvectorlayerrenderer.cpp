@@ -47,6 +47,7 @@
 
 QgsVectorLayerRenderer::QgsVectorLayerRenderer( QgsVectorLayer *layer, QgsRenderContext &context )
   : QgsMapLayerRenderer( layer->id(), &context )
+  , mFeedback( std::make_unique< QgsFeedback >() )
   , mLayer( layer )
   , mFields( layer->fields() )
   , mSource( std::make_unique< QgsVectorLayerFeatureSource >( layer ) )
@@ -188,7 +189,7 @@ void QgsVectorLayerRenderer::setLayerRenderingTimeHint( int time )
 
 QgsFeedback *QgsVectorLayerRenderer::feedback() const
 {
-  return renderContext()->feedback();
+  return mFeedback.get();
 }
 
 bool QgsVectorLayerRenderer::forceRasterRender() const
@@ -222,8 +223,7 @@ bool QgsVectorLayerRenderer::render()
   bool res = true;
   for ( const std::unique_ptr< QgsFeatureRenderer > &renderer : mRenderers )
   {
-    if ( ( renderContext()->feedback() && renderContext()->feedback()->isCanceled() )
-         || !res )
+    if ( mFeedback->isCanceled() || !res )
     {
       break;
     }
@@ -403,17 +403,17 @@ bool QgsVectorLayerRenderer::renderInternal( QgsFeatureRenderer *renderer )
     context.setVectorSimplifyMethod( vectorMethod );
   }
 
-  featureRequest.setFeedback( renderContext()->feedback() );
+  featureRequest.setFeedback( mFeedback.get() );
   // also set the interruption checker for the expression context, in case the renderer uses some complex expression
   // which could benefit from early exit paths...
-  context.expressionContext().setFeedback( renderContext()->feedback() );
+  context.expressionContext().setFeedback( mFeedback.get() );
 
   QgsFeatureIterator fit = mSource->getFeatures( featureRequest );
   // Attach an interruption checker so that iterators that have potentially
   // slow fetchFeature() implementations, such as in the WFS provider, can
   // check it, instead of relying on just the mContext.renderingStopped() check
   // in drawRenderer()
-  fit.setInterruptionChecker( renderContext()->feedback() );
+  fit.setInterruptionChecker( mFeedback.get() );
 
   if ( ( renderer->capabilities() & QgsFeatureRenderer::SymbolLevels ) && renderer->usingSymbolLevels() )
     drawRendererLevels( renderer, fit );
