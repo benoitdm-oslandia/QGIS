@@ -41,15 +41,15 @@ class SocketMonitoringThread: public QThread
   public:
 
     /**
-       * @brief SocketMonitoringThread
-       * \param  isReponseFinished
+       * \brief SocketMonitoringThread
+       * \param  isResponseFinished
        * \param  feedback
        */
-    SocketMonitoringThread( bool *isReponseFinished, QgsFeedback *feedback );
+    SocketMonitoringThread( bool *isResponseFinished, QgsFeedback *feedback );
     void run( );
 
   private:
-    bool *mIsReponseFinished = nullptr;
+    bool *mIsResponseFinished = nullptr;
     QgsFeedback *mFeedback = nullptr;
     int mIpcFd = 0;
 };

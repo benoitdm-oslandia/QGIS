@@ -56,13 +56,13 @@ typedef struct QgsFCGXStreamData
 } QgsFCGXStreamData;
 
 
-SocketMonitoringThread::SocketMonitoringThread( bool *isReponseFinished, QgsFeedback *feedback )
-  : mIsReponseFinished( isReponseFinished )
+SocketMonitoringThread::SocketMonitoringThread( bool *isResponseFinished, QgsFeedback *feedback )
+  : mIsResponseFinished( isResponseFinished )
   , mFeedback( feedback )
   , mIpcFd( -1 )
 {
   setObjectName( "FCGI socket monitor" );
-  Q_ASSERT( mIsReponseFinished );
+  Q_ASSERT( mIsResponseFinished );
   Q_ASSERT( mFeedback );
 
   if ( FCGI_stdout && FCGI_stdout->fcgx_stream && FCGI_stdout->fcgx_stream->data )
@@ -106,7 +106,7 @@ void SocketMonitoringThread::run( )
   }
 
   char c;
-  while ( !*mIsReponseFinished )
+  while ( !*mIsResponseFinished )
   {
     ssize_t x = recv( mIpcFd, &c, 1, MSG_PEEK | MSG_DONTWAIT ); // see https://stackoverflow.com/a/12402596
     if ( x < 0 )
@@ -125,7 +125,7 @@ void SocketMonitoringThread::run( )
     QThread::msleep( 333L );
   }
 
-  if ( *mIsReponseFinished )
+  if ( *mIsResponseFinished )
   {
     QgsDebugMsgLevel( QStringLiteral( "FCGIServer: socket monitoring quits normally." ), 2 );
   }

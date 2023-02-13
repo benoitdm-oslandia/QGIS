@@ -319,7 +319,7 @@ namespace QgsWms
       // list for external layers
       QList<QgsMapLayer *> mExternalLayers;
 
-      QgsFeedback *mSocketFeedback;
+      QgsFeedback *mSocketFeedback = nullptr;
   };
 };
 
