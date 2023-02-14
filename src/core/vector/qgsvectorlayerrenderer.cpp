@@ -455,7 +455,7 @@ void QgsVectorLayerRenderer::drawRenderer( QgsFeatureRenderer *renderer, QgsFeat
   QgsFeature fet;
   while ( fit.nextFeature( fet ) )
   {
-    QThread::msleep( 50L ); // TODO to remove
+    //QThread::msleep( 50L ); // TODO to remove
     try
     {
       cpt++; // TODO to remove
@@ -464,6 +464,10 @@ void QgsVectorLayerRenderer::drawRenderer( QgsFeatureRenderer *renderer, QgsFeat
         QgsDebugMsgLevel( QStringLiteral( "Drawing of vector layer %1 canceled." ).arg( layerId() ), 1 ); // TODO to remove
         break;
       }
+
+      if ( cpt % 1000 == 0 ) // TODO to remove
+        QgsDebugMsgLevel( QStringLiteral( "%1 rendered %2 features" ).arg( layerId() ).arg( cpt ), 1 );
+
 
       if ( !fet.hasGeometry() || fet.geometry().isEmpty() )
         continue; // skip features without geometry
