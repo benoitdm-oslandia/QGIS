@@ -160,6 +160,13 @@ QgsFcgiServerResponse::QgsFcgiServerResponse( QgsServerRequest::Method method )
   mSocketMonitoringThread->start();
 }
 
+QgsFcgiServerResponse::~QgsFcgiServerResponse()
+{
+  mFinished = true;
+  mSocketMonitoringThread->exit();
+  mSocketMonitoringThread->wait();
+}
+
 void QgsFcgiServerResponse::removeHeader( const QString &key )
 {
   mHeaders.remove( key );

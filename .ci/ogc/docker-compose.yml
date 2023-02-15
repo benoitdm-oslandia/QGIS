@@ -20,6 +20,7 @@ services:
     volumes:
       - ./../../:/usr/src/qgis/
       - ./../../data:/data
+      - ./../../data/cores:/cores
     networks:
       - qgis
     privileged: true
