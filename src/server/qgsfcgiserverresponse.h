@@ -105,6 +105,7 @@ class SERVER_EXPORT QgsFcgiServerResponse: public QgsServerResponse
 
     /**
      * Returns socket feedback if any
+     * \since QGIS 3.30
      */
     QgsFeedback *feedback() const override { return mFeedback.get(); }
 
@@ -116,7 +117,7 @@ class SERVER_EXPORT QgsFcgiServerResponse: public QgsServerResponse
     QgsServerRequest::Method mMethod;
     int mStatusCode = 0;
 
-    SocketMonitoringThread *mSocketMonitoringThread = nullptr;
+    std::unique_ptr<SocketMonitoringThread> mSocketMonitoringThread;
     std::unique_ptr<QgsFeedback> mFeedback;
 };
 

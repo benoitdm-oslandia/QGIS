@@ -156,7 +156,7 @@ QgsFcgiServerResponse::QgsFcgiServerResponse( QgsServerRequest::Method method )
   mBuffer.open( QIODevice::ReadWrite );
   setDefaultHeaders();
 
-  mSocketMonitoringThread = new SocketMonitoringThread( &mFinished, mFeedback.get() );
+  mSocketMonitoringThread = std::make_unique<SocketMonitoringThread>( &mFinished, mFeedback.get() );
   mSocketMonitoringThread->start();
 }
 

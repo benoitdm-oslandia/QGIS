@@ -54,6 +54,7 @@ namespace QgsWms
        * \param mapSettings Passed to MapRendererJob
        * \param image The resulting image
        * \param feedback socket feedback
+       * \since 3.30.0
        */
       void render( const QgsMapSettings &mapSettings, QImage *image, const QgsFeedback *feedback );
 
