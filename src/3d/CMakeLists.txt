@@ -74,6 +74,7 @@ set(QGIS_3D_SRCS
   framegraph/qgs3daxisrenderview.cpp
   framegraph/qgsabstractrenderview.cpp
   framegraph/qgsambientocclusionrenderentity.cpp
+  framegraph/qgsambientocclusionrenderview.cpp
   framegraph/qgsambientocclusionblurentity.cpp
   framegraph/qgsdebugtextureentity.cpp
   framegraph/qgsdebugtexturerenderview.cpp
@@ -170,6 +171,7 @@ set(QGIS_3D_HDRS
   framegraph/qgs3daxis.h
   framegraph/qgs3daxisrenderview.h
   framegraph/qgsambientocclusionrenderentity.h
+  framegraph/qgsambientocclusionrenderview.h
   framegraph/qgsambientocclusionblurentity.h
   framegraph/qgsabstractrenderview.h
   framegraph/qgsdebugtextureentity.h

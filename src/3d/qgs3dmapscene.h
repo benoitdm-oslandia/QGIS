@@ -58,6 +58,7 @@ class QgsChunkNode;
 class QgsDoubleRange;
 class Qgs3DMapSceneEntity;
 class QgsDebugTextureEntity;
+class QgsAmbientOcclusionRenderEntity;
 
 
 /**
@@ -307,5 +308,8 @@ class _3D_EXPORT Qgs3DMapScene : public QObject
     QgsDebugTextureEntity *mShadowTextureDebugging = nullptr;
     //! depth texture debugging
     QgsDebugTextureEntity *mDepthTextureDebugging = nullptr;
+    //! ambient occlusion entity
+    QgsAmbientOcclusionRenderEntity *mAmbientOcclusionRenderEntity = nullptr;
+
 };
 #endif // QGS3DMAPSCENE_H
