@@ -170,16 +170,18 @@ void QgsPolygon3DSymbol::setMaterialSettings( QgsAbstractMaterialSettings *mater
 
 bool QgsPolygon3DSymbol::exportGeometries( Qgs3DSceneExporter *exporter, Qt3DCore::QEntity *entity, const QString &objectNamePrefix ) const
 {
-  const QList<Qt3DCore::QEntity *> entities = entity->findChildren<Qt3DCore::QEntity *>( QString(), Qt::FindDirectChildrenOnly );
-  if ( entities.isEmpty() )
+  const QList<Qt3DCore::QEntity *> subEntities = entity->findChildren<Qt3DCore::QEntity *>( QString(), Qt::FindDirectChildrenOnly );
+  if ( subEntities.isEmpty() )
   {
     const QList<Qt3DRender::QGeometryRenderer *> renderers = entity->findChildren<Qt3DRender::QGeometryRenderer *>();
-    for ( Qt3DRender::QGeometryRenderer *r : renderers )
+    for ( Qt3DRender::QGeometryRenderer *renderer : renderers )
     {
-      Qgs3DExportObject *object = exporter->processGeometryRenderer( r, objectNamePrefix );
-      if ( object == nullptr ) continue;
-      exporter->processEntityMaterial( entity, object );
-      exporter->mObjects.push_back( object );
+      Qgs3DExportObject *object = exporter->processGeometryRenderer( renderer, objectNamePrefix );
+      if ( object != nullptr )
+      {
+        exporter->processEntityMaterial( entity, object );
+        exporter->mObjects.push_back( object );
+      }
     }
     return renderers.size() != 0;
   }
@@ -187,7 +189,7 @@ bool QgsPolygon3DSymbol::exportGeometries( Qgs3DSceneExporter *exporter, Qt3DCor
   {
     bool out = false;
     QString prefix;
-    for ( Qt3DCore::QEntity *e : entities )
+    for ( Qt3DCore::QEntity *e : subEntities )
     {
       if ( e->objectName().isEmpty() )
         prefix = objectNamePrefix;
