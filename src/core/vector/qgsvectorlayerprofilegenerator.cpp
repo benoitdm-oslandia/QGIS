@@ -712,19 +712,13 @@ bool QgsVectorLayerProfileGenerator::generateProfile( const QgsProfileGeneration
   switch ( QgsWkbTypes::geometryType( mWkbType ) )
   {
     case Qgis::GeometryType::Point:
-      if ( !generateProfileForPoints() )
-        return false;
-      break;
+      return generateProfileForPoints();
 
     case Qgis::GeometryType::Line:
-      if ( !generateProfileForLines() )
-        return false;
-      break;
+      return generateProfileForLines();
 
     case Qgis::GeometryType::Polygon:
-      if ( !generateProfileForPolygons() )
-        return false;
-      break;
+      return generateProfileForPolygons();
 
     case Qgis::GeometryType::Unknown:
     case Qgis::GeometryType::Null:
@@ -799,24 +793,14 @@ bool QgsVectorLayerProfileGenerator::generateProfileForPoints()
 
   QgsFeature feature;
   QgsFeatureIterator it = mSource->getFeatures( request );
-  while ( it.nextFeature( feature ) )
+  while ( !mFeedback->isCanceled() && it.nextFeature( feature ) )
   {
-    if ( mFeedback->isCanceled() )
-      return false;
-
     mExpressionContext.setFeature( feature );
 
     const QgsGeometry g = feature.geometry();
-    if ( g.isMultipart() )
+    for ( auto it = g.const_parts_begin(); !mFeedback->isCanceled() && it != g.const_parts_end(); ++it )
     {
-      for ( auto it = g.const_parts_begin(); it != g.const_parts_end(); ++it )
-      {
-        processPoint( feature, qgsgeometry_cast< const QgsPoint * >( *it ) );
-      }
-    }
-    else
-    {
-      processPoint( feature, qgsgeometry_cast< const QgsPoint * >( g.constGet() ) );
+      processPoint( feature, qgsgeometry_cast< const QgsPoint * >( *it ) );
     }
   }
   return true;
@@ -952,9 +936,7 @@ bool QgsVectorLayerProfileGenerator::generateProfileForLines()
     QString error;
     std::unique_ptr< QgsAbstractGeometry > intersection( mProfileBoxEngine->intersection( curve, &error ) );
     if ( !intersection )
-    {
       return;
-    }
 
     if ( mFeedback->isCanceled() )
       return;
@@ -970,13 +952,10 @@ bool QgsVectorLayerProfileGenerator::generateProfileForLines()
     QgsGeos curveGeos( curve );
     curveGeos.prepareGeometry();
 
-    if ( mFeedback->isCanceled() )
-      return;
-
-    for ( auto it = intersection->const_parts_begin(); it != intersection->const_parts_end(); ++it )
+    for ( auto it = intersection->const_parts_begin();
+          !mFeedback->isCanceled() && it != intersection->const_parts_end();
+          ++it )
     {
-      if ( mFeedback->isCanceled() )
-        return;
       if ( const QgsPoint *intersectionPoint = qgsgeometry_cast< const QgsPoint * >( *it ) )
       {
         processPoint( *intersectionPoint, curveGeos, feature );
@@ -990,32 +969,20 @@ bool QgsVectorLayerProfileGenerator::generateProfileForLines()
 
   QgsFeature feature;
   QgsFeatureIterator it = mSource->getFeatures( request );
-  while ( it.nextFeature( feature ) )
+  while ( !mFeedback->isCanceled() && it.nextFeature( feature ) )
   {
-    if ( mFeedback->isCanceled() )
-      return false;
-
-    if ( !mProfileBoxEngine->intersects( feature.geometry().constGet() ) )
-      continue;
-
     mExpressionContext.setFeature( feature );
 
     const QgsGeometry g = feature.geometry();
-    if ( g.isMultipart() )
+    for ( auto it = g.const_parts_begin(); !mFeedback->isCanceled() && it != g.const_parts_end(); ++it )
     {
-      for ( auto it = g.const_parts_begin(); it != g.const_parts_end(); ++it )
+      if ( mProfileBoxEngine->intersects( *it ) )
       {
-        if ( !mProfileBoxEngine->intersects( *it ) )
-          continue;
-
         processCurve( feature, qgsgeometry_cast< const QgsCurve * >( *it ) );
       }
     }
-    else
-    {
-      processCurve( feature, qgsgeometry_cast< const QgsCurve * >( g.constGet() ) );
-    }
   }
+
   return true;
 }
 
