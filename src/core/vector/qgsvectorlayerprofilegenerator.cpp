@@ -692,7 +692,15 @@ bool QgsVectorLayerProfileGenerator::generateProfile( const QgsProfileGeneration
   mProfileCurveEngine.reset( new QgsGeos( mProfileCurve.get() ) );
   mProfileCurveEngine->prepareGeometry();
 
-  mProfileBox = std::unique_ptr<QgsAbstractGeometry>( mProfileCurveEngine->buffer( mTolerance, 8, Qgis::EndCapStyle::Flat, Qgis::JoinStyle::Round, 2 ) );
+  if ( mTolerance == 0.0 ) // geos does not handle very well buffer with 0 size
+  {
+    mProfileBox = std::unique_ptr<QgsAbstractGeometry>( mProfileCurve->clone() );
+  }
+  else
+  {
+    mProfileBox = std::unique_ptr<QgsAbstractGeometry>( mProfileCurveEngine->buffer( mTolerance, 8, Qgis::EndCapStyle::Flat, Qgis::JoinStyle::Round, 2 ) );
+  }
+
   mProfileBoxEngine.reset( new QgsGeos( mProfileBox.get() ) );
   mProfileBoxEngine->prepareGeometry();
 
@@ -874,7 +882,8 @@ bool QgsVectorLayerProfileGenerator::generateProfileForLines()
       QString lastError;
       QgsVectorLayerProfileResults::Feature resultFeature;
       resultFeature.featureId = feature.id();
-      double lastDistanceAlongProfileCurve = 0.0;
+      double lastDistanceAlongProfileCurve = std::numeric_limits<double>::lowest();
+      double lastHeight = std::numeric_limits<double>::lowest();
 
       for ( auto it = intersectionCurve.vertices_begin(); it != intersectionCurve.vertices_end(); ++it )
       {
@@ -888,14 +897,16 @@ bool QgsVectorLayerProfileGenerator::generateProfileForLines()
         const QgsPoint *interpolatedPoint = &intersectionPoint;
 
         const double offset = mDataDefinedProperties.valueAsDouble( QgsMapLayerElevationProperties::ZOffset, mExpressionContext, mOffset );
-
         const double height = featureZToHeight( interpolatedPoint->x(), interpolatedPoint->y(), interpolatedPoint->z(), offset );
-        mResults->mRawPoints.append( QgsPoint( interpolatedPoint->x(), interpolatedPoint->y(), height ) );
-        mResults->minZ = std::min( mResults->minZ, height );
-        mResults->maxZ = std::max( mResults->maxZ, height );
-
         const double distanceAlongProfileCurve = mProfileCurveEngine->lineLocatePoint( *interpolatedPoint, &error );
+
+        if ( qgsDoubleNear( lastHeight, height ) && qgsDoubleNear( lastDistanceAlongProfileCurve, distanceAlongProfileCurve ) )
+          continue; // useless point
+
+        lastHeight = height;
         lastDistanceAlongProfileCurve = distanceAlongProfileCurve;
+
+        mResults->mRawPoints.append( QgsPoint( interpolatedPoint->x(), interpolatedPoint->y(), height ) );
         mResults->mDistanceToHeightMap.insert( distanceAlongProfileCurve, height );
 
         if ( mExtrusionEnabled )
@@ -913,10 +924,15 @@ bool QgsVectorLayerProfileGenerator::generateProfileForLines()
         {
           transformedParts.append( QgsGeometry( new QgsPoint( interpolatedPoint->x(), interpolatedPoint->y(), height ) ) );
           crossSectionParts.append( QgsGeometry( new QgsPoint( distanceAlongProfileCurve, height ) ) );
+          mResults->minZ = std::min( mResults->minZ, height );
+          mResults->maxZ = std::max( mResults->maxZ, height );
         }
       }
 
-      mResults->mDistanceToHeightMap.insert( lastDistanceAlongProfileCurve + 0.001, qQNaN() );
+      if ( mResults->mDistanceToHeightMap.empty() )
+        return; // no usefull point found
+
+      mResults->mDistanceToHeightMap.insert( lastDistanceAlongProfileCurve + 0.000001, qQNaN() );
 
       resultFeature.geometry = transformedParts.size() > 1 ? QgsGeometry::unaryUnion( transformedParts ) : transformedParts.value( 0 );
       if ( !crossSectionParts.empty() )
