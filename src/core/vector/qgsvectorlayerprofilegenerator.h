@@ -122,6 +122,10 @@ class CORE_EXPORT QgsVectorLayerProfileGenerator : public QgsAbstractProfileSurf
     bool generateProfileForLines();
     bool generateProfileForPolygons();
 
+    void processIntersectionPoint( const QgsPoint *intersectionPoint, const QgsFeature &feature );
+    void processIntersectionPointForLines( const QgsCurve *curve, const QgsPoint &intersectionPoint, const QgsGeos &curveGeos,  const QgsFeature &feature );
+    void processIntersectionCurveForLines( const QgsCurve &intersectionCurve, const QgsFeature &feature );
+
     double terrainHeight( double x, double y );
     double featureZToHeight( double x, double y, double z, double offset );
 
