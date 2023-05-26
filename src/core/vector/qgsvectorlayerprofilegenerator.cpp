@@ -750,9 +750,6 @@ bool QgsVectorLayerProfileGenerator::generateProfileForPoints()
   // our feature request is using the optimised distance within check (allowing use of spatial index)
   // BUT this will also include points which are within the tolerance distance before/after the end of line.
   // So we also need to double check that they fall within the flat buffered curve too.
-  std::unique_ptr< QgsAbstractGeometry > bufferedCurve( mProfileCurveEngine->buffer( mTolerance, 8, Qgis::EndCapStyle::Flat, Qgis::JoinStyle::Round, 2 ) );
-  QgsGeos bufferedCurveEngine( bufferedCurve.get() );
-  bufferedCurveEngine.prepareGeometry();
 
   QgsFeature feature;
   QgsFeatureIterator it = mSource->getFeatures( request );
@@ -763,7 +760,7 @@ bool QgsVectorLayerProfileGenerator::generateProfileForPoints()
     const QgsGeometry g = feature.geometry();
     for ( auto it = g.const_parts_begin(); !mFeedback->isCanceled() && it != g.const_parts_end(); ++it )
     {
-      if ( bufferedCurveEngine.intersects( *it ) )
+      if ( mProfileBoxEngine->intersects( *it ) )
       {
         processIntersectionPoint( qgsgeometry_cast< const QgsPoint * >( *it ), feature );
       }
@@ -779,8 +776,6 @@ void QgsVectorLayerProfileGenerator::processIntersectionPoint( const QgsPoint *p
 
   const double height = featureZToHeight( point->x(), point->y(), point->z(), offset );
   mResults->mRawPoints.append( QgsPoint( point->x(), point->y(), height ) );
-  mResults->minZ = std::min( mResults->minZ, height );
-  mResults->maxZ = std::max( mResults->maxZ, height );
 
   const double distanceAlongProfileCurve = mProfileCurveEngine->lineLocatePoint( *point, &error );
   mResults->mDistanceToHeightMap.insert( distanceAlongProfileCurve, height );
@@ -802,6 +797,8 @@ void QgsVectorLayerProfileGenerator::processIntersectionPoint( const QgsPoint *p
   {
     resultFeature.geometry = QgsGeometry( new QgsPoint( point->x(), point->y(), height ) );
     resultFeature.crossSectionGeometry = QgsGeometry( new QgsPoint( distanceAlongProfileCurve, height ) );
+    mResults->minZ = std::min( mResults->minZ, height );
+    mResults->maxZ = std::max( mResults->maxZ, height );
   }
 
   mResults->features[resultFeature.featureId].append( resultFeature );
@@ -925,7 +922,6 @@ bool QgsVectorLayerProfileGenerator::generateProfileForLines()
     {
       if ( const QgsPoint *intersectionPoint = qgsgeometry_cast< const QgsPoint * >( *it ) )
       {
-        qDebug() << "=========================================================== processIntersectionPointForLines"; // TODO to remove
         processIntersectionPointForLines( curve, *intersectionPoint, curveGeos, feature );
       }
       else if ( const QgsCurve *intersectionCurve = qgsgeometry_cast< const QgsCurve * >( *it ) )
