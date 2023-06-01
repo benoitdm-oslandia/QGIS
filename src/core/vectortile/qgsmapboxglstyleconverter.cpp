@@ -180,7 +180,7 @@ void QgsMapBoxGlStyleConverter::parseLayers( const QVariantList &layers, QgsMapB
     else
     {
       mWarnings << QObject::tr( "%1: Skipping unknown layer type %2" ).arg( context->layerId(), layerType );
-      QgsDebugMsg( mWarnings.constLast() );
+      QgsDebugError( mWarnings.constLast() );
       continue;
     }
 
@@ -542,7 +542,7 @@ bool QgsMapBoxGlStyleConverter::parseLineLayer( const QVariantMap &jsonLayer, Qg
   }
 
 
-  double lineWidth = 1.0;
+  double lineWidth = 1.0 * context.pixelSizeConversionFactor();
   QgsProperty lineWidthProperty;
   if ( jsonPaint.contains( QStringLiteral( "line-width" ) ) )
   {
@@ -3162,7 +3162,7 @@ QString QgsMapBoxGlStyleConverter::retrieveSpriteAsBase64( const QVariant &value
     case QVariant::String:
     {
       QString spriteName = value.toString();
-      const QRegularExpression fieldNameMatch( QStringLiteral( "{([^}]+)}" ) );
+      const thread_local QRegularExpression fieldNameMatch( QStringLiteral( "{([^}]+)}" ) );
       QRegularExpressionMatch match = fieldNameMatch.match( spriteName );
       if ( match.hasMatch() )
       {
@@ -3395,7 +3395,7 @@ QString QgsMapBoxGlStyleConverter::processLabelField( const QString &string, boo
 {
   // {field_name} is permitted in string -- if multiple fields are present, convert them to an expression
   // but if single field is covered in {}, return it directly
-  const QRegularExpression singleFieldRx( QStringLiteral( "^{([^}]+)}$" ) );
+  const thread_local QRegularExpression singleFieldRx( QStringLiteral( "^{([^}]+)}$" ) );
   const QRegularExpressionMatch match = singleFieldRx.match( string );
   if ( match.hasMatch() )
   {
@@ -3403,7 +3403,7 @@ QString QgsMapBoxGlStyleConverter::processLabelField( const QString &string, boo
     return match.captured( 1 );
   }
 
-  const QRegularExpression multiFieldRx( QStringLiteral( "(?={[^}]+})" ) );
+  const thread_local QRegularExpression multiFieldRx( QStringLiteral( "(?={[^}]+})" ) );
   const QStringList parts = string.split( multiFieldRx );
   if ( parts.size() > 1 )
   {
@@ -3529,7 +3529,7 @@ void QgsMapBoxGlStyleConverter::parseSources( const QVariantMap &sources, QgsMap
       case Qgis::MapBoxGlStyleSourceType::Image:
       case Qgis::MapBoxGlStyleSourceType::Video:
       case Qgis::MapBoxGlStyleSourceType::Unknown:
-        QgsDebugMsg( QStringLiteral( "Ignoring vector tile style source %1 (%2)" ).arg( name, qgsEnumValueToKey( type ) ) );
+        QgsDebugError( QStringLiteral( "Ignoring vector tile style source %1 (%2)" ).arg( name, qgsEnumValueToKey( type ) ) );
         continue;
     }
   }
@@ -3566,7 +3566,7 @@ bool QgsMapBoxGlStyleConverter::numericArgumentsOnly( const QVariant &bottomVari
 //
 void QgsMapBoxGlStyleConversionContext::pushWarning( const QString &warning )
 {
-  QgsDebugMsg( warning );
+  QgsDebugError( warning );
   mWarnings << warning;
 }
 

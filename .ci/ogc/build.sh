@@ -2,7 +2,7 @@
 
 set -e
 
-mkdir /usr/src/qgis/build
+mkdir -p /usr/src/qgis/build
 cd /usr/src/qgis/build || exit 1
 
 export CCACHE_TEMPDIR=/tmp
@@ -14,6 +14,7 @@ ccache -M 2.0G
 ccache -z
 
 cmake -GNinja \
+ -DCMAKE_BUILD_TYPE=Debug \
  -DUSE_CCACHE=ON \
  -DWITH_QUICK=OFF \
  -DWITH_3D=OFF \

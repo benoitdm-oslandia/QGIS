@@ -849,6 +849,28 @@ class TestQgsMapBoxGlStyleConverter(unittest.TestCase):
                          'CASE WHEN @vector_tile_zoom >= 10 AND @vector_tile_zoom <= 11 THEN scale_exp(@vector_tile_zoom,10,11,1.5,2,1.2) WHEN @vector_tile_zoom > 11 AND @vector_tile_zoom <= 12 THEN scale_exp(@vector_tile_zoom,11,12,2,3,1.2) WHEN @vector_tile_zoom > 12 AND @vector_tile_zoom <= 13 THEN scale_exp(@vector_tile_zoom,12,13,3,5,1.2) WHEN @vector_tile_zoom > 13 AND @vector_tile_zoom <= 14 THEN scale_exp(@vector_tile_zoom,13,14,5,6,1.2) WHEN @vector_tile_zoom > 14 AND @vector_tile_zoom <= 16 THEN scale_exp(@vector_tile_zoom,14,16,6,10,1.2) WHEN @vector_tile_zoom > 16 AND @vector_tile_zoom <= 17 THEN scale_exp(@vector_tile_zoom,16,17,10,12,1.2) WHEN @vector_tile_zoom > 17 THEN 12 END')
         self.assertFalse(dd_properties.property(QgsSymbolLayer.PropertyCustomDash).isActive())
 
+    def testParseLineNoWidth(self):
+        conversion_context = QgsMapBoxGlStyleConversionContext()
+        style = {
+            "id": "water line (intermittent)/river",
+            "type": "line",
+            "source": "esri",
+            "source-layer": "water line (intermittent)",
+            "paint": {
+                "line-color": "#aad3df",
+            }
+        }
+        has_renderer, rendererStyle = QgsMapBoxGlStyleConverter.parseLineLayer(style, conversion_context)
+        self.assertTrue(has_renderer)
+        self.assertEqual(rendererStyle.geometryType(), QgsWkbTypes.LineGeometry)
+        self.assertEqual(rendererStyle.symbol()[0].width(), 1.0)
+
+        conversion_context.setPixelSizeConversionFactor(0.5)
+        has_renderer, rendererStyle = QgsMapBoxGlStyleConverter.parseLineLayer(style, conversion_context)
+        self.assertTrue(has_renderer)
+        self.assertEqual(rendererStyle.geometryType(), QgsWkbTypes.LineGeometry)
+        self.assertEqual(rendererStyle.symbol()[0].width(), 0.5)
+
     def testLinePattern(self):
         """ Test line-pattern property """
         context = QgsMapBoxGlStyleConversionContext()

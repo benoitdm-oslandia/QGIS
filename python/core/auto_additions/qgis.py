@@ -2257,6 +2257,15 @@ Qgis.GraduatedMethod.__doc__ = 'Methods for modifying symbols by range in a grad
 # --
 Qgis.GraduatedMethod.baseClass = Qgis
 # monkey patching scoped based enum
+Qgis.PlotAxisSuffixPlacement.NoLabels.__doc__ = "Do not place suffixes"
+Qgis.PlotAxisSuffixPlacement.EveryLabel.__doc__ = "Place suffix after every value label"
+Qgis.PlotAxisSuffixPlacement.FirstLabel.__doc__ = "Place suffix after the first label value only"
+Qgis.PlotAxisSuffixPlacement.LastLabel.__doc__ = "Place suffix after the last label value only"
+Qgis.PlotAxisSuffixPlacement.FirstAndLastLabels.__doc__ = "Place suffix after the first and last label values only"
+Qgis.PlotAxisSuffixPlacement.__doc__ = 'Placement options for suffixes in the labels for axis of plots.\n\n.. versionadded:: 3.32\n\n' + '* ``NoLabels``: ' + Qgis.PlotAxisSuffixPlacement.NoLabels.__doc__ + '\n' + '* ``EveryLabel``: ' + Qgis.PlotAxisSuffixPlacement.EveryLabel.__doc__ + '\n' + '* ``FirstLabel``: ' + Qgis.PlotAxisSuffixPlacement.FirstLabel.__doc__ + '\n' + '* ``LastLabel``: ' + Qgis.PlotAxisSuffixPlacement.LastLabel.__doc__ + '\n' + '* ``FirstAndLastLabels``: ' + Qgis.PlotAxisSuffixPlacement.FirstAndLastLabels.__doc__
+# --
+Qgis.PlotAxisSuffixPlacement.baseClass = Qgis
+# monkey patching scoped based enum
 Qgis.DpiMode.All.__doc__ = "All"
 Qgis.DpiMode.Off.__doc__ = "Off"
 Qgis.DpiMode.QGIS.__doc__ = "QGIS"
@@ -2477,7 +2486,8 @@ Qgis.VerticalAxisInversion.baseClass = Qgis
 # monkey patching scoped based enum
 Qgis.ProfileSurfaceSymbology.Line.__doc__ = "The elevation surface will be rendered using a line symbol"
 Qgis.ProfileSurfaceSymbology.FillBelow.__doc__ = "The elevation surface will be rendered using a fill symbol below the surface level"
-Qgis.ProfileSurfaceSymbology.__doc__ = 'Surface symbology type for elevation profile plots.\n\n.. versionadded:: 3.26\n\n' + '* ``Line``: ' + Qgis.ProfileSurfaceSymbology.Line.__doc__ + '\n' + '* ``FillBelow``: ' + Qgis.ProfileSurfaceSymbology.FillBelow.__doc__
+Qgis.ProfileSurfaceSymbology.FillAbove.__doc__ = "The elevation surface will be rendered using a fill symbol above the surface level (since QGIS 3.32)"
+Qgis.ProfileSurfaceSymbology.__doc__ = 'Surface symbology type for elevation profile plots.\n\n.. versionadded:: 3.26\n\n' + '* ``Line``: ' + Qgis.ProfileSurfaceSymbology.Line.__doc__ + '\n' + '* ``FillBelow``: ' + Qgis.ProfileSurfaceSymbology.FillBelow.__doc__ + '\n' + '* ``FillAbove``: ' + Qgis.ProfileSurfaceSymbology.FillAbove.__doc__
 # --
 Qgis.ProfileSurfaceSymbology.baseClass = Qgis
 # monkey patching scoped based enum
@@ -2495,6 +2505,13 @@ Qgis.ProfileGeneratorFlag.__doc__ = 'Flags that control the way the :py:class:`Q
 Qgis.ProfileGeneratorFlag.baseClass = Qgis
 Qgis.ProfileGeneratorFlags.baseClass = Qgis
 ProfileGeneratorFlags = Qgis  # dirty hack since SIP seems to introduce the flags in module
+# monkey patching scoped based enum
+Qgis.ProfileExportType.Features3D.__doc__ = "Export profiles as 3D features, with elevation values stored in exported geometry Z values"
+Qgis.ProfileExportType.Profile2D.__doc__ = "Export profiles as 2D profile lines, with elevation stored in exported geometry Y dimension and distance in X dimension"
+Qgis.ProfileExportType.DistanceVsElevationTable.__doc__ = "Export profiles as a table of sampled distance vs elevation values"
+Qgis.ProfileExportType.__doc__ = 'Types of export for elevation profiles.\n\n.. versionadded:: 3.32\n\n' + '* ``Features3D``: ' + Qgis.ProfileExportType.Features3D.__doc__ + '\n' + '* ``Profile2D``: ' + Qgis.ProfileExportType.Profile2D.__doc__ + '\n' + '* ``DistanceVsElevationTable``: ' + Qgis.ProfileExportType.DistanceVsElevationTable.__doc__
+# --
+Qgis.ProfileExportType.baseClass = Qgis
 QgsPointCloudRenderer.PointSymbol = Qgis.PointCloudSymbol
 # monkey patching scoped based enum
 QgsPointCloudRenderer.Square = Qgis.PointCloudSymbol.Square

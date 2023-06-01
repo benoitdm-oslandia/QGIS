@@ -100,6 +100,11 @@ QList<QgsAnnotationLayer *> QgsProcessingUtils::compatibleAnnotationLayers( QgsP
   return res;
 }
 
+QList<QgsVectorTileLayer *> QgsProcessingUtils::compatibleVectorTileLayers( QgsProject *project, bool sort )
+{
+  return compatibleMapLayers< QgsVectorTileLayer >( project, sort );
+}
+
 template<typename T> QList<T *> QgsProcessingUtils::compatibleMapLayers( QgsProject *project, bool sort )
 {
   if ( !project )
@@ -151,6 +156,10 @@ QList<QgsMapLayer *> QgsProcessingUtils::compatibleLayers( QgsProject *project, 
     layers << al;
   layers << project->mainAnnotationLayer();
 
+  const auto vectorTileLayers = compatibleMapLayers< QgsVectorTileLayer >( project, false );
+  for ( QgsVectorTileLayer *vtl : vectorTileLayers )
+    layers << vtl;
+
   const auto pluginLayers = compatibleMapLayers< QgsPluginLayer >( project, false );
   for ( QgsPluginLayer *pl : pluginLayers )
     layers << pl;
@@ -172,7 +181,7 @@ QString QgsProcessingUtils::encodeProviderKeyAndUri( const QString &providerKey,
 
 bool QgsProcessingUtils::decodeProviderKeyAndUri( const QString &string, QString &providerKey, QString &uri )
 {
-  QRegularExpression re( QStringLiteral( "^(\\w+?):\\/\\/(.+)$" ) );
+  const thread_local QRegularExpression re( QStringLiteral( "^(\\w+?):\\/\\/(.+)$" ) );
   const QRegularExpressionMatch match = re.match( string );
   if ( !match.hasMatch() )
     return false;
@@ -235,6 +244,9 @@ QgsMapLayer *QgsProcessingUtils::mapLayerFromStore( const QString &string, QgsMa
 
       case LayerHint::Annotation:
         return l->type() == Qgis::LayerType::Annotation;
+
+      case LayerHint::VectorTile:
+        return l->type() == Qgis::LayerType::VectorTile;
     }
     return true;
   };
@@ -376,6 +388,20 @@ QgsMapLayer *QgsProcessingUtils::loadMapLayerFromString( const QString &string, 
     if ( pointCloudLayer && pointCloudLayer->isValid() )
     {
       return pointCloudLayer.release();
+    }
+  }
+  if ( typeHint == LayerHint::UnknownType || typeHint == LayerHint::VectorTile )
+  {
+    QgsDataSourceUri dsUri;
+    dsUri.setParam( "type", "mbtiles" );
+    dsUri.setParam( "url", uri );
+
+    std::unique_ptr< QgsVectorTileLayer > tileLayer;
+    tileLayer = std::make_unique< QgsVectorTileLayer >( dsUri.encodedUri(), name );
+
+    if ( tileLayer->isValid() )
+    {
+      return tileLayer.release();
     }
   }
   return nullptr;
@@ -735,7 +761,7 @@ void QgsProcessingUtils::parseDestinationString( QString &destination, QString &
 
   if ( !matched )
   {
-    QRegularExpression splitRx( QStringLiteral( "^(.{3,}?):(.*)$" ) );
+    const thread_local QRegularExpression splitRx( QStringLiteral( "^(.{3,}?):(.*)$" ) );
     QRegularExpressionMatch match = splitRx.match( destination );
     if ( match.hasMatch() )
     {
@@ -780,7 +806,7 @@ void QgsProcessingUtils::parseDestinationString( QString &destination, QString &
     useWriter = true;
     providerKey = QStringLiteral( "ogr" );
 
-    QRegularExpression splitRx( QStringLiteral( "^(.*)\\.(.*?)$" ) );
+    const thread_local QRegularExpression splitRx( QStringLiteral( "^(.*)\\.(.*?)$" ) );
     QRegularExpressionMatch match = splitRx.match( destination );
     if ( match.hasMatch() )
     {
@@ -1384,6 +1410,11 @@ QString QgsProcessingUtils::defaultRasterExtension()
 QString QgsProcessingUtils::defaultPointCloudExtension()
 {
   return QStringLiteral( "las" );
+}
+
+QString QgsProcessingUtils::defaultVectorTileExtension()
+{
+  return QStringLiteral( "mbtiles" );
 }
 
 QVariantMap QgsProcessingUtils::removePointerValuesFromMap( const QVariantMap &map )

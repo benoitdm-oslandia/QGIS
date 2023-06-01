@@ -36,9 +36,14 @@
 #include "qgsmapmouseevent.h"
 #include "qgsmeshlayer.h"
 #include "qgsunittypes.h"
-#include "qgslocaldefaultsettings.h"
+#include "qgssettingsentryimpl.h"
+#include "qgssettingstree.h"
 
 #include <QActionGroup>
+
+
+const QgsSettingsEntryBool *QgsAdvancedDigitizingDockWidget::settingsCadSnappingPriorityPrioritizeFeature = new QgsSettingsEntryBool( QStringLiteral( "cad-snapping-prioritize-feature" ), QgsSettingsTree::sTreeDigitizing, false, tr( "Determines if snapping to features has piority over snapping to common angles." ) ) ;
+
 
 QgsAdvancedDigitizingDockWidget::QgsAdvancedDigitizingDockWidget( QgsMapCanvas *canvas, QWidget *parent )
   : QgsDockWidget( parent )
@@ -144,6 +149,29 @@ QgsAdvancedDigitizingDockWidget::QgsAdvancedDigitizingDockWidget( QgsMapCanvas *
   {
     commonAngles << QPair<double, QString>( *it, formatCommonAngleSnapping( *it ) );
   }
+
+  {
+    QMenu *snappingPriorityMenu = new QMenu( tr( "Snapping Priority" ), mCommonAngleActionsMenu );
+    QActionGroup *snappingPriorityActionGroup = new QActionGroup( snappingPriorityMenu );
+    QAction *featuresAction = new QAction( tr( "Prioritize Snapping to Features" ), snappingPriorityActionGroup );
+    featuresAction->setCheckable( true );
+    QAction *anglesAction = new QAction( tr( "Prioritize Snapping to Angle" ), snappingPriorityActionGroup );
+    anglesAction->setCheckable( true );
+    snappingPriorityActionGroup->addAction( featuresAction );
+    snappingPriorityActionGroup->addAction( anglesAction );
+    snappingPriorityMenu->addAction( anglesAction );
+    snappingPriorityMenu->addAction( featuresAction );
+    connect( anglesAction, &QAction::changed, this, [ = ]
+    {
+      mSnappingPrioritizeFeatures = featuresAction->isChecked();
+      settingsCadSnappingPriorityPrioritizeFeature->setValue( featuresAction->isChecked() );
+    } );
+    featuresAction->setChecked( settingsCadSnappingPriorityPrioritizeFeature->value( ) );
+    anglesAction->setChecked( ! featuresAction->isChecked() );
+    mCommonAngleActionsMenu->addMenu( snappingPriorityMenu );
+  }
+
+
   for ( QList< QPair<double, QString > >::const_iterator it = commonAngles.constBegin(); it != commonAngles.constEnd(); ++it )
   {
     QAction *action = new QAction( it->second, mCommonAngleActionsMenu );
@@ -280,7 +308,8 @@ QgsAdvancedDigitizingDockWidget::QgsAdvancedDigitizingDockWidget( QgsMapCanvas *
       mFloater->setItemVisibility( QgsAdvancedDigitizingFloater::FloaterItem::XCoordinate, checked );
       mFloater->setItemVisibility( QgsAdvancedDigitizingFloater::FloaterItem::YCoordinate, checked );
     } );
-    action->setChecked( QgsSettings().value( QStringLiteral( "/Cad/XYShowInFloater" ), true ).toBool() );
+    // There is no separate menu option for X and Y so let's check for X only.
+    action->setChecked( QgsSettings().value( QStringLiteral( "/Cad/XCoordinateShowInFloater" ), true ).toBool() );
   }
 
   {
@@ -291,7 +320,7 @@ QgsAdvancedDigitizingDockWidget::QgsAdvancedDigitizingDockWidget( QgsMapCanvas *
     {
       mFloater->setItemVisibility( QgsAdvancedDigitizingFloater::FloaterItem::ZCoordinate, checked );
     } );
-    action->setChecked( QgsSettings().value( QStringLiteral( "/Cad/ZShowInFloater" ), true ).toBool() );
+    action->setChecked( QgsSettings().value( QStringLiteral( "/Cad/ZCoordinateShowInFloater" ), true ).toBool() );
   }
 
   {
@@ -302,7 +331,7 @@ QgsAdvancedDigitizingDockWidget::QgsAdvancedDigitizingDockWidget( QgsMapCanvas *
     {
       mFloater->setItemVisibility( QgsAdvancedDigitizingFloater::FloaterItem::MCoordinate, checked );
     } );
-    action->setChecked( QgsSettings().value( QStringLiteral( "/Cad/MShowInFloater" ), true ).toBool() );
+    action->setChecked( QgsSettings().value( QStringLiteral( "/Cad/MCoordinateShowInFloater" ), true ).toBool() );
   }
 
   {
@@ -313,7 +342,7 @@ QgsAdvancedDigitizingDockWidget::QgsAdvancedDigitizingDockWidget( QgsMapCanvas *
     {
       mFloater->setItemVisibility( QgsAdvancedDigitizingFloater::FloaterItem::CommonAngleSnapping, checked );
     } );
-    action->setChecked( QgsSettings().value( QStringLiteral( "/Cad/CommonAngleShowInFloater" ), false ).toBool() );
+    action->setChecked( QgsSettings().value( QStringLiteral( "/Cad/CommonAngleSnappingShowInFloater" ), false ).toBool() );
   }
 
   {
@@ -1180,6 +1209,7 @@ bool QgsAdvancedDigitizingDockWidget::applyConstraints( QgsMapMouseEvent *e )
   context.mConstraint = _constraint( mMConstraint.get() );
   context.distanceConstraint = _constraint( mDistanceConstraint.get() );
   context.angleConstraint = _constraint( mAngleConstraint.get() );
+  context.snappingToFeaturesOverridesCommonAngle = mSnappingPrioritizeFeatures;
 
   context.lineExtensionConstraint = _constraint( mLineExtensionConstraint.get() );
   context.xyVertexConstraint = _constraint( mXyVertexConstraint.get() );

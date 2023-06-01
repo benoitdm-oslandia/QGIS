@@ -987,6 +987,8 @@ QString QgsProcessingParameters::parameterAsOutputLayer( const QgsProcessingPara
       layerTypeHint = QgsProcessingUtils::LayerHint::Raster;
     else if ( definition && definition->type() == QgsProcessingParameterPointCloudDestination::typeName() )
       layerTypeHint = QgsProcessingUtils::LayerHint::PointCloud;
+    else if ( definition && definition->type() == QgsProcessingParameterVectorTileDestination::typeName() )
+      layerTypeHint = QgsProcessingUtils::LayerHint::VectorTile;
 
     context.addLayerToLoadOnCompletion( dest, QgsProcessingContext::LayerDetails( destName, destinationProject, outputName, layerTypeHint ) );
   }
@@ -1138,7 +1140,7 @@ QgsRectangle QgsProcessingParameters::parameterAsExtent( const QgsProcessingPara
   if ( rectText.isEmpty() && !layer )
     return QgsRectangle();
 
-  const QRegularExpression rx( QStringLiteral( "^(.*?)\\s*,\\s*(.*?),\\s*(.*?),\\s*(.*?)\\s*(?:\\[(.*)\\])?\\s*$" ) );
+  const thread_local QRegularExpression rx( QStringLiteral( "^(.*?)\\s*,\\s*(.*?),\\s*(.*?),\\s*(.*?)\\s*(?:\\[(.*)\\])?\\s*$" ) );
   const QRegularExpressionMatch match = rx.match( rectText );
   if ( match.hasMatch() )
   {
@@ -1249,7 +1251,7 @@ QgsGeometry QgsProcessingParameters::parameterAsExtentGeometry( const QgsProcess
 
   if ( !rectText.isEmpty() )
   {
-    const QRegularExpression rx( QStringLiteral( "^(.*?)\\s*,\\s*(.*?),\\s*(.*?),\\s*(.*?)\\s*(?:\\[(.*)\\])?\\s*$" ) );
+    const thread_local QRegularExpression rx( QStringLiteral( "^(.*?)\\s*,\\s*(.*?),\\s*(.*?),\\s*(.*?)\\s*(?:\\[(.*)\\])?\\s*$" ) );
     const QRegularExpressionMatch match = rx.match( rectText );
     if ( match.hasMatch() )
     {
@@ -1356,7 +1358,7 @@ QgsCoordinateReferenceSystem QgsProcessingParameters::parameterAsExtentCrs( cons
   else
     valueAsString = val.toString();
 
-  const QRegularExpression rx( QStringLiteral( "^(.*?)\\s*,\\s*(.*?),\\s*(.*?),\\s*(.*?)\\s*(?:\\[(.*)\\])?\\s*$" ) );
+  const thread_local QRegularExpression rx( QStringLiteral( "^(.*?)\\s*,\\s*(.*?),\\s*(.*?),\\s*(.*?)\\s*(?:\\[(.*)\\])?\\s*$" ) );
 
   const QRegularExpressionMatch match = rx.match( valueAsString );
   if ( match.hasMatch() )
@@ -1445,7 +1447,7 @@ QgsPointXY QgsProcessingParameters::parameterAsPoint( const QgsProcessingParamet
   if ( pointText.isEmpty() )
     return QgsPointXY();
 
-  const QRegularExpression rx( QStringLiteral( "^\\s*\\(?\\s*(.*?)\\s*,\\s*(.*?)\\s*(?:\\[(.*)\\])?\\s*\\)?\\s*$" ) );
+  const thread_local QRegularExpression rx( QStringLiteral( "^\\s*\\(?\\s*(.*?)\\s*,\\s*(.*?)\\s*(?:\\[(.*)\\])?\\s*\\)?\\s*$" ) );
 
   const QString valueAsString = parameterAsString( definition, value, context );
   const QRegularExpressionMatch match = rx.match( valueAsString );
@@ -1497,7 +1499,7 @@ QgsCoordinateReferenceSystem QgsProcessingParameters::parameterAsPointCrs( const
     }
   }
 
-  const QRegularExpression rx( QStringLiteral( "^\\s*\\(?\\s*(.*?)\\s*,\\s*(.*?)\\s*(?:\\[(.*)\\])?\\s*\\)?\\s*$" ) );
+  const thread_local QRegularExpression rx( QStringLiteral( "^\\s*\\(?\\s*(.*?)\\s*,\\s*(.*?)\\s*(?:\\[(.*)\\])?\\s*\\)?\\s*$" ) );
 
   const QString valueAsString = parameterAsString( definition, value, context );
   const QRegularExpressionMatch match = rx.match( valueAsString );
@@ -1606,7 +1608,7 @@ QgsGeometry QgsProcessingParameters::parameterAsGeometry( const QgsProcessingPar
   if ( valueAsString.isEmpty() )
     return QgsGeometry();
 
-  const QRegularExpression rx( QStringLiteral( "^\\s*(?:CRS=(.*);)?(.*?)$" ) );
+  const thread_local QRegularExpression rx( QStringLiteral( "^\\s*(?:CRS=(.*);)?(.*?)$" ) );
 
   const QRegularExpressionMatch match = rx.match( valueAsString );
   if ( match.hasMatch() )
@@ -2275,6 +2277,8 @@ QgsProcessingParameterDefinition *QgsProcessingParameters::parameterFromVariantM
     def.reset( new QgsProcessingParameterAnnotationLayer( name ) );
   else if ( type == QgsProcessingParameterPointCloudAttribute::typeName() )
     def.reset( new QgsProcessingParameterPointCloudAttribute( name ) );
+  else if ( type == QgsProcessingParameterVectorTileDestination::typeName() )
+    def.reset( new QgsProcessingParameterVectorTileDestination( name ) );
   else
   {
     QgsProcessingParameterType *paramType = QgsApplication::processingRegistry()->parameterType( type );
@@ -2393,13 +2397,15 @@ QgsProcessingParameterDefinition *QgsProcessingParameters::parameterFromScriptCo
     return QgsProcessingParameterAnnotationLayer::fromScriptCode( name, description, isOptional, definition );
   else if ( type == QLatin1String( "attribute" ) )
     return QgsProcessingParameterPointCloudAttribute::fromScriptCode( name, description, isOptional, definition );
+  else if ( type == QLatin1String( "vectortiledestination" ) )
+    return QgsProcessingParameterVectorTileDestination::fromScriptCode( name, description, isOptional, definition );
 
   return nullptr;
 }
 
 bool QgsProcessingParameters::parseScriptCodeParameterOptions( const QString &code, bool &isOptional, QString &name, QString &type, QString &definition )
 {
-  const QRegularExpression re( QStringLiteral( "(?:#*)(.*?)=\\s*(.*)" ) );
+  const thread_local QRegularExpression re( QStringLiteral( "(?:#*)(.*?)=\\s*(.*)" ) );
   QRegularExpressionMatch m = re.match( code );
   if ( !m.hasMatch() )
     return false;
@@ -2418,7 +2424,7 @@ bool QgsProcessingParameters::parseScriptCodeParameterOptions( const QString &co
 
   tokens = tokens.trimmed();
 
-  const QRegularExpression re2( QStringLiteral( "(.*?)\\s+(.*)" ) );
+  const thread_local QRegularExpression re2( QStringLiteral( "(.*?)\\s+(.*)" ) );
   m = re2.match( tokens );
   if ( !m.hasMatch() )
   {
@@ -2850,7 +2856,7 @@ QString QgsProcessingParameterDefinition::valueAsStringPrivate( const QVariant &
     return value.toString();
 
   // unhandled type
-  QgsDebugMsg( QStringLiteral( "unsupported variant type %1" ).arg( QMetaType::typeName( value.userType() ) ) );
+  QgsDebugError( QStringLiteral( "unsupported variant type %1" ).arg( QMetaType::typeName( value.userType() ) ) );
   ok = false;
   return value.toString();
 }
@@ -3419,7 +3425,7 @@ bool QgsProcessingParameterExtent::checkValueIsAcceptable( const QVariant &input
     return true;
   }
 
-  const QRegularExpression rx( QStringLiteral( "^(.*?)\\s*,\\s*(.*?)\\s*,\\s*(.*?)\\s*,\\s*(.*?)\\s*(?:\\[(.*)\\])?\\s*$" ) );
+  const thread_local QRegularExpression rx( QStringLiteral( "^(.*?)\\s*,\\s*(.*?)\\s*,\\s*(.*?)\\s*,\\s*(.*?)\\s*(?:\\[(.*)\\])?\\s*$" ) );
   const QRegularExpressionMatch match = rx.match( input.toString() );
   if ( match.hasMatch() )
   {
@@ -3537,7 +3543,7 @@ bool QgsProcessingParameterPoint::checkValueIsAcceptable( const QVariant &input,
       return mFlags & FlagOptional;
   }
 
-  const QRegularExpression rx( QStringLiteral( "^\\s*\\(?\\s*(.*?)\\s*,\\s*(.*?)\\s*(?:\\[(.*)\\])?\\s*\\)?\\s*$" ) );
+  const thread_local QRegularExpression rx( QStringLiteral( "^\\s*\\(?\\s*(.*?)\\s*,\\s*(.*?)\\s*(?:\\[(.*)\\])?\\s*\\)?\\s*$" ) );
 
   const QRegularExpressionMatch match = rx.match( input.toString() );
   if ( match.hasMatch() )
@@ -3656,7 +3662,7 @@ bool QgsProcessingParameterGeometry::checkValueIsAcceptable( const QVariant &inp
   }
 
   // Match against EWKT
-  const QRegularExpression rx( QStringLiteral( "^\\s*(?:CRS=(.*);)?(.*?)$" ) );
+  const thread_local QRegularExpression rx( QStringLiteral( "^\\s*(?:CRS=(.*);)?(.*?)$" ) );
 
   const QRegularExpressionMatch match = rx.match( input.toString() );
   if ( match.hasMatch() )
@@ -4375,6 +4381,7 @@ QString QgsProcessingParameterMultipleLayers::createFileFilter() const
     case QgsProcessing::TypeMapLayer:
     case QgsProcessing::TypePlugin:
     case QgsProcessing::TypeAnnotation:
+    case QgsProcessing::TypeVectorTile:
       return createAllMapLayerFileFilter();
   }
   return QString();
@@ -4421,7 +4428,7 @@ QgsProcessingParameterMultipleLayers *QgsProcessingParameterMultipleLayers::from
 {
   QString type = definition;
   QString defaultVal;
-  const QRegularExpression re( QStringLiteral( "(.*?)\\s+(.*)" ) );
+  const thread_local QRegularExpression re( QStringLiteral( "(.*?)\\s+(.*)" ) );
   const QRegularExpressionMatch m = re.match( definition );
   if ( m.hasMatch() )
   {
@@ -5146,7 +5153,7 @@ QgsProcessingParameterEnum *QgsProcessingParameterEnum::fromScriptCode( const QS
     def = def.mid( 7 );
   }
 
-  const QRegularExpression re( QStringLiteral( "(.*)\\s+(.*?)$" ) );
+  const thread_local QRegularExpression re( QStringLiteral( "(.*)\\s+(.*?)$" ) );
   const QRegularExpressionMatch m = re.match( def );
   QString values = def;
   if ( m.hasMatch() )
@@ -5369,11 +5376,11 @@ QString QgsProcessingParameterExpression::asPythonString( const QgsProcessing::P
 
       if ( mExpressionType == Qgis::ExpressionType::PointCloud )
       {
-        code += QStringLiteral( ", type=Qgis.ExpressionType.PointCloud)" );
+        code += QLatin1String( ", type=Qgis.ExpressionType.PointCloud)" );
       }
       else
       {
-        code += QStringLiteral( ")" );
+        code += QLatin1Char( ')' );
       }
       return code;
     }
@@ -5928,7 +5935,7 @@ QgsProcessingParameterField *QgsProcessingParameterField::fromScriptCode( const 
     def = def.mid( 21 ).trimmed();
   }
 
-  const QRegularExpression re( QStringLiteral( "(.*?)\\s+(.*)$" ) );
+  const thread_local QRegularExpression re( QStringLiteral( "(.*?)\\s+(.*)$" ) );
   const QRegularExpressionMatch m = re.match( def );
   if ( m.hasMatch() )
   {
@@ -6433,6 +6440,7 @@ bool QgsProcessingParameterFeatureSink::hasGeometry() const
     case QgsProcessing::TypeVectorPoint:
     case QgsProcessing::TypeVectorLine:
     case QgsProcessing::TypeVectorPolygon:
+    case QgsProcessing::TypeVectorTile:
       return true;
 
     case QgsProcessing::TypeRaster:
@@ -6726,7 +6734,7 @@ QString QgsProcessingParameterFileDestination::defaultFileExtension() const
     return QStringLiteral( "file" );
 
   // get first extension from filter
-  const QRegularExpression rx( QStringLiteral( ".*?\\(\\*\\.([a-zA-Z0-9._]+).*" ) );
+  const thread_local QRegularExpression rx( QStringLiteral( ".*?\\(\\*\\.([a-zA-Z0-9._]+).*" ) );
   const QRegularExpressionMatch match = rx.match( mFileFilter );
   if ( !match.hasMatch() )
     return QStringLiteral( "file" );
@@ -6903,7 +6911,7 @@ QString QgsProcessingDestinationParameter::generateTemporaryDestination( const Q
 {
   // sanitize name to avoid multiple . in the filename. E.g. when name() contain
   // backend command name having a "." inside as in case of grass commands
-  const QRegularExpression rx( QStringLiteral( "[.]" ) );
+  const thread_local QRegularExpression rx( QStringLiteral( "[.]" ) );
   QString sanitizedName = name();
   sanitizedName.replace( rx, QStringLiteral( "_" ) );
 
@@ -7134,6 +7142,7 @@ bool QgsProcessingParameterVectorDestination::hasGeometry() const
     case QgsProcessing::TypeVectorPoint:
     case QgsProcessing::TypeVectorLine:
     case QgsProcessing::TypeVectorPolygon:
+    case QgsProcessing::TypeVectorTile:
       return true;
 
     case QgsProcessing::TypeRaster:
@@ -7358,7 +7367,7 @@ QgsProcessingParameterBand *QgsProcessingParameterBand::fromScriptCode( const QS
     def = def.mid( 8 ).trimmed();
   }
 
-  const QRegularExpression re( QStringLiteral( "(.*?)\\s+(.*)$" ) );
+  const thread_local QRegularExpression re( QStringLiteral( "(.*?)\\s+(.*)$" ) );
   const QRegularExpressionMatch m = re.match( def );
   if ( m.hasMatch() )
   {
@@ -7725,7 +7734,7 @@ QgsProcessingParameterLayoutItem *QgsProcessingParameterLayoutItem::fromScriptCo
   QString parent;
   QString def = definition;
   int itemType = -1;
-  const QRegularExpression re( QStringLiteral( "(\\d+)?\\s*(.*?)\\s+(.*)$" ) );
+  const thread_local QRegularExpression re( QStringLiteral( "(\\d+)?\\s*(.*?)\\s+(.*)$" ) );
   const QRegularExpressionMatch m = re.match( def );
   if ( m.hasMatch() )
   {
@@ -8581,7 +8590,7 @@ QgsProcessingParameterDatabaseSchema *QgsProcessingParameterDatabaseSchema::from
   QString parent;
   QString def = definition;
 
-  const QRegularExpression re( QStringLiteral( "(.*?)\\s+(.*)$" ) );
+  const thread_local QRegularExpression re( QStringLiteral( "(.*?)\\s+(.*)$" ) );
   const QRegularExpressionMatch m = re.match( def );
   if ( m.hasMatch() )
   {
@@ -8737,7 +8746,7 @@ QgsProcessingParameterDatabaseTable *QgsProcessingParameterDatabaseTable::fromSc
   QString schema;
   QString def = definition;
 
-  const QRegularExpression re( QStringLiteral( "(.*?)\\s+(.*+)\\b\\s*(.*)$" ) );
+  const thread_local QRegularExpression re( QStringLiteral( "(.*?)\\s+(.*+)\\b\\s*(.*)$" ) );
   const QRegularExpressionMatch m = re.match( def );
   if ( m.hasMatch() )
   {
@@ -9049,7 +9058,7 @@ QStringList QgsProcessingParameterPointCloudDestination::supportedOutputPointClo
   else
   {
     QString ext = QgsProcessingUtils::defaultPointCloudExtension();
-    return QStringList() << QObject::tr( "%1 files (*.%2)" ).arg( ext.toUpper(), ext.toLower() );
+    return QStringList() << ext;
   }
 }
 
@@ -9263,7 +9272,7 @@ QgsProcessingParameterPointCloudAttribute *QgsProcessingParameterPointCloudAttri
     def = def.mid( 25 ).trimmed();
   }
 
-  const QRegularExpression re( QStringLiteral( "(.*?)\\s+(.*)$" ) );
+  const thread_local QRegularExpression re( QStringLiteral( "(.*?)\\s+(.*)$" ) );
   const QRegularExpressionMatch m = re.match( def );
   if ( m.hasMatch() )
   {
@@ -9277,4 +9286,108 @@ QgsProcessingParameterPointCloudAttribute *QgsProcessingParameterPointCloudAttri
   }
 
   return new QgsProcessingParameterPointCloudAttribute( name, description, def.isEmpty() ? QVariant() : def, parent, allowMultiple, isOptional, defaultToAllAttributes );
+}
+
+//
+// QgsProcessingParameterVectorTileDestination
+//
+
+QgsProcessingParameterVectorTileDestination::QgsProcessingParameterVectorTileDestination( const QString &name, const QString &description, const QVariant &defaultValue, bool optional, bool createByDefault )
+  : QgsProcessingDestinationParameter( name, description, defaultValue, optional, createByDefault )
+{
+}
+
+QgsProcessingParameterDefinition *QgsProcessingParameterVectorTileDestination::clone() const
+{
+  return new QgsProcessingParameterVectorTileDestination( *this );
+}
+
+bool QgsProcessingParameterVectorTileDestination::checkValueIsAcceptable( const QVariant &input, QgsProcessingContext * ) const
+{
+  QVariant var = input;
+  if ( !var.isValid() )
+    return mFlags & FlagOptional;
+
+  if ( var.userType() == QMetaType::type( "QgsProcessingOutputLayerDefinition" ) )
+  {
+    const QgsProcessingOutputLayerDefinition fromVar = qvariant_cast<QgsProcessingOutputLayerDefinition>( var );
+    var = fromVar.sink;
+  }
+
+  if ( var.userType() == QMetaType::type( "QgsProperty" ) )
+  {
+    const QgsProperty p = var.value< QgsProperty >();
+    if ( p.propertyType() == QgsProperty::StaticProperty )
+    {
+      var = p.staticValue();
+    }
+    else
+    {
+      return true;
+    }
+  }
+
+  if ( var.type() != QVariant::String )
+    return false;
+
+  if ( var.toString().isEmpty() )
+    return mFlags & FlagOptional;
+
+  return true;
+}
+
+QString QgsProcessingParameterVectorTileDestination::valueAsPythonString( const QVariant &value, QgsProcessingContext & ) const
+{
+  if ( !value.isValid() )
+    return QStringLiteral( "None" );
+
+  if ( value.userType() == QMetaType::type( "QgsProperty" ) )
+    return QStringLiteral( "QgsProperty.fromExpression('%1')" ).arg( value.value< QgsProperty >().asExpression() );
+
+  if ( value.userType() == QMetaType::type( "QgsProcessingOutputLayerDefinition" ) )
+  {
+    const QgsProcessingOutputLayerDefinition fromVar = qvariant_cast<QgsProcessingOutputLayerDefinition>( value );
+    if ( fromVar.sink.propertyType() == QgsProperty::StaticProperty )
+    {
+      return QgsProcessingUtils::stringToPythonLiteral( fromVar.sink.staticValue().toString() );
+    }
+    else
+    {
+      return QStringLiteral( "QgsProperty.fromExpression('%1')" ).arg( fromVar.sink.asExpression() );
+    }
+  }
+
+  return QgsProcessingUtils::stringToPythonLiteral( value.toString() );
+}
+
+QgsProcessingOutputDefinition *QgsProcessingParameterVectorTileDestination::toOutputDefinition() const
+{
+  return new QgsProcessingOutputVectorTileLayer( name(), description() );
+}
+
+QString QgsProcessingParameterVectorTileDestination::defaultFileExtension() const
+{
+  return QgsProcessingUtils::defaultVectorTileExtension();
+}
+
+QString QgsProcessingParameterVectorTileDestination::createFileFilter() const
+{
+  const QStringList exts = supportedOutputVectorTileLayerExtensions();
+  QStringList filters;
+  for ( const QString &ext : exts )
+  {
+    filters << QObject::tr( "%1 files (*.%2)" ).arg( ext.toUpper(), ext.toLower() );
+  }
+  return filters.join( QLatin1String( ";;" ) ) + QStringLiteral( ";;" ) + QObject::tr( "All files (*.*)" );
+}
+
+QStringList QgsProcessingParameterVectorTileDestination::supportedOutputVectorTileLayerExtensions() const
+{
+  QString ext = QgsProcessingUtils::defaultVectorTileExtension();
+  return QStringList() << ext;
+}
+
+QgsProcessingParameterVectorTileDestination *QgsProcessingParameterVectorTileDestination::fromScriptCode( const QString &name, const QString &description, bool isOptional, const QString &definition )
+{
+  return new QgsProcessingParameterVectorTileDestination( name, description, definition.isEmpty() ? QVariant() : definition, isOptional );
 }

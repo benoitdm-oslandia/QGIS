@@ -19,6 +19,7 @@
 #include "qgsapplication.h"
 #include "qgsfields.h"
 
+#include "qgsgdalutils.h"
 #include "qgslogger.h"
 #include "qgsmessagelog.h"
 #include "qgscoordinatereferencesystem.h"
@@ -407,14 +408,14 @@ void QgsVectorFileWriter::init( QString vectorFileName,
   mCodec = QTextCodec::codecForName( fileEncoding.toLocal8Bit().constData() );
   if ( !mCodec )
   {
-    QgsDebugMsg( "error finding QTextCodec for " + fileEncoding );
+    QgsDebugError( "error finding QTextCodec for " + fileEncoding );
 
     QgsSettings settings;
     QString enc = settings.value( QStringLiteral( "UI/encoding" ), "System" ).toString();
     mCodec = QTextCodec::codecForName( enc.toLocal8Bit().constData() );
     if ( !mCodec )
     {
-      QgsDebugMsg( "error finding QTextCodec for " + enc );
+      QgsDebugError( "error finding QTextCodec for " + enc );
       mCodec = QTextCodec::codecForLocale();
       Q_ASSERT( mCodec );
     }
@@ -871,7 +872,7 @@ void QgsVectorFileWriter::init( QString vectorFileName,
                           " precision " + QString::number( ogrPrecision ), 2 );
         if ( OGR_L_CreateField( mLayer, fld.get(), true ) != OGRERR_NONE )
         {
-          QgsDebugMsg( "error creating field " + attrField.name() );
+          QgsDebugError( "error creating field " + attrField.name() );
           mErrorMessage = QObject::tr( "Creation of field %1 failed (OGR error: %2)" )
                           .arg( attrField.name(),
                                 QString::fromUtf8( CPLGetLastErrorMsg() ) );
@@ -888,7 +889,7 @@ void QgsVectorFileWriter::init( QString vectorFileName,
 
           if ( ogrIdx < 0 )
           {
-            QgsDebugMsg( "error creating field " + attrField.name() );
+            QgsDebugError( "error creating field " + attrField.name() );
             mErrorMessage = QObject::tr( "Created field %1 not found (OGR error: %2)" )
                             .arg( attrField.name(),
                                   QString::fromUtf8( CPLGetLastErrorMsg() ) );
@@ -3190,7 +3191,7 @@ QgsVectorFileWriter::~QgsVectorFileWriter()
   {
     if ( OGRERR_NONE != OGR_L_CommitTransaction( mLayer ) )
     {
-      QgsDebugMsg( QStringLiteral( "Error while committing transaction on OGRLayer." ) );
+      QgsDebugError( QStringLiteral( "Error while committing transaction on OGRLayer." ) );
     }
   }
   mDS.reset();
@@ -3385,7 +3386,7 @@ QgsVectorFileWriter::WriterError QgsVectorFileWriter::prepareWriteAsVectorFormat
       }
       else
       {
-        QgsDebugMsg( QStringLiteral( "No such source field with index '%1' available." ).arg( attrIdx ) );
+        QgsDebugError( QStringLiteral( "No such source field with index '%1' available." ).arg( attrIdx ) );
       }
     }
   }
@@ -3771,7 +3772,7 @@ bool QgsVectorFileWriter::deleteShapeFile( const QString &fileName )
     QFile f( dir.canonicalPath() + '/' + file );
     if ( !f.remove() )
     {
-      QgsDebugMsg( QStringLiteral( "Removing file %1 failed: %2" ).arg( file, f.errorString() ) );
+      QgsDebugError( QStringLiteral( "Removing file %1 failed: %2" ).arg( file, f.errorString() ) );
       ok = false;
     }
   }
@@ -3783,6 +3784,33 @@ void QgsVectorFileWriter::setSymbologyScale( double d )
 {
   mSymbologyScale = d;
   mRenderContext.setRendererScale( mSymbologyScale );
+}
+
+QStringList multiLayerFormats()
+{
+  QStringList driverNames;
+  const QSet< QString > multiLayerExtensions = qgis::listToSet( QgsGdalUtils::multiLayerFileExtensions() );
+
+  for ( int i = 0; i < GDALGetDriverCount(); ++i )
+  {
+    GDALDriverH driver = GDALGetDriver( i );
+    if ( !driver )
+    {
+      QgsLogger::warning( "unable to get driver " + QString::number( i ) );
+      continue;
+    }
+
+    const QString driverExtensions = GDALGetMetadataItem( driver, GDAL_DMD_EXTENSIONS, "" );
+    if ( driverExtensions.isEmpty() )
+      continue;
+
+    const QSet< QString > splitExtensions = qgis::listToSet( driverExtensions.split( ' ', Qt::SkipEmptyParts ) );
+    if ( splitExtensions.intersects( multiLayerExtensions ) )
+    {
+      driverNames << OGR_Dr_GetName( driver );
+    }
+  }
+  return driverNames;
 }
 
 QList< QgsVectorFileWriter::FilterFormatDetails > QgsVectorFileWriter::supportedFiltersAndFormats( const VectorFormatOptions options )
@@ -3802,12 +3830,20 @@ QList< QgsVectorFileWriter::FilterFormatDetails > QgsVectorFileWriter::supported
   QgsApplication::registerOgrDrivers();
   int const drvCount = OGRGetDriverCount();
 
+  const QStringList multiLayerDrivers = multiLayerFormats();
+
   for ( int i = 0; i < drvCount; ++i )
   {
     OGRSFDriverH drv = OGRGetDriver( i );
     if ( drv )
     {
-      QString drvName = OGR_Dr_GetName( drv );
+      const QString drvName = OGR_Dr_GetName( drv );
+
+      if ( options & SupportsMultipleLayers )
+      {
+        if ( !multiLayerDrivers.contains( drvName ) )
+          continue;
+      }
 
       GDALDriverH gdalDriver = GDALGetDriverByName( drvName.toLocal8Bit().constData() );
       char **metadata = nullptr;
@@ -3874,7 +3910,7 @@ QStringList QgsVectorFileWriter::supportedFormatExtensions( const VectorFormatOp
   const auto formats = supportedFiltersAndFormats( options );
   QSet< QString > extensions;
 
-  const QRegularExpression rx( QStringLiteral( "\\*\\.(.*)$" ) );
+  const thread_local QRegularExpression rx( QStringLiteral( "\\*\\.(.*)$" ) );
 
   for ( const FilterFormatDetails &format : formats )
   {
@@ -3918,13 +3954,21 @@ QList< QgsVectorFileWriter::DriverDetails > QgsVectorFileWriter::ogrDriverList( 
   QgsApplication::registerOgrDrivers();
   const int drvCount = OGRGetDriverCount();
 
+  const QStringList multiLayerDrivers = multiLayerFormats();
+
   QStringList writableDrivers;
   for ( int i = 0; i < drvCount; ++i )
   {
     OGRSFDriverH drv = OGRGetDriver( i );
     if ( drv )
     {
-      QString drvName = OGR_Dr_GetName( drv );
+      const QString drvName = OGR_Dr_GetName( drv );
+
+      if ( options & SupportsMultipleLayers )
+      {
+        if ( !multiLayerDrivers.contains( drvName ) )
+          continue;
+      }
 
       if ( options & SkipNonSpatialFormats )
       {
@@ -4070,7 +4114,7 @@ QString QgsVectorFileWriter::convertCodecNameForEncodingOption( const QString &c
   if ( codecName == QLatin1String( "System" ) )
     return QStringLiteral( "LDID/0" );
 
-  const QRegularExpression re( QRegularExpression::anchoredPattern( QString( "(CP|windows-|ISO[ -])(.+)" ) ), QRegularExpression::CaseInsensitiveOption );
+  const thread_local QRegularExpression re( QRegularExpression::anchoredPattern( QString( "(CP|windows-|ISO[ -])(.+)" ) ), QRegularExpression::CaseInsensitiveOption );
   const QRegularExpressionMatch match = re.match( codecName );
   if ( match.hasMatch() )
   {

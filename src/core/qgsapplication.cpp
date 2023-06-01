@@ -205,7 +205,7 @@ QgsApplication::QgsApplication( int &argc, char **argv, bool GUIenabled, const Q
   connect( instance(), &QgsApplication::localeChanged, &QgsDateTimeFieldFormatter::applyLocaleChange );
 
   // Delay application members initialization in desktop app (In desktop app, profile folder is not known at this point)
-  if ( platformName != QStringLiteral( "desktop" ) )
+  if ( platformName != QLatin1String( "desktop" ) )
   {
     mApplicationMembers = new ApplicationMembers();
     mApplicationMembers->mSettingsRegistryCore->migrateOldSettings();
@@ -220,7 +220,7 @@ QgsApplication::QgsApplication( int &argc, char **argv, bool GUIenabled, const Q
 void QgsApplication::init( QString profileFolder )
 {
   // Initialize application members in desktop app (at this point, profile folder is known)
-  if ( platform() == QStringLiteral( "desktop" ) )
+  if ( platform() == QLatin1String( "desktop" ) )
   {
     instance()->mApplicationMembers = new ApplicationMembers();
     instance()->mApplicationMembers->mSettingsRegistryCore->migrateOldSettings();
@@ -771,7 +771,7 @@ QIcon QgsApplication::getThemeIcon( const QString &name, const QColor &fillColor
     }
     else
     {
-      QgsDebugMsg( QStringLiteral( "Could not create colorized icon svg at %1" ).arg( iconPath ) );
+      QgsDebugError( QStringLiteral( "Could not create colorized icon svg at %1" ).arg( iconPath ) );
       return QIcon();
     }
 
@@ -2340,7 +2340,7 @@ bool QgsApplication::createDatabase( QString *errorMessage )
 
     if ( sqlite3_exec( database.get(), "DROP VIEW vw_srs", nullptr, nullptr, &errmsg ) != SQLITE_OK )
     {
-      QgsDebugMsg( QStringLiteral( "vw_srs didn't exists in private qgis.db: %1" ).arg( errmsg ) );
+      QgsDebugError( QStringLiteral( "vw_srs didn't exists in private qgis.db: %1" ).arg( errmsg ) );
     }
 
     if ( sqlite3_exec( database.get(),

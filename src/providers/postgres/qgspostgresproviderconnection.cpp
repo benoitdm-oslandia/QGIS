@@ -55,7 +55,7 @@ QgsPostgresProviderConnection::QgsPostgresProviderConnection( const QString &nam
 {
   mProviderKey = QStringLiteral( "postgres" );
   // Remove the sql and table empty parts
-  const QRegularExpression removePartsRe { R"raw(\s*sql=\s*|\s*table=""\s*)raw" };
+  const thread_local QRegularExpression removePartsRe { R"raw(\s*sql=\s*|\s*table=""\s*)raw" };
   setUri( QgsPostgresConn::connUri( name ).uri( false ).replace( removePartsRe, QString() ) );
 
   QgsSettings settings;
@@ -707,7 +707,7 @@ QList<QgsPostgresProviderConnection::TableProperty> QgsPostgresProviderConnectio
             }
             catch ( const QgsProviderConnectionException &ex )
             {
-              QgsDebugMsg( QStringLiteral( "Error retrieving primary keys: %1" ).arg( ex.what() ) );
+              QgsDebugError( QStringLiteral( "Error retrieving primary keys: %1" ).arg( ex.what() ) );
             }
           }
 

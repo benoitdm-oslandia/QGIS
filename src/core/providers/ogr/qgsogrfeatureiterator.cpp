@@ -80,7 +80,7 @@ QgsOgrFeatureIterator::QgsOgrFeatureIterator( QgsOgrFeatureSource *source, bool 
   }
   else
   {
-    //QgsDebugMsg( "Feature iterator of " + mSource->mLayerName + ": acquiring connection");
+    //QgsDebugMsgLevel( "Feature iterator of " + mSource->mLayerName + ": acquiring connection", 2);
     mConn = QgsOgrConnPool::instance()->acquireConnection( QgsOgrProviderUtils::connectionPoolId( mSource->mDataSource, mSource->mShareSameDatasetAmongLayers ),
             mRequest.timeout(),
             mRequest.requestMayBeNested(),
@@ -109,10 +109,6 @@ QgsOgrFeatureIterator::QgsOgrFeatureIterator( QgsOgrFeatureSource *source, bool 
       mOgrLayerOri = mOgrLayer;
       mOgrLayer = QgsOgrProviderUtils::setSubsetString( mOgrLayer, mConn->ds, mSource->mEncoding, mSource->mSubsetString );
       // If the mSubsetString was a full SELECT ...., then mOgrLayer will be a OGR SQL layer != mOgrLayerOri
-
-      mFieldsWithoutFid.clear();
-      for ( int i = ( mFirstFieldIsFid ) ? 1 : 0; i < mSource->mFields.size(); i++ )
-        mFieldsWithoutFid.append( mSource->mFields.at( i ) );
 
       if ( !mOgrLayer )
       {
@@ -566,7 +562,7 @@ bool QgsOgrFeatureIterator::close()
 
   if ( mConn )
   {
-    //QgsDebugMsg( "Feature iterator of " + mSource->mLayerName + ": releasing connection");
+    //QgsDebugMsgLevel( "Feature iterator of " + mSource->mLayerName + ": releasing connection", 2);
     QgsOgrConnPool::instance()->releaseConnection( mConn );
   }
 

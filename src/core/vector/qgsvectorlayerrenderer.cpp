@@ -43,6 +43,7 @@
 
 #include <QPicture>
 #include <QTimer>
+#include <QThread>
 
 QgsVectorLayerRenderer::QgsVectorLayerRenderer( QgsVectorLayer *layer, QgsRenderContext &context )
   : QgsMapLayerRenderer( layer->id(), &context )
@@ -222,6 +223,10 @@ bool QgsVectorLayerRenderer::render()
   bool res = true;
   for ( const std::unique_ptr< QgsFeatureRenderer > &renderer : mRenderers )
   {
+    if ( mFeedback->isCanceled() || !res )
+    {
+      break;
+    }
     res = renderInternal( renderer.get() ) && res;
   }
 
@@ -432,6 +437,7 @@ bool QgsVectorLayerRenderer::renderInternal( QgsFeatureRenderer *renderer )
 
 void QgsVectorLayerRenderer::drawRenderer( QgsFeatureRenderer *renderer, QgsFeatureIterator &fit )
 {
+  QgsDebugMsgLevel( QStringLiteral( "%1 started drawing of vector layer." ).arg( layerId() ), 1 ); // TODO to remove
   const bool isMainRenderer = renderer == mRenderer;
 
   QgsExpressionContextScope *symbolScope = QgsExpressionContextUtils::updateSymbolScope( nullptr, new QgsExpressionContextScope() );
@@ -445,16 +451,23 @@ void QgsVectorLayerRenderer::drawRenderer( QgsFeatureRenderer *renderer, QgsFeat
     clipEngine->prepareGeometry();
   }
 
+  ulong cpt = 0; // TODO to remove
   QgsFeature fet;
   while ( fit.nextFeature( fet ) )
   {
+    //QThread::msleep( 50L ); // TODO to remove
     try
     {
+      cpt++; // TODO to remove
       if ( context.renderingStopped() )
       {
-        QgsDebugMsgLevel( QStringLiteral( "Drawing of vector layer %1 canceled." ).arg( layerId() ), 2 );
+        QgsDebugMsgLevel( QStringLiteral( "Drawing of vector layer %1 canceled." ).arg( layerId() ), 1 ); // TODO to remove
         break;
       }
+
+      if ( cpt % 1000 == 0 ) // TODO to remove
+        QgsDebugMsgLevel( QStringLiteral( "%1 rendered %2 features" ).arg( layerId() ).arg( cpt ), 1 );
+
 
       if ( !fet.hasGeometry() || fet.geometry().isEmpty() )
         continue; // skip features without geometry
@@ -530,11 +543,15 @@ void QgsVectorLayerRenderer::drawRenderer( QgsFeatureRenderer *renderer, QgsFeat
     catch ( const QgsCsException &cse )
     {
       Q_UNUSED( cse )
-      QgsDebugMsg( QStringLiteral( "Failed to transform a point while drawing a feature with ID '%1'. Ignoring this feature. %2" )
-                   .arg( fet.id() ).arg( cse.what() ) );
+      QgsDebugError( QStringLiteral( "Failed to transform a point while drawing a feature with ID '%1'. Ignoring this feature. %2" )
+                     .arg( fet.id() ).arg( cse.what() ) );
     }
   }
 
+  if ( context.renderingStopped() ) // TODO to remove
+  {
+    QgsDebugMsgLevel( QStringLiteral( "%1 WAS canceled. cpt: %2" ).arg( layerId() ).arg( cpt ), 1 );
+  }
   delete context.expressionContext().popScope();
 
   stopRenderer( renderer, nullptr );
@@ -718,7 +735,7 @@ void QgsVectorLayerRenderer::drawRendererLevels( QgsFeatureRenderer *renderer, Q
         const QgsSymbolLevelItem &item = level[i];
         if ( !featureLists.contains( item.symbol() ) )
         {
-          QgsDebugMsg( QStringLiteral( "level item's symbol not found!" ) );
+          QgsDebugError( QStringLiteral( "level item's symbol not found!" ) );
           continue;
         }
         const int layer = item.layer();
@@ -753,8 +770,8 @@ void QgsVectorLayerRenderer::drawRendererLevels( QgsFeatureRenderer *renderer, Q
           catch ( const QgsCsException &cse )
           {
             Q_UNUSED( cse )
-            QgsDebugMsg( QStringLiteral( "Failed to transform a point while drawing a feature with ID '%1'. Ignoring this feature. %2" )
-                         .arg( fet.id() ).arg( cse.what() ) );
+            QgsDebugError( QStringLiteral( "Failed to transform a point while drawing a feature with ID '%1'. Ignoring this feature. %2" )
+                           .arg( fet.id() ).arg( cse.what() ) );
           }
         }
       }

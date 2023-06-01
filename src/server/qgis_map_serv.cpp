@@ -44,6 +44,7 @@ int fcgi_accept()
 
 int main( int argc, char *argv[] )
 {
+
   if ( argc >= 2 )
   {
     if ( argv[1] == QLatin1String( "--version" ) || argv[1] == QLatin1String( "-v" ) )
@@ -100,4 +101,3 @@ int main( int argc, char *argv[] )
   QgsApplication::exitQgis();
   return 0;
 }
-

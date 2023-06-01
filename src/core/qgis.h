@@ -2227,6 +2227,21 @@ class CORE_EXPORT Qgis
     Q_ENUM( GraduatedMethod )
 
     /**
+     * Placement options for suffixes in the labels for axis of plots.
+     *
+     * \since QGIS 3.32
+     */
+    enum class PlotAxisSuffixPlacement
+    {
+      NoLabels, //!< Do not place suffixes
+      EveryLabel, //!< Place suffix after every value label
+      FirstLabel, //!< Place suffix after the first label value only
+      LastLabel, //!< Place suffix after the last label value only
+      FirstAndLastLabels, //!< Place suffix after the first and last label values only
+    };
+    Q_ENUM( PlotAxisSuffixPlacement )
+
+    /**
      * DpiMode enum
      * \since QGIS 3.26
      */
@@ -2579,6 +2594,7 @@ class CORE_EXPORT Qgis
     {
       Line, //!< The elevation surface will be rendered using a line symbol
       FillBelow, //!< The elevation surface will be rendered using a fill symbol below the surface level
+      FillAbove, //!< The elevation surface will be rendered using a fill symbol above the surface level (since QGIS 3.32)
     };
     Q_ENUM( ProfileSurfaceSymbology );
 
@@ -2608,6 +2624,19 @@ class CORE_EXPORT Qgis
     Q_ENUM( ProfileGeneratorFlag )
     Q_DECLARE_FLAGS( ProfileGeneratorFlags, ProfileGeneratorFlag )
     Q_FLAG( ProfileGeneratorFlags )
+
+    /**
+     * Types of export for elevation profiles.
+     *
+     * \since QGIS 3.32
+     */
+    enum class ProfileExportType : int
+    {
+      Features3D, //!< Export profiles as 3D features, with elevation values stored in exported geometry Z values
+      Profile2D, //!< Export profiles as 2D profile lines, with elevation stored in exported geometry Y dimension and distance in X dimension
+      DistanceVsElevationTable, //!< Export profiles as a table of sampled distance vs elevation values
+    };
+    Q_ENUM( ProfileExportType );
 
     /**
      * Rendering symbols for point cloud points.
