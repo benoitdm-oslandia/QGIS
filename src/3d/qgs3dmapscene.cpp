@@ -986,14 +986,16 @@ void Qgs3DMapScene::onDebugShadowMapSettingsChanged()
 {
   if ( !mShadowTextureDebugging && mMap.debugShadowMapEnabled() )
   {
-    QgsAbstractRenderView *aoRenderView = mEngine->frameGraph()->renderView( QgsFrameGraph::AO_RENDERVIEW );
-    Qt3DRender::QTexture2D *aoDepthTexture = aoRenderView->outputTexture( Qt3DRender::QRenderTargetOutput::Color0 );
+    QgsAbstractRenderView *shadowRenderView = mEngine->frameGraph()->renderView( QgsFrameGraph::SHADOW_RENDERVIEW );
+    Qt3DRender::QTexture2D *shadowColortexture = shadowRenderView->outputTexture( Qt3DRender::QRenderTargetOutput::Color0 );
 
     Qt3DRender::QLayer *debugRenderViewLayer = mEngine->frameGraph()->filterLayer( QgsFrameGraph::DEBUG_RENDERVIEW );
 
-    mShadowTextureDebugging = new QgsDebugTextureEntity( aoDepthTexture, debugRenderViewLayer, mEngine->frameGraph()->rootEntity() );
+    mShadowTextureDebugging = new QgsDebugTextureEntity( shadowColortexture, debugRenderViewLayer, mEngine->frameGraph()->rootEntity() );
   }
 
+  mEngine->frameGraph()->renderView( QgsFrameGraph::DEBUG_RENDERVIEW )
+  ->enableSubTree( mMap.debugShadowMapEnabled() || mMap.debugDepthMapEnabled() );
   if ( mShadowTextureDebugging )
   {
     mShadowTextureDebugging->onSettingsChanged( mMap.debugShadowMapEnabled(), mMap.debugShadowMapCorner(), mMap.debugShadowMapSize() );
@@ -1012,6 +1014,8 @@ void Qgs3DMapScene::onDebugDepthMapSettingsChanged()
     mDepthTextureDebugging = new QgsDebugTextureEntity( forwardDepthTexture, debugRenderViewLayer, mEngine->frameGraph()->rootEntity() );
   }
 
+  mEngine->frameGraph()->renderView( QgsFrameGraph::DEBUG_RENDERVIEW )
+  ->enableSubTree( mMap.debugShadowMapEnabled() || mMap.debugDepthMapEnabled() );
   if ( mDepthTextureDebugging )
   {
     mDepthTextureDebugging->onSettingsChanged( mMap.debugDepthMapEnabled(), mMap.debugDepthMapCorner(), mMap.debugDepthMapSize() );
