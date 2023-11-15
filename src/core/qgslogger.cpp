@@ -22,6 +22,7 @@
 #include <QFile>
 #include <QElapsedTimer>
 #include <QThread>
+#include <QDateTime>
 
 #ifndef CMAKE_SOURCE_DIR
 #error CMAKE_SOURCE_DIR undefined
@@ -67,38 +68,75 @@ void QgsLogger::debug( const QString &msg, int debuglevel, const char *file, con
     return;
 
 
+  QString separator = " | ";
   QString m = msg;
+
+  // display elapsed time
+  m.prepend( separator );
+  m.prepend( QStringLiteral( "%1ms" ).arg( sTime()->elapsed() ) );
+  sTime()->restart();
+
+  // display file/function/line data
+  m.prepend( separator );
+  if ( function )
+  {
+    m.prepend( QStringLiteral( "(%1)" ).arg( function ) );
+  }
+  else
+  {
+    m.prepend( "(nofunc)" );
+  }
+
+  if ( line != -1 )
+  {
+#ifndef _MSC_VER
+    m.prepend( QStringLiteral( ":%1" ).arg( line ) );
+#else
+    m.prepend( QString( ":%1" ).arg( line ) );
+#endif
+  }
 
   if ( file )
   {
-    if ( qApp && qApp->thread() != QThread::currentThread() )
-    {
-      m.prepend( QStringLiteral( "[thread:0x%1] " ).arg( reinterpret_cast< qint64 >( QThread::currentThread() ), 0, 16 ) );
-    }
-
-    m.prepend( QStringLiteral( "[%1ms] " ).arg( sTime()->elapsed() ) );
-    sTime()->restart();
-
-    if ( function )
-    {
-      m.prepend( QStringLiteral( " (%1) " ).arg( function ) );
-    }
-
-    if ( line != -1 )
-    {
-#ifndef _MSC_VER
-      m.prepend( QStringLiteral( ":%1 :" ).arg( line ) );
-#else
-      m.prepend( QString( "(%1) :" ).arg( line ) );
-#endif
-    }
-
 #ifndef _MSC_VER
     m.prepend( file + ( file[0] == '/' ? sPrefixLength : 0 ) );
 #else
     m.prepend( file );
 #endif
   }
+  else
+  {
+    m.prepend( "nofile" );
+  }
+
+  // display thread data
+  m.prepend( separator );
+  if ( qApp && qApp->thread() != QThread::currentThread() )
+  {
+    m.prepend( QStringLiteral( "0x%1" ).arg( reinterpret_cast< qint64 >( QThread::currentThread() ), 0, 16 ) );
+  }
+  else
+  {
+    m.prepend( QStringLiteral( "main" ) );
+  }
+
+  // display log level
+  m.prepend( separator );
+  QString level;
+  if ( debuglevel == 0 )
+    level = "ERROR  ";
+  else if ( debuglevel == 1 )
+    level = "WARNING";
+  else if ( debuglevel == 2 )
+    level = "DEBUG  ";
+  else
+    level = QString( "TRACE%1" ).arg( debuglevel - 2 );
+
+  m.prepend( QStringLiteral( "%1" ).arg( level ) );
+
+  // display log timestamp
+  m.prepend( separator );
+  m.prepend( QDateTime::currentDateTime().toString( Qt::ISODateWithMs ) );
 
   if ( sLogFile()->isEmpty() )
   {
