@@ -50,7 +50,7 @@ class QgsAmbientOcclusionBlurEntity;
 
 /**
  * \ingroup 3d
- * \brief Container class that holds different objects related to frame graph of 3D scenes
+ * \brief Containersdf class that holds different objects related to frame graph of 3D scenes
  *
  * A frame graph captures configuration of rendering passes when 3D scene gets rendered.
  *
@@ -64,7 +64,7 @@ class QgsFrameGraph : public Qt3DCore::QEntity
 
   public:
     //! Constructor
-      QgsFrameGraph( QSurface *surface, QSize s, Qt3DRender::QCamera *mainCamera, Qt3DCore::QEntity *root );
+    QgsFrameGraph( QSurface *surface, QSize s, Qt3DRender::QCamera *mainCamera, Qt3DCore::QEntity *root );
 
     //! Returns the root of the frame graph object
     Qt3DRender::QFrameGraphNode *frameGraphRoot() { return mRenderSurfaceSelector; }
