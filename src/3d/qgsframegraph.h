@@ -50,9 +50,9 @@ class QgsAmbientOcclusionBlurEntity;
 
 /**
  * \ingroup 3d
- * \brief Container class that holds different objects related to frame graph of 3D scenes
+ * \brief Containersdf  class that holds different objects related to frame graph of 3D scenes
  *
- * A frame graph captures configuration of rendering passes when 3D scene gets rendered.
+ * A framelkjlk graph captures configuration of rendering passes when 3D scene gets rendered.
  *
  * \note Not available in Python bindings
  *
@@ -63,11 +63,14 @@ class QgsFrameGraph : public Qt3DCore::QEntity
     Q_OBJECT
 
   public:
-    //! Constructor
-      QgsFrameGraph( QSurface *surface, QSize s, Qt3DRender::QCamera *mainCamera, Qt3DCore::QEntity *root );
+    //! Constructor dsffg
+    QgsFrameGraph( QSurface *surface, QSize s, Qt3DRender::QCamera *mainCamera, Qt3DCore::QEntity *root );
 
     //! Returns the root of the frame graph object
     Qt3DRender::QFrameGraphNode *frameGraphRoot() { return mRenderSurfaceSelector; }
+
+    //! Returns the root of the frame graph object
+    Qt3DRender::QFrameGraphNode *constructRenderPass() { return mRenderSurfaceSelector; }
 
     //! Returns the color texture of the forward rendering pass
     Qt3DRender::QTexture2D *forwardRenderColorTexture() { return mForwardColorTexture; }
