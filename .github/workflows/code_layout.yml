@@ -44,14 +44,18 @@ jobs:
             **/*.gpkg
             **/*.qgz
             **/*.qgs
-        env:
-          ALL_CHANGED_FILES: ${{ steps.changed_files.outputs.all_changed_files }}
 
       - name: Echo list
+        if: steps.changed_files.outputs.any_changed == 'true'
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed_files.outputs.all_changed_files }}
         run: |
           echo "=============================================================================" >/dev/stderr \
           && echo "$ALL_CHANGED_FILES" >/dev/stderr  \
           && echo "=============================================================================" >/dev/stderr
 
       - name: Spell Test
+        if: steps.changed_files.outputs.any_changed == 'true'
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed_files.outputs.all_changed_files }}
         run: echo "$ALL_CHANGED_FILES" | ./scripts/spell_check/check_spelling.sh
