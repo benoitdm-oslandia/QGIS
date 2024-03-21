@@ -47,7 +47,10 @@ jobs:
         env:
           ALL_CHANGED_FILES: ${{ steps.changed_files.outputs.all_changed_files }}
 
-      - name: Spell Test
+      - name: Echo list
         run: |
-          echo "$ALL_CHANGED_FILES"  \
-          && echo "$ALL_CHANGED_FILES" | ./scripts/spell_check/check_spelling.sh
+          echo "$ALL_CHANGED_FILES" >/dev/stderr  \
+          && echo "=============================================================================" >/dev/stderr
+
+      - name: Spell Test
+        run: echo "$ALL_CHANGED_FILES" | ./scripts/spell_check/check_spelling.sh
