@@ -78,6 +78,9 @@ if [ -n "$SCRIPT_INPUT" ]; then
   fi
   echo "Running spell check on files: $INPUTFILES"
 else
+  if [ -p /dev/stdin ]; then
+    exit 0
+  fi
   INPUTFILES="."
 fi
 
