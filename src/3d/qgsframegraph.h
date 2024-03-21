@@ -52,7 +52,7 @@ class QgsAmbientOcclusionBlurEntity;
  * \ingroup 3d
  * \brief Containersdf  class that holds different objects related to frame graph of 3D scenes
  *
- * A frame graph captures configuration of rendering passes when 3D scene gets rendered.
+ * A framelkjlk graph captures configuration of rendering passes when 3D scene gets rendered.
  *
  * \note Not available in Python bindings
  *
