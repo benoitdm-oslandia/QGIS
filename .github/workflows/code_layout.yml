@@ -162,18 +162,18 @@ jobs:
               silversearcher-ag
 
       - name: Retrieve changed files
-        uses: tj-actions/changed-files@v42
+        uses: tj-actions/changed-files@v43
         id: changed_files
         with:
           separator: " "
-          files_ignore: |
-            **/*.sip.in
-            **/*.png
-            **/*.svg
-            **/*.tif*
-            **/*.gpkg
-            **/*.qgz
-            **/*.qgs
+          # files_ignore: |
+          #   **/*.sip.in
+          #   **/*.png
+          #   **/*.svg
+          #   **/*.tif*
+          #   **/*.gpkg
+          #   **/*.qgz
+          #   **/*.qgs
 
       - name: Echo list
         if: steps.changed_files.outputs.any_changed == 'true'
