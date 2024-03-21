@@ -19,22 +19,28 @@ env:
   DOXYGEN_VERSION: 1.9.8
 
 jobs:
-
   spell_check:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Install Requirements
         run: |
           sudo apt install -y \
               expect \
               silversearcher-ag
-      - uses: tj-actions/changed-files@v42
+
+      - name: Retrieve changed files
+        uses: tj-actions/changed-files@v42
         id: changed_files
         with:
-          separator: ' '
+          separator: " "
         env:
           ALL_CHANGED_FILES: ${{ steps.changed_files.outputs.all_changed_files }}
+      #        run: echo "$ALL_CHANGED_FILES"
+
       - name: Spell Test
-        run: echo "$ALL_CHANGED_FILES" | ./scripts/spell_check/check_spelling.sh
+        run: |
+          echo "$ALL_CHANGED_FILES" \
+          echo "$ALL_CHANGED_FILES" | ./scripts/spell_check/check_spelling.sh
