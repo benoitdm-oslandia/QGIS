@@ -896,6 +896,7 @@ set(QGIS_CORE_SRCS
   geometry/qgsrectangle.cpp
   geometry/qgsreferencedgeometry.cpp
   geometry/qgsregularpolygon.cpp
+  geometry/qgssfcgalengine.cpp
   geometry/qgssphere.cpp
   geometry/qgssurface.cpp
   geometry/qgstriangle.cpp
@@ -1483,6 +1484,7 @@ set(QGIS_CORE_HDRS
   geometry/qgsrectangle.h
   geometry/qgsreferencedgeometry.h
   geometry/qgsregularpolygon.h
+  geometry/qgssfcgalengine.h
   geometry/qgssphere.h
   geometry/qgssurface.h
   geometry/qgstriangle.h
@@ -2527,6 +2529,12 @@ endif()
 if (WITH_PDAL)
   target_link_libraries(qgis_core
     ${PDAL_LIBRARIES}
+  )
+endif()
+
+if (WITH_SFCGAL)
+  target_link_libraries(qgis_core
+    ${SFCGAL_LIBRARY}
   )
 endif()
 
