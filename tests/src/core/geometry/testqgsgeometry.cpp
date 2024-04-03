@@ -48,6 +48,8 @@
 #include "qgsgeos.h"
 #include "qgsreferencedgeometry.h"
 
+#include "qgssfcgalengine.h"
+
 //qgs unit test utility class
 
 #include "testtransformer.h"
@@ -172,6 +174,14 @@ class TestQgsGeometry : public QgsTest
 
     void wktParser();
 
+    void sfcgalIntersection();
+    void sfcgalUnionCheck1();
+    void sfcgalUnionCheck2();
+    void sfcgalDifferenceCheck1();
+    void sfcgalDifferenceCheck2();
+    void sfcgalBufferCheck();
+
+
   private:
     //! Must be called before each render test
     void initPainterTest();
@@ -184,6 +194,10 @@ class TestQgsGeometry : public QgsTest
     void paintPolygon( QgsPolygonXY &polygon );
     //! A helper method to dump to qdebug the geometry of a polyline
     void dumpPolyline( QgsPolylineXY &polyline );
+
+    void paintMultiPolygon( QgsGeometryCollection *multiPolygon );
+    void paintPolygon( QgsPolygon *polygon );
+    void paintCurve( QgsCurve *curve );
 
     // Release return with delete []
     unsigned char *hex2bytes( const char *hex, int *size )
@@ -225,6 +239,9 @@ class TestQgsGeometry : public QgsTest
     QgsGeometry mpPolygonGeometryA;
     QgsGeometry mpPolygonGeometryB;
     QgsGeometry mpPolygonGeometryC;
+    QgsGeometry mSfcgalPolygonZA;
+    QgsGeometry mSfcgalPolygonZB;
+    QgsGeometry mSfcgalPolygonZC;
     QString mWktLine;
     QString mTestDataDir;
     QImage mImage;
@@ -305,6 +322,28 @@ void TestQgsGeometry::initPainterTest()
   mpPolygonGeometryA = QgsGeometry::fromPolygonXY( mPolygonA );
   mpPolygonGeometryB = QgsGeometry::fromPolygonXY( mPolygonB );
   mpPolygonGeometryC = QgsGeometry::fromPolygonXY( mPolygonC );
+
+  // triangle with big hole, intersects nothing
+  mSfcgalPolygonZA = QgsGeometry::fromWkt(
+                       QStringLiteral( "PolygonZ ("
+                                       "(-7037.2105 4814.2525 20, -7112.2748 3024.2574 20, -4669.7976 2770.1936 20, -3428.3493 3278.3212 20, -7037.2105 4814.2525 20),"
+                                       "(-6832.9186 4498.2679 20, -3923.7277 3302.1336 20, -4717.1434 2947.5009 20, -6862.9722 3193.9406 20, -6832.9186 4498.2679 20)"
+                                       ")" )
+                     );
+  // triangle with small hole, intersects mSfcgalPolygonZC
+  mSfcgalPolygonZB = QgsGeometry::fromWkt(
+                       QStringLiteral( "PolygonZ ("
+                                       "(-5728.7630 4205.9883 0, -7160.7591 4662.1484 0, -4903.0556 1942.5107 0, -3384.4469 3426.4743 0, -5728.7630 4205.9883 0),"
+                                       "(-5128.9946 2875.5984 0, -5189.1018 2701.2874 0, -5357.4021 2833.5233 0, -5128.9946 2875.5984 0)"
+                                       ")" )
+                     );
+
+  // triangle from bottom to top, intersects mSfcgalPolygonZB
+  mSfcgalPolygonZC = QgsGeometry::fromWkt(
+                       QStringLiteral( "PolygonZ ("
+                                       "(-6547.4512 5101.3843 -50, -7609.9000 6077.2203 -50, -7690.7384 4281.4510 -50, -5080.8101 2930.2934 50, -6547.4512 5101.3843 -50)"
+                                       ")" )
+                     );
 
   mImage = QImage( 250, 250, QImage::Format_RGB32 );
   mImage.fill( qRgb( 152, 219, 249 ) );
@@ -1373,6 +1412,7 @@ void TestQgsGeometry::intersectionCheck1()
   // should be a single polygon as A intersect B
   QgsGeometry mypIntersectionGeometry = mpPolygonGeometryA.intersection( mpPolygonGeometryB );
   QVERIFY( mypIntersectionGeometry.wkbType() == Qgis::WkbType::Polygon );
+  qDebug() << "================ intersectionCheck1: mypIntersectionGeometry=" << mypIntersectionGeometry.asWkt( 2 );
   QgsPolygonXY myPolygon = mypIntersectionGeometry.asPolygon();
   QVERIFY( myPolygon.size() > 0 ); //check that the union created a feature
   paintPolygon( myPolygon );
@@ -1464,6 +1504,7 @@ void TestQgsGeometry::unionCheck1()
   // should be a multipolygon with 2 parts as A does not intersect C
   QgsGeometry mypUnionGeometry = mpPolygonGeometryA.combine( mpPolygonGeometryC );
   QVERIFY( mypUnionGeometry.wkbType() == Qgis::WkbType::MultiPolygon );
+  qDebug() << "================ unionCheck1: geom=" << mypUnionGeometry.asWkt( 2 );
   QgsMultiPolygonXY myMultiPolygon = mypUnionGeometry.asMultiPolygon();
   QVERIFY( myMultiPolygon.size() > 0 ); //check that the union did not fail
   paintMultiPolygon( myMultiPolygon );
@@ -1476,6 +1517,7 @@ void TestQgsGeometry::unionCheck2()
   // should be a single polygon as A intersect B
   QgsGeometry mypUnionGeometry = mpPolygonGeometryA.combine( mpPolygonGeometryB );
   QVERIFY( mypUnionGeometry.wkbType() == Qgis::WkbType::Polygon );
+  qDebug() << "================ unionCheck2: geom=" << mypUnionGeometry.asWkt( 2 );
   QgsPolygonXY myPolygon = mypUnionGeometry.asPolygon();
   QVERIFY( myPolygon.size() > 0 ); //check that the union created a feature
   paintPolygon( myPolygon );
@@ -1793,6 +1835,17 @@ void TestQgsGeometry::paintMultiPolygon( QgsMultiPolygonXY &multiPolygon )
   }
 }
 
+void TestQgsGeometry::paintMultiPolygon( QgsGeometryCollection *multiPolygon )
+{
+  for ( int i = 0; i < multiPolygon->partCount(); i++ )
+  {
+    QgsAbstractGeometry *part = multiPolygon->geometryN( i );
+    QVERIFY2( part->wkbType() == Qgis::WkbType::Polygon || part->wkbType() == Qgis::WkbType::PolygonZ, "must be WkbType::PolygonXX" );
+    QgsPolygon *myPolygon = dynamic_cast<QgsPolygon *>( part );
+    paintPolygon( myPolygon );
+  }
+}
+
 void TestQgsGeometry::dumpPolygon( QgsPolygonXY &polygon )
 {
   for ( int j = 0; j < polygon.size(); j++ )
@@ -1822,6 +1875,21 @@ void TestQgsGeometry::paintPolygon( QgsPolygonXY &polygon )
   }
   mpPainter->drawPolygon( myPoints );
 }
+
+void TestQgsGeometry::paintPolygon( QgsPolygon *polygon )
+{
+  paintCurve( polygon->exteriorRing() );
+  for ( int i = 0; i < polygon->numInteriorRings(); i++ )
+  {
+    paintCurve( polygon->interiorRing( i ) );
+  }
+}
+
+void TestQgsGeometry::paintCurve( QgsCurve *curve )
+{
+  curve->drawAsPolygon( *mpPainter );
+}
+
 
 void TestQgsGeometry::dumpPolyline( QgsPolylineXY &polyline )
 {
@@ -3051,5 +3119,135 @@ void TestQgsGeometry::wktParser()
   QVERIFY( mline.fromWkt( "MultiLineString EMPTY" ) );
   QCOMPARE( mline.asWkt(), QStringLiteral( "MultiLineString EMPTY" ) );
 }
+
+void TestQgsGeometry::sfcgalIntersection()
+{
+  initPainterTest();
+
+  std::unique_ptr< QgsGeometryEngine > engineGeomA( new QgsSfcgalEngine( mpPolygonGeometryA.constGet() ) );
+  QString errorMsg;
+  QVERIFY( engineGeomA->intersects( mpPolygonGeometryB.constGet(), &errorMsg ) );
+  QVERIFY2( errorMsg.isEmpty(), errorMsg.toStdString().c_str() );
+
+  // should be a single polygon as A intersect B
+  QgsAbstractGeometry *intersectionGeom = engineGeomA->intersection( mpPolygonGeometryB.constGet(), &errorMsg );
+  QVERIFY2( intersectionGeom, ( QString( "intersectionGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
+  QCOMPARE( intersectionGeom->wkbType(), Qgis::WkbType::Polygon );
+  qDebug() << "================ sfcgalIntersection: geom=" << intersectionGeom->asWkt( 2 );
+
+  QgsPolygon *intersectionPoly = dynamic_cast<QgsPolygon *>( intersectionGeom );
+  QVERIFY( intersectionPoly->exteriorRing()->length() > 0 ); //check that the union created a feature
+  //QCOMPARE( intersectionPoly->exteriorRing()->asWkt(), QStringLiteral( "LineString (80 80, 80 40, 40 40, 40 80, 80 80)" ) );
+
+  paintPolygon( intersectionPoly );
+  QGSVERIFYIMAGECHECK( "Checking if A intersects B (sfcgal)", "geometry_intersectionCheck1", mImage, QString(), 0 );
+
+
+  // with Z
+  std::unique_ptr< QgsGeometryEngine > enginePolyZA( new QgsSfcgalEngine( mSfcgalPolygonZA.constGet() ) );
+  QVERIFY( !enginePolyZA->intersects( mSfcgalPolygonZB.constGet() ) );
+  QVERIFY( enginePolyZA->intersects( mSfcgalPolygonZC.constGet() ) );
+
+  std::unique_ptr< QgsGeometryEngine > enginePolyZB( new QgsSfcgalEngine( mSfcgalPolygonZB.constGet() ) );
+  QVERIFY( !enginePolyZB->intersects( mSfcgalPolygonZC.constGet() ) );
+}
+
+void TestQgsGeometry::sfcgalUnionCheck1()
+{
+  initPainterTest();
+  // should be a multipolygon with 2 parts as A does not intersect C
+  std::unique_ptr< QgsGeometryEngine > engineGeomA( new QgsSfcgalEngine( mpPolygonGeometryA.constGet() ) );
+
+  QString errorMsg;
+  QgsAbstractGeometry *combinedGeom = engineGeomA->combine( mpPolygonGeometryC.constGet(), &errorMsg );
+  QVERIFY2( combinedGeom, ( QString( "combinedGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
+  QCOMPARE( combinedGeom->wkbType(), Qgis::WkbType::MultiPolygon );
+  qDebug() << "================ sfcgalUnionCheck1: geom=" << combinedGeom->asWkt( 2 );
+
+  QgsGeometryCollection *combinedPoly = dynamic_cast<QgsGeometryCollection *>( combinedGeom );
+  QVERIFY( combinedPoly->partCount() > 0 ); //check that the union did not fail
+  paintMultiPolygon( combinedPoly );
+  QGSVERIFYIMAGECHECK( "Checking A union C produces 2 polys (sfcgal)", "geometry_unionCheck1", mImage, QString(), 0 );
+
+  // with Z
+  // TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+}
+
+void TestQgsGeometry::sfcgalUnionCheck2()
+{
+  initPainterTest();
+  // should be a single polygon as A intersect B
+  std::unique_ptr< QgsGeometryEngine > engineGeomA( new QgsSfcgalEngine( mpPolygonGeometryA.constGet() ) );
+
+  QString errorMsg;
+  QgsAbstractGeometry *combinedGeom = engineGeomA->combine( mpPolygonGeometryB.constGet(), &errorMsg );
+  QVERIFY2( combinedGeom, ( QString( "combinedGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
+  QCOMPARE( combinedGeom->wkbType(), Qgis::WkbType::Polygon );
+  qDebug() << "================ sfcgalUnionCheck2: geom=" << combinedGeom->asWkt( 2 );
+
+  QgsPolygon *combinedPoly = dynamic_cast<QgsPolygon *>( combinedGeom );
+  QVERIFY( combinedPoly->partCount() > 0 ); //check that the union did not fail
+  paintPolygon( combinedPoly );
+  QGSVERIFYIMAGECHECK( "Checking A union B produces single union poly (sfcgal)", "geometry_unionCheck2", mImage, QString(), 0 );
+
+  // with Z
+  // TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+}
+
+void TestQgsGeometry::sfcgalDifferenceCheck1()
+{
+  initPainterTest();
+  // should be same as A since A does not intersect C so diff is 100% of A
+  std::unique_ptr< QgsGeometryEngine > engineGeomA( new QgsSfcgalEngine( mpPolygonGeometryA.constGet() ) );
+
+  QString errorMsg;
+  QgsAbstractGeometry *diffGeom = engineGeomA->difference( mpPolygonGeometryC.constGet(), &errorMsg );
+  QCOMPARE( diffGeom->wkbType(), Qgis::WkbType::Polygon );
+  qDebug() << "================ sfcgalDifferenceCheck1: geom=" << diffGeom->asWkt( 2 );
+
+  QgsPolygon *diffPoly = dynamic_cast<QgsPolygon *>( diffGeom );
+  QVERIFY( diffPoly->partCount() > 0 ); //check that the union did not fail
+  paintPolygon( diffPoly );
+  QGSVERIFYIMAGECHECK( "Checking (A - C) = A", "geometry_differenceCheck1", mImage, QString(), 0 );
+
+  // with Z
+  // TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+}
+
+void TestQgsGeometry::sfcgalDifferenceCheck2()
+{
+  initPainterTest();
+  // should be a single polygon as (A - B) = subset of A
+  std::unique_ptr< QgsGeometryEngine > engineGeomA( new QgsSfcgalEngine( mpPolygonGeometryA.constGet() ) );
+
+  QString errorMsg;
+  QgsAbstractGeometry *diffGeom = engineGeomA->difference( mpPolygonGeometryB.constGet(), &errorMsg );
+  QCOMPARE( diffGeom->wkbType(), Qgis::WkbType::Polygon );
+  qDebug() << "================ sfcgalDifferenceCheck2: geom=" << diffGeom->asWkt( 2 );
+
+  QgsPolygon *diffPoly = dynamic_cast<QgsPolygon *>( diffGeom );
+  QVERIFY( diffPoly->partCount() > 0 ); //check that the union did not fail
+  paintPolygon( diffPoly );
+  QGSVERIFYIMAGECHECK( "Checking (A - B) = subset of A", "geometry_differenceCheck2", mImage, QString(), 0 );
+
+  // with Z
+  // TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+}
+
+void TestQgsGeometry::sfcgalBufferCheck()
+{
+  initPainterTest();
+  // should be a single polygon
+  QgsGeometry mypBufferGeometry( mpPolygonGeometryB.buffer( 10, 10 ) );
+  QVERIFY( mypBufferGeometry.wkbType() == Qgis::WkbType::Polygon );
+  QgsPolygonXY myPolygon = mypBufferGeometry.asPolygon();
+  QVERIFY( myPolygon.size() > 0 ); //check that the buffer created a feature
+  paintPolygon( myPolygon );
+  QGSVERIFYIMAGECHECK( "Checking buffer(10,10) of B", "geometry_bufferCheck", mImage, QString(), 0 );
+}
+
+
+
+
 QGSTEST_MAIN( TestQgsGeometry )
 #include "testqgsgeometry.moc"

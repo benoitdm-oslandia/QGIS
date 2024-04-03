@@ -169,6 +169,8 @@ if(WITH_CORE)
       endif()
   endif()
 
+  set (WITH_SFCGAL TRUE CACHE BOOL "Determines whether SFCgal geometry library should be built")
+
   set (WITH_3D TRUE CACHE BOOL "Determines whether QGIS 3D library should be built")
 
   set (WITH_QUICK FALSE CACHE BOOL "Determines whether QGIS Quick library should be built")
@@ -386,6 +388,10 @@ if(WITH_CORE)
   find_package(EXIV2 REQUIRED)
 
   # optional
+  if (WITH_SFCGAL)
+    find_package(SFCGAL) # SFCGAL provider
+  endif()
+
   if (WITH_POSTGRESQL)
     find_package(Postgres) # PostgreSQL provider
   endif()
