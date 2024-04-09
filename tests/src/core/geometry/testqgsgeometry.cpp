@@ -175,10 +175,12 @@ class TestQgsGeometry : public QgsTest
     void wktParser();
 
     void sfcgalIntersection();
+    void sfcgalIntersection3d();
     void sfcgalUnionCheck1();
     void sfcgalUnionCheck2();
     void sfcgalDifferenceCheck1();
     void sfcgalDifferenceCheck2();
+    void sfcgalDifference3d();
     void sfcgalBufferCheck();
 
 
@@ -3137,19 +3139,56 @@ void TestQgsGeometry::sfcgalIntersection()
 
   QgsPolygon *intersectionPoly = dynamic_cast<QgsPolygon *>( intersectionGeom );
   QVERIFY( intersectionPoly->exteriorRing()->length() > 0 ); //check that the union created a feature
-  //QCOMPARE( intersectionPoly->exteriorRing()->asWkt(), QStringLiteral( "LineString (80 80, 80 40, 40 40, 40 80, 80 80)" ) );
+  QCOMPARE( intersectionPoly->exteriorRing()->asWkt( 2 ), QStringLiteral( "LineString (40 80, 40 40, 80 40, 80 80, 40 80)" ) );
 
   paintPolygon( intersectionPoly );
   QGSVERIFYIMAGECHECK( "Checking if A intersects B (sfcgal)", "geometry_intersectionCheck1", mImage, QString(), 0 );
+}
 
+void TestQgsGeometry::sfcgalIntersection3d()
+{
+  initPainterTest();
+  QString errorMsg;
 
-  // with Z
-  std::unique_ptr< QgsGeometryEngine > enginePolyZA( new QgsSfcgalEngine( mSfcgalPolygonZA.constGet() ) );
-  QVERIFY( !enginePolyZA->intersects( mSfcgalPolygonZB.constGet() ) );
-  QVERIFY( enginePolyZA->intersects( mSfcgalPolygonZC.constGet() ) );
+  // first triangulate polygon as some are not coplanar
+  std::unique_ptr< QgsSfcgalEngine > enginePolyZA( new QgsSfcgalEngine( mSfcgalPolygonZA.constGet() ) );
+  std::unique_ptr< QgsSfcgalEngine > enginePolyZB( new QgsSfcgalEngine( mSfcgalPolygonZB.constGet() ) );
+  std::unique_ptr< QgsSfcgalEngine > enginePolyZC( new QgsSfcgalEngine( mSfcgalPolygonZC.constGet() ) );
+  sfcgal::unique_ptr scTriangulatedA = enginePolyZA->triangulate();
+  sfcgal::unique_ptr scTriangulatedB = enginePolyZB->triangulate();
+  sfcgal::unique_ptr scTriangulatedC = enginePolyZC->triangulate();
 
-  std::unique_ptr< QgsGeometryEngine > enginePolyZB( new QgsSfcgalEngine( mSfcgalPolygonZB.constGet() ) );
-  QVERIFY( !enginePolyZB->intersects( mSfcgalPolygonZC.constGet() ) );
+  // second intersect triangulated polygons
+  QVERIFY( !QgsSfcgalEngine::intersects( scTriangulatedA, scTriangulatedB ) );
+
+  {
+    QVERIFY( QgsSfcgalEngine::intersects( scTriangulatedA, scTriangulatedC ) );
+    sfcgal::unique_ptr scInterGeom = QgsSfcgalEngine::intersection( scTriangulatedA, scTriangulatedC, &errorMsg );
+    std::unique_ptr<QgsAbstractGeometry> interGeom = QgsSfcgalEngine::toAbsGeometry( scInterGeom.get() );
+    QVERIFY2( interGeom && interGeom.get(), ( QString( "intersectionGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
+    QCOMPARE( interGeom->wkbType(), Qgis::WkbType::MultiLineStringZ );
+    qDebug() << "================ sfcgalIntersection3d (AC): geom=" << interGeom->asWkt( 2 );
+
+    QgsMultiCurve *interCurve = dynamic_cast<QgsMultiCurve *>( interGeom.get() );
+    QCOMPARE( interCurve->partCount(), 2 ); //check that the operation created 2 features
+    QCOMPARE( interCurve->curveN( 0 )->asWkt( 2 ), QStringLiteral( "LineStringZ (-5863.79 3335.64 20, -5551.89 3559.33 20)" ) );
+    QCOMPARE( interCurve->curveN( 1 )->asWkt( 2 ), QStringLiteral( "LineStringZ (-5520.8 3581.62 20, -5551.89 3559.33 20)" ) );
+  }
+
+  {
+    QVERIFY( QgsSfcgalEngine::intersects( scTriangulatedB, scTriangulatedC ) );
+    sfcgal::unique_ptr scInterGeom = QgsSfcgalEngine::intersection( scTriangulatedB, scTriangulatedC, &errorMsg );
+    std::unique_ptr<QgsAbstractGeometry> interGeom = QgsSfcgalEngine::toAbsGeometry( scInterGeom.get() );
+    QVERIFY2( interGeom && interGeom.get(), ( QString( "intersectionGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
+    QCOMPARE( interGeom->wkbType(), Qgis::WkbType::MultiLineStringZ );
+    qDebug() << "================ sfcgalIntersection3d (BC): geom=" << interGeom->asWkt( 2 );
+
+    QgsMultiCurve *interCurve = dynamic_cast<QgsMultiCurve *>( interGeom.get() );
+    QCOMPARE( interCurve->partCount(), 2 ); //check that the operation created 2 features
+    QCOMPARE( interCurve->curveN( 0 )->asWkt( 2 ), QStringLiteral( "LineStringZ (-6321.91 3651.67 0, -6229.56 3717.9 0)" ) );
+    QCOMPARE( interCurve->curveN( 1 )->asWkt( 2 ), QStringLiteral( "LineStringZ (-5814.13 4015.84 0, -6229.56 3717.9 0)" ) );
+  }
+
 }
 
 void TestQgsGeometry::sfcgalUnionCheck1()
@@ -3209,9 +3248,6 @@ void TestQgsGeometry::sfcgalDifferenceCheck1()
   QVERIFY( diffPoly->partCount() > 0 ); //check that the union did not fail
   paintPolygon( diffPoly );
   QGSVERIFYIMAGECHECK( "Checking (A - C) = A", "geometry_differenceCheck1", mImage, QString(), 0 );
-
-  // with Z
-  // TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 }
 
 void TestQgsGeometry::sfcgalDifferenceCheck2()
@@ -3229,9 +3265,45 @@ void TestQgsGeometry::sfcgalDifferenceCheck2()
   QVERIFY( diffPoly->partCount() > 0 ); //check that the union did not fail
   paintPolygon( diffPoly );
   QGSVERIFYIMAGECHECK( "Checking (A - B) = subset of A", "geometry_differenceCheck2", mImage, QString(), 0 );
+}
 
-  // with Z
-  // TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+void TestQgsGeometry::sfcgalDifference3d()
+{
+  initPainterTest();
+  QString errorMsg;
+  // first triangulate polygon as some are not coplanar
+  std::unique_ptr< QgsSfcgalEngine > enginePolyZA( new QgsSfcgalEngine( mSfcgalPolygonZA.constGet() ) );
+  std::unique_ptr< QgsSfcgalEngine > enginePolyZB( new QgsSfcgalEngine( mSfcgalPolygonZB.constGet() ) );
+  std::unique_ptr< QgsSfcgalEngine > enginePolyZC( new QgsSfcgalEngine( mSfcgalPolygonZC.constGet() ) );
+  sfcgal::unique_ptr scTriangulatedA = enginePolyZA->triangulate();
+  sfcgal::unique_ptr scTriangulatedB = enginePolyZB->triangulate();
+  sfcgal::unique_ptr scTriangulatedC = enginePolyZC->triangulate();
+
+  // second diff triangulated polygons
+  {
+    sfcgal::unique_ptr scDiffGeom = QgsSfcgalEngine::difference( scTriangulatedA, scTriangulatedB, &errorMsg );
+    QCOMPARE( QgsSfcgalEngine::wkbType( scDiffGeom ), Qgis::WkbType::MultiLineStringZ );
+
+    std::unique_ptr<QgsAbstractGeometry> diffGeom = QgsSfcgalEngine::toAbsGeometry( scDiffGeom.get() );
+    QVERIFY2( diffGeom && diffGeom.get(), ( QString( "diffGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
+  }
+  {
+    sfcgal::unique_ptr scDiffGeom = QgsSfcgalEngine::difference( scTriangulatedA, scTriangulatedC, &errorMsg );
+    std::unique_ptr<QgsAbstractGeometry> diffGeom = QgsSfcgalEngine::toAbsGeometry( scDiffGeom.get() );
+    QVERIFY2( diffGeom && diffGeom.get(), ( QString( "diffGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
+  }
+  {
+    sfcgal::unique_ptr scDiffGeom = QgsSfcgalEngine::difference( scTriangulatedB, scTriangulatedC, &errorMsg );
+    std::unique_ptr<QgsAbstractGeometry> diffGeom = QgsSfcgalEngine::toAbsGeometry( scDiffGeom.get() );
+    QVERIFY2( diffGeom && diffGeom.get(), ( QString( "diffGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
+    QCOMPARE( diffGeom->wkbType(), Qgis::WkbType::MultiLineStringZ );
+    qDebug() << "================ sfcgalIntersection3d (BC): geom=" << diffGeom->asWkt( 2 );
+
+    QgsMultiCurve *interCurve = dynamic_cast<QgsMultiCurve *>( diffGeom.get() );
+    QCOMPARE( interCurve->partCount(), 2 ); //check that the operation created 2 features
+    QCOMPARE( interCurve->curveN( 0 )->asWkt( 2 ), QStringLiteral( "LineStringZ (-6321.91 3651.67 0, -6229.56 3717.9 0)" ) );
+    QCOMPARE( interCurve->curveN( 1 )->asWkt( 2 ), QStringLiteral( "LineStringZ (-5814.13 4015.84 0, -6229.56 3717.9 0)" ) );
+  }
 }
 
 void TestQgsGeometry::sfcgalBufferCheck()
