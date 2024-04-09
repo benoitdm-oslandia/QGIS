@@ -68,25 +68,27 @@ namespace sfcgal
 
   using geometry  = sfcgal_geometry_t;
 
-  int errorHandler( const char *, ... );
-  int warningHandler( const char *, ... );
+  int errorCallback( const char *, ... );
+  int warningCallback( const char *, ... );
 
   unsigned char *hex2bytes( const char *hex, int *size );
   QString bytes2hex( const char *bytes, int size );
 
-  class Handler
+  class ErrorHandler
   {
     public:
-      Handler();
+      ErrorHandler();
 
       bool hasFailed( QString *errorMsg = nullptr );
-      void clearErrorText();
-      QString getErrorText() const;
-      void addErrorText( const QString &msg );
+      void clearText();
+      QString getText() const;
+      void addText( const QString &msg );
 
     private:
       QString errorMessage;
   };
+
+  ErrorHandler *errorHandler();
 }
 
 /**
@@ -105,12 +107,21 @@ class CORE_EXPORT QgsSfcgalEngine: public QgsGeometryEngine
      * \param allowInvalidSubGeom Whether invalid sub-geometries should be skipped without error (since QGIS 3.38)
      */
     QgsSfcgalEngine( const QgsAbstractGeometry *geometry, double precision = 0 );
+    QgsSfcgalEngine( const sfcgal::unique_ptr &geometry, double precision = 0 );
+
+    static sfcgal::unique_ptr cloneGeometry( const sfcgal::unique_ptr &geom );
+    static sfcgal::unique_ptr fromWkb( const QgsConstWkbPtr &wkbPtr, QString *errorMsg = nullptr );
+    static QgsConstWkbPtr toWkb( const sfcgal::unique_ptr &geom, QString *errorMsg = nullptr );
+    static sfcgal::unique_ptr fromWkt( const QString &wkt, QString *errorMsg = nullptr );
 
     void geometryChanged() override;
     void prepareGeometry() override;
 
     QgsAbstractGeometry *intersection( const QgsAbstractGeometry *geom, QString *errorMsg = nullptr, const QgsGeometryParameters &parameters = QgsGeometryParameters() ) const override;
+    static sfcgal::unique_ptr intersection( const sfcgal::unique_ptr &geomA, const sfcgal::unique_ptr &geomB, QString *errorMsg = nullptr, const QgsGeometryParameters &parameters = QgsGeometryParameters() );
+
     QgsAbstractGeometry *difference( const QgsAbstractGeometry *geom, QString *errorMsg = nullptr, const QgsGeometryParameters &parameters = QgsGeometryParameters() ) const override;
+    static sfcgal::unique_ptr difference( const sfcgal::unique_ptr &geomA, const sfcgal::unique_ptr &geomB, QString *errorMsg = nullptr, const QgsGeometryParameters &parameters = QgsGeometryParameters() );
 
 
     QgsAbstractGeometry *combine( const QgsAbstractGeometry *geom, QString *errorMsg = nullptr, const QgsGeometryParameters &parameters = QgsGeometryParameters() ) const override;
@@ -129,6 +140,8 @@ class CORE_EXPORT QgsSfcgalEngine: public QgsGeometryEngine
     bool distanceWithin( const QgsAbstractGeometry *geom, double maxdistance, QString *errorMsg = nullptr ) const override;
 
     bool intersects( const QgsAbstractGeometry *geom, QString *errorMsg = nullptr ) const override;
+    static bool intersects( const sfcgal::unique_ptr &geomA, const sfcgal::unique_ptr &geomB, QString *errorMsg = nullptr );
+
     bool touches( const QgsAbstractGeometry *geom, QString *errorMsg = nullptr ) const override;
     bool crosses( const QgsAbstractGeometry *geom, QString *errorMsg = nullptr ) const override;
     bool within( const QgsAbstractGeometry *geom, QString *errorMsg = nullptr ) const override;
@@ -152,6 +165,8 @@ class CORE_EXPORT QgsSfcgalEngine: public QgsGeometryEngine
 
     QgsAbstractGeometry *offsetCurve( double distance, int segments, Qgis::JoinStyle joinStyle, double miterLimit, QString *errorMsg = nullptr ) const override;
 
+    sfcgal::unique_ptr triangulate() const;
+
     /**
      * Create a geometry from a sfcgal::geometry
      * \param sfcgal sfcgal::geometry. Ownership is NOT transferred.
@@ -166,12 +181,14 @@ class CORE_EXPORT QgsSfcgalEngine: public QgsGeometryEngine
      */
     static sfcgal::unique_ptr fromAbsGeometry( const QgsAbstractGeometry *geometry, QString *errorMsg = nullptr );
 
+    static Qgis::WkbType wkbType( const sfcgal::unique_ptr &geom );
+
   private:
-    int errorHandler( const char *, ... );
-    int warningHandler( const char *, ... );
+    int errorCallback( const char *, ... );
+    int warningCallback( const char *, ... );
 
 
-    mutable QString errorMessage;
+    //mutable QString errorMessage;
     mutable sfcgal::unique_ptr mSfcgalGeom;
     sfcgal::prepared_unique_ptr mSfcgalPrepared;
     double mPrecision = 0.0;

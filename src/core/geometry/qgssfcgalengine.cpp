@@ -7,7 +7,12 @@
 #include <sstream>
 #include <charconv>
 
-Q_GLOBAL_STATIC( sfcgal::Handler, sfcgalHandler )
+Q_GLOBAL_STATIC( sfcgal::ErrorHandler, _sfcgalErrorHandler )
+
+sfcgal::ErrorHandler *sfcgal::errorHandler()
+{
+  return _sfcgalErrorHandler;
+}
 
 
 void sfcgal::Deleter::operator()( sfcgal_geometry_t *geom ) const
@@ -20,22 +25,22 @@ void sfcgal::Deleter::operator()( const sfcgal_prepared_geometry_t *geom ) const
   sfcgal_prepared_geometry_delete( ( sfcgal_prepared_geometry_t * )geom );
 }
 
-bool sfcgal::Handler::hasFailed( QString *errorMsg )
+bool sfcgal::ErrorHandler::hasFailed( QString *errorMsg )
 {
-  if ( !getErrorText().isEmpty() )
+  if ( !getText().isEmpty() )
   {
-    QgsDebugError( QString( "sfcgal operation failed: " ) + getErrorText() );
+    QgsDebugError( QString( "sfcgal operation failed: " ) + getText() );
     if ( errorMsg )
     {
       errorMsg->clear();
-      errorMsg->append( getErrorText() );
+      errorMsg->append( getText() );
     }
     return true;
   }
   return false;
 }
 
-int sfcgal::errorHandler( const char *fmt, ... )
+int sfcgal::errorCallback( const char *fmt, ... )
 {
   va_list ap;
   char buffer[1024];
@@ -44,12 +49,12 @@ int sfcgal::errorHandler( const char *fmt, ... )
   vsnprintf( buffer, sizeof buffer, fmt, ap );
   va_end( ap );
 
-  sfcgalHandler->addErrorText( QStringLiteral( "SFCgal error occurred: %1" ).arg( buffer ) );
+  sfcgal::errorHandler()->addText( QStringLiteral( "SFCgal error occurred: %1" ).arg( buffer ) );
 
   return strlen( buffer );
 }
 
-int sfcgal::warningHandler( const char *fmt, ... )
+int sfcgal::warningCallback( const char *fmt, ... )
 {
   va_list ap;
   char buffer[1024];
@@ -58,29 +63,29 @@ int sfcgal::warningHandler( const char *fmt, ... )
   vsnprintf( buffer, sizeof buffer, fmt, ap );
   va_end( ap );
 
-  sfcgalHandler->addErrorText( QStringLiteral( "SFCgal warning occurred: %1" ).arg( buffer ) );
+  sfcgal::errorHandler()->addText( QStringLiteral( "SFCgal warning occurred: %1" ).arg( buffer ) );
 
   return strlen( buffer );
 }
 
 
-sfcgal::Handler::Handler()
+sfcgal::ErrorHandler::ErrorHandler()
 {
   sfcgal_init(); // empty but called
-  sfcgal_set_error_handlers( sfcgal::warningHandler, sfcgal::errorHandler );
+  sfcgal_set_error_handlers( sfcgal::warningCallback, sfcgal::errorCallback );
 }
 
-void sfcgal::Handler::clearErrorText()
+void sfcgal::ErrorHandler::clearText()
 {
   errorMessage.clear();
 }
 
-QString sfcgal::Handler::getErrorText() const
+QString sfcgal::ErrorHandler::getText() const
 {
   return errorMessage;
 }
 
-void sfcgal::Handler::addErrorText( const QString &msg )
+void sfcgal::ErrorHandler::addText( const QString &msg )
 {
   qDebug() << "sfcgal::Handler::addErrorText" << msg;
   errorMessage.append( msg );
@@ -109,19 +114,30 @@ QgsSfcgalEngine::QgsSfcgalEngine( const QgsAbstractGeometry *geometry, double pr
 {
   mSfcgalGeom = fromAbsGeometry( geometry );
   QString errorMsg;
-  if ( sfcgalHandler->hasFailed( &errorMsg ) )
-    logError( QStringLiteral( "Unable to init sfcgal with geom." ), errorMsg );
+  if ( sfcgal::errorHandler()->hasFailed( &errorMsg ) )
+    QgsDebugError( QStringLiteral( "Unable to init sfcgal with qgs geom. Error: %1" ).arg( errorMsg ) );
+}
+
+QgsSfcgalEngine::QgsSfcgalEngine( const sfcgal::unique_ptr &geometry, double precision )
+  : QgsGeometryEngine( nullptr )
+  , mPrecision( precision )
+{
+  mSfcgalGeom = sfcgal::unique_ptr( geometry.get() );
+  mGeometry = toAbsGeometry( mSfcgalGeom.get() ).release();
+  QString errorMsg;
+  if ( sfcgal::errorHandler()->hasFailed( &errorMsg ) )
+    QgsDebugError( QStringLiteral( "Unable to init sfcgal with sfcgal geom. Error: %1" ).arg( errorMsg ) );
 }
 
 
 std::unique_ptr<QgsAbstractGeometry> QgsSfcgalEngine::toAbsGeometry( const sfcgal::geometry *geom )
 {
-  sfcgalHandler->clearErrorText();
+  sfcgal::errorHandler()->clearText();
   std::unique_ptr<QgsAbstractGeometry> out;
   char *wkbHex;
   size_t len = 0;
   sfcgal_geometry_as_wkb( geom, &wkbHex, &len );
-  if ( sfcgalHandler->hasFailed() )
+  if ( sfcgal::errorHandler()->hasFailed() )
     return nullptr;
 
   wkbHex [len] = 0; // temp fix bad ended array
@@ -151,22 +167,170 @@ std::unique_ptr<QgsPolygon> QgsSfcgalEngine::toPolygon( const sfcgal::geometry *
 
 sfcgal::unique_ptr QgsSfcgalEngine::fromAbsGeometry( const QgsAbstractGeometry *geom, QString *errorMsg )
 {
-  sfcgalHandler->clearErrorText();
+  sfcgal::errorHandler()->clearText();
   QByteArray wkbBytes = geom->asWkb();
   QString wkbHex = sfcgal::bytes2hex( wkbBytes.data(), wkbBytes.size() );
 
   sfcgal::geometry *out = sfcgal_io_read_wkb( wkbHex.toStdString().c_str(), wkbHex.length() );
 
-  if ( sfcgalHandler->hasFailed( errorMsg ) )
+  if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
     return nullptr;
 
   /*  sfcgal_geometry_is_valid(out);
-    if ( sfcgalHandler->hasFailed( errorMsg ) )
+    if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
       return nullptr;
   */
 
   return sfcgal::unique_ptr( out );
 }
+
+sfcgal::unique_ptr QgsSfcgalEngine::cloneGeometry( const sfcgal::unique_ptr &geom )
+{
+  sfcgal::geometry *out = sfcgal_geometry_clone( geom.get() );
+  return sfcgal::unique_ptr( out );
+}
+
+
+sfcgal::unique_ptr QgsSfcgalEngine::fromWkb( const QgsConstWkbPtr &wkbPtr, QString *errorMsg )
+{
+  sfcgal::errorHandler()->clearText();
+
+  const unsigned char *wkbUnsignedPtr = wkbPtr;
+  sfcgal::geometry *out = sfcgal_io_read_wkb( reinterpret_cast<const char *>( wkbUnsignedPtr ), wkbPtr.remaining() );
+
+  if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
+    return nullptr;
+
+  return sfcgal::unique_ptr( out );
+}
+
+sfcgal::unique_ptr QgsSfcgalEngine::fromWkt( const QString &wkt, QString *errorMsg )
+{
+  sfcgal::errorHandler()->clearText();
+
+  sfcgal::geometry *out = sfcgal_io_read_wkt( wkt.toStdString().c_str(), wkt.length() );
+
+  if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
+    return nullptr;
+
+  return sfcgal::unique_ptr( out );
+}
+
+QgsConstWkbPtr QgsSfcgalEngine::toWkb( const sfcgal::unique_ptr &geom, QString *errorMsg )
+{
+  sfcgal::errorHandler()->clearText();
+
+  std::unique_ptr<QgsAbstractGeometry> out;
+  char *wkbHex;
+  size_t len = 0;
+  sfcgal_geometry_as_wkb( geom.get(), &wkbHex, &len );
+  if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
+    return QgsConstWkbPtr( nullptr, 0 );
+
+
+  return QgsConstWkbPtr( reinterpret_cast<unsigned char *>( wkbHex ), len );
+}
+
+Qgis::WkbType QgsSfcgalEngine::wkbType( const sfcgal::unique_ptr &geom )
+{
+  sfcgal_geometry_type_t type = sfcgal_geometry_type_id( geom.get() ) ;
+
+  switch ( type )
+  {
+    case SFCGAL_TYPE_POINT:
+      if ( sfcgal_geometry_is_3d( geom.get() ) && sfcgal_geometry_is_measured( geom.get() ) )
+        return Qgis::WkbType::PointZM;
+      if ( sfcgal_geometry_is_3d( geom.get() ) )
+        return Qgis::WkbType::PointZ;
+      if ( sfcgal_geometry_is_measured( geom.get() ) )
+        return Qgis::WkbType::PointM;
+      return Qgis::WkbType::Point;
+
+    case SFCGAL_TYPE_LINESTRING:
+      if ( sfcgal_geometry_is_3d( geom.get() ) && sfcgal_geometry_is_measured( geom.get() ) )
+        return Qgis::WkbType::LineStringZM;
+      if ( sfcgal_geometry_is_3d( geom.get() ) )
+        return Qgis::WkbType::LineStringZ;
+      if ( sfcgal_geometry_is_measured( geom.get() ) )
+        return Qgis::WkbType::LineStringM;
+      return Qgis::WkbType::LineString;
+
+    case SFCGAL_TYPE_POLYGON:
+      if ( sfcgal_geometry_is_3d( geom.get() ) && sfcgal_geometry_is_measured( geom.get() ) )
+        return Qgis::WkbType::PolygonZM;
+      if ( sfcgal_geometry_is_3d( geom.get() ) )
+        return Qgis::WkbType::PolygonZ;
+      if ( sfcgal_geometry_is_measured( geom.get() ) )
+        return Qgis::WkbType::PolygonM;
+      return Qgis::WkbType::Polygon;
+
+    case SFCGAL_TYPE_MULTIPOINT:
+      if ( sfcgal_geometry_is_3d( geom.get() ) && sfcgal_geometry_is_measured( geom.get() ) )
+        return Qgis::WkbType::MultiPointZM;
+      if ( sfcgal_geometry_is_3d( geom.get() ) )
+        return Qgis::WkbType::MultiPointZ;
+      if ( sfcgal_geometry_is_measured( geom.get() ) )
+        return Qgis::WkbType::MultiPointM;
+      return Qgis::WkbType::MultiPoint;
+
+    case SFCGAL_TYPE_MULTILINESTRING:
+      if ( sfcgal_geometry_is_3d( geom.get() ) && sfcgal_geometry_is_measured( geom.get() ) )
+        return Qgis::WkbType::MultiLineStringZM;
+      if ( sfcgal_geometry_is_3d( geom.get() ) )
+        return Qgis::WkbType::MultiLineStringZ;
+      if ( sfcgal_geometry_is_measured( geom.get() ) )
+        return Qgis::WkbType::MultiLineStringM;
+      return Qgis::WkbType::MultiLineString;
+
+    case SFCGAL_TYPE_MULTIPOLYGON:
+      if ( sfcgal_geometry_is_3d( geom.get() ) && sfcgal_geometry_is_measured( geom.get() ) )
+        return Qgis::WkbType::MultiPolygonZM;
+      if ( sfcgal_geometry_is_3d( geom.get() ) )
+        return Qgis::WkbType::MultiPolygonZ;
+      if ( sfcgal_geometry_is_measured( geom.get() ) )
+        return Qgis::WkbType::MultiPolygonM;
+      return Qgis::WkbType::MultiPolygon;
+
+    case SFCGAL_TYPE_GEOMETRYCOLLECTION:
+      if ( sfcgal_geometry_is_3d( geom.get() ) && sfcgal_geometry_is_measured( geom.get() ) )
+        return Qgis::WkbType::GeometryCollectionZM;
+      if ( sfcgal_geometry_is_3d( geom.get() ) )
+        return Qgis::WkbType::GeometryCollectionZ;
+      if ( sfcgal_geometry_is_measured( geom.get() ) )
+        return Qgis::WkbType::GeometryCollectionM;
+      return Qgis::WkbType::GeometryCollection;
+
+    case SFCGAL_TYPE_POLYHEDRALSURFACE:
+    case SFCGAL_TYPE_TRIANGULATEDSURFACE:
+      if ( sfcgal_geometry_is_3d( geom.get() ) && sfcgal_geometry_is_measured( geom.get() ) )
+        return Qgis::WkbType::MultiSurfaceZM;
+      if ( sfcgal_geometry_is_3d( geom.get() ) )
+        return Qgis::WkbType::MultiSurfaceZ;
+      if ( sfcgal_geometry_is_measured( geom.get() ) )
+        return Qgis::WkbType::MultiSurfaceM;
+      return Qgis::WkbType::MultiSurface;
+
+    case SFCGAL_TYPE_TRIANGLE:
+      if ( sfcgal_geometry_is_3d( geom.get() ) && sfcgal_geometry_is_measured( geom.get() ) )
+        return Qgis::WkbType::TriangleZM;
+      if ( sfcgal_geometry_is_3d( geom.get() ) )
+        return Qgis::WkbType::TriangleZ;
+      if ( sfcgal_geometry_is_measured( geom.get() ) )
+        return Qgis::WkbType::TriangleM;
+      return Qgis::WkbType::Triangle;
+
+    case SFCGAL_TYPE_SOLID:
+      return Qgis::WkbType::Unknown;
+
+
+    case SFCGAL_TYPE_MULTISOLID:
+      return Qgis::WkbType::Unknown;
+  }
+
+  return Qgis::WkbType::Unknown;
+}
+
+
 
 void QgsSfcgalEngine::geometryChanged()
 {
@@ -180,55 +344,80 @@ void QgsSfcgalEngine::prepareGeometry()
 
 QgsAbstractGeometry *QgsSfcgalEngine::intersection( const QgsAbstractGeometry *geom, QString *errorMsg, const QgsGeometryParameters & ) const
 {
-  sfcgalHandler->clearErrorText();
+  sfcgal::errorHandler()->clearText();
   sfcgal::unique_ptr other = fromAbsGeometry( geom, errorMsg );
-  if ( sfcgalHandler->hasFailed( errorMsg ) )
+  if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
     return nullptr;
 
-  sfcgal_geometry_t *result = nullptr;
-  if ( geom->is3D() || mGeometry->is3D() )
-    result = sfcgal_geometry_intersection_3d( mSfcgalGeom.get(), other.get() );
-  else
-    result = sfcgal_geometry_intersection( mSfcgalGeom.get(), other.get() );
+  sfcgal::unique_ptr result = QgsSfcgalEngine::intersection( mSfcgalGeom, other, errorMsg );
 
   if ( !result )
-    sfcgalHandler->addErrorText( "sfcgal produced null result." );
-
-  if ( sfcgalHandler->hasFailed( errorMsg ) )
     return nullptr;
 
-  std::unique_ptr<QgsAbstractGeometry> out = toAbsGeometry( result );
+  std::unique_ptr<QgsAbstractGeometry> out = toAbsGeometry( result.release() );
   return out.release();
+}
+
+sfcgal::unique_ptr QgsSfcgalEngine::intersection( const sfcgal::unique_ptr &geomA, const sfcgal::unique_ptr &geomB, QString *errorMsg, const QgsGeometryParameters & )
+{
+  sfcgal::errorHandler()->clearText();
+
+  sfcgal_geometry_t *result = nullptr;
+  if ( sfcgal_geometry_is_3d( geomA.get() ) || sfcgal_geometry_is_3d( geomB.get() ) )
+    result = sfcgal_geometry_intersection_3d( geomA.get(), geomB.get() );
+  else
+    result = sfcgal_geometry_intersection( geomA.get(), geomB.get() );
+
+  if ( !result )
+    sfcgal::errorHandler()->addText( "sfcgal produced null result." );
+
+  if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
+    return nullptr;
+
+  return sfcgal::unique_ptr( result );
 }
 
 QgsAbstractGeometry *QgsSfcgalEngine::difference( const QgsAbstractGeometry *geom, QString *errorMsg, const QgsGeometryParameters & ) const
 {
-  sfcgalHandler->clearErrorText();
+  sfcgal::errorHandler()->clearText();
   sfcgal::unique_ptr other = fromAbsGeometry( geom, errorMsg );
-  if ( sfcgalHandler->hasFailed( errorMsg ) )
+  if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
     return nullptr;
 
-  sfcgal_geometry_t *result = nullptr;
-  if ( geom->is3D() || mGeometry->is3D() )
-    result = sfcgal_geometry_difference_3d( mSfcgalGeom.get(), other.get() );
-  else
-    result = sfcgal_geometry_difference( mSfcgalGeom.get(), other.get() ) ;
+  sfcgal::unique_ptr result = QgsSfcgalEngine::difference( mSfcgalGeom, other, errorMsg );
 
   if ( !result )
-    sfcgalHandler->addErrorText( "sfcgal produced null result." );
-
-  if ( sfcgalHandler->hasFailed( errorMsg ) )
     return nullptr;
 
-  std::unique_ptr<QgsAbstractGeometry> out = toAbsGeometry( result );
+  std::unique_ptr<QgsAbstractGeometry> out = toAbsGeometry( result.release() );
   return out.release();
 }
 
+sfcgal::unique_ptr QgsSfcgalEngine::difference( const sfcgal::unique_ptr &geomA, const sfcgal::unique_ptr &geomB, QString *errorMsg, const QgsGeometryParameters & )
+{
+  sfcgal::errorHandler()->clearText();
+
+  sfcgal_geometry_t *result = nullptr;
+  if ( sfcgal_geometry_is_3d( geomA.get() ) || sfcgal_geometry_is_3d( geomB.get() ) )
+    result = sfcgal_geometry_difference_3d( geomA.get(), geomB.get() );
+  else
+    result = sfcgal_geometry_difference( geomA.get(), geomB.get() );
+
+  if ( !result )
+    sfcgal::errorHandler()->addText( "sfcgal produced null result." );
+
+  if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
+    return nullptr;
+
+  return sfcgal::unique_ptr( result );
+}
+
+
 QgsAbstractGeometry *QgsSfcgalEngine::combine( const QgsAbstractGeometry *geom, QString *errorMsg, const QgsGeometryParameters & ) const
 {
-  sfcgalHandler->clearErrorText();
+  sfcgal::errorHandler()->clearText();
   sfcgal::unique_ptr other = fromAbsGeometry( geom, errorMsg );
-  if ( sfcgalHandler->hasFailed( errorMsg ) )
+  if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
     return nullptr;
 
   sfcgal_geometry_t *result = nullptr;
@@ -238,9 +427,9 @@ QgsAbstractGeometry *QgsSfcgalEngine::combine( const QgsAbstractGeometry *geom, 
     result = sfcgal_geometry_union( mSfcgalGeom.get(), other.get() );
 
   if ( !result )
-    sfcgalHandler->addErrorText( "sfcgal produced null result." );
+    sfcgal::errorHandler()->addText( "sfcgal produced null result." );
 
-  if ( sfcgalHandler->hasFailed( errorMsg ) )
+  if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
     return nullptr;
 
   std::unique_ptr<QgsAbstractGeometry> out = toAbsGeometry( result );
@@ -249,12 +438,12 @@ QgsAbstractGeometry *QgsSfcgalEngine::combine( const QgsAbstractGeometry *geom, 
 
 QgsAbstractGeometry *QgsSfcgalEngine::combine( const QVector<QgsAbstractGeometry *> &geomList, QString *errorMsg, const QgsGeometryParameters & ) const
 {
-  sfcgalHandler->clearErrorText();
+  sfcgal::errorHandler()->clearText();
   sfcgal_geometry_t *combined = nullptr;
   for ( auto otherGeom : geomList )
   {
     sfcgal::unique_ptr other = fromAbsGeometry( otherGeom, errorMsg );
-    if ( sfcgalHandler->hasFailed( errorMsg ) )
+    if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
       return nullptr;
 
     if ( ! combined )
@@ -266,9 +455,9 @@ QgsAbstractGeometry *QgsSfcgalEngine::combine( const QVector<QgsAbstractGeometry
       combined = sfcgal_geometry_union( combined, other.get() ) ;
 
     if ( !combined )
-      sfcgalHandler->addErrorText( "sfcgal produced null result." );
+      sfcgal::errorHandler()->addText( "sfcgal produced null result." );
 
-    if ( sfcgalHandler->hasFailed( errorMsg ) )
+    if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
       return nullptr;
   }
 
@@ -278,12 +467,12 @@ QgsAbstractGeometry *QgsSfcgalEngine::combine( const QVector<QgsAbstractGeometry
 
 QgsAbstractGeometry *QgsSfcgalEngine::combine( const QVector<QgsGeometry> &geomList, QString *errorMsg, const QgsGeometryParameters & ) const
 {
-  sfcgalHandler->clearErrorText();
+  sfcgal::errorHandler()->clearText();
   sfcgal_geometry_t *combined = nullptr;
   for ( QgsGeometry otherGeom : geomList )
   {
     sfcgal::unique_ptr other = fromAbsGeometry( otherGeom.get() );
-    if ( sfcgalHandler->hasFailed( errorMsg ) )
+    if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
       return nullptr;
 
     if ( ! combined )
@@ -295,9 +484,9 @@ QgsAbstractGeometry *QgsSfcgalEngine::combine( const QVector<QgsGeometry> &geomL
       combined = sfcgal_geometry_union( combined, other.get() ) ;
 
     if ( !combined )
-      sfcgalHandler->addErrorText( "sfcgal produced null result." );
+      sfcgal::errorHandler()->addText( "sfcgal produced null result." );
 
-    if ( sfcgalHandler->hasFailed( errorMsg ) )
+    if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
       return nullptr;
   }
 
@@ -317,11 +506,11 @@ QgsAbstractGeometry *QgsSfcgalEngine::symDifference( const QgsAbstractGeometry *
 
 QgsAbstractGeometry *QgsSfcgalEngine::buffer( double distance, int, QString *errorMsg ) const
 {
-  sfcgalHandler->clearErrorText();
+  sfcgal::errorHandler()->clearText();
   sfcgal_geometry_t *result = nullptr;
   result =  sfcgal_geometry_round( mSfcgalGeom.get(), distance ) ;
 
-  if ( sfcgalHandler->hasFailed( errorMsg ) )
+  if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
     return nullptr;
 
   std::unique_ptr<QgsAbstractGeometry> out = toAbsGeometry( result );
@@ -351,14 +540,14 @@ QgsAbstractGeometry *QgsSfcgalEngine::interpolate( double distance, QString *err
 
 QgsAbstractGeometry *QgsSfcgalEngine::envelope( QString *errorMsg ) const
 {
-  sfcgalHandler->clearErrorText();
+  sfcgal::errorHandler()->clearText();
   sfcgal_geometry_t *result = nullptr;
   if ( mGeometry->is3D() )
     result =  sfcgal_geometry_convexhull( mSfcgalGeom.get() ) ;
   else
     result = sfcgal_geometry_convexhull_3d( mSfcgalGeom.get() ) ;
 
-  if ( sfcgalHandler->hasFailed( errorMsg ) )
+  if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
     return nullptr;
 
   std::unique_ptr<QgsAbstractGeometry> out = toAbsGeometry( result );
@@ -388,9 +577,9 @@ QgsAbstractGeometry *QgsSfcgalEngine::convexHull( QString *errorMsg ) const
 double QgsSfcgalEngine::distance( const QgsAbstractGeometry *geom, QString *errorMsg ) const
 {
   double result = std::numeric_limits<double>::quiet_NaN();
-  sfcgalHandler->clearErrorText();
+  sfcgal::errorHandler()->clearText();
   sfcgal::unique_ptr other = fromAbsGeometry( geom, errorMsg );
-  if ( sfcgalHandler->hasFailed( errorMsg ) )
+  if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
     return result;
 
   if ( mGeometry->is3D() )
@@ -398,7 +587,7 @@ double QgsSfcgalEngine::distance( const QgsAbstractGeometry *geom, QString *erro
   else
     result = sfcgal_geometry_distance( mSfcgalGeom.get(), other.get() ) ;
 
-  if ( sfcgalHandler->hasFailed( errorMsg ) )
+  if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
     return std::numeric_limits<double>::quiet_NaN();
 
   return result;
@@ -414,15 +603,25 @@ bool QgsSfcgalEngine::distanceWithin( const QgsAbstractGeometry *geom, double ma
 
 bool QgsSfcgalEngine::intersects( const QgsAbstractGeometry *geom, QString *errorMsg ) const
 {
-  sfcgalHandler->clearErrorText();
+  sfcgal::errorHandler()->clearText();
   sfcgal::unique_ptr other = fromAbsGeometry( geom, errorMsg );
-  bool result = false;
-  if ( geom->is3D() || mGeometry->is3D() )
-    result = sfcgal_geometry_intersects_3d( mSfcgalGeom.get(), other.get() );
-  else
-    result = sfcgal_geometry_intersects( mSfcgalGeom.get(), other.get() );
+  if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
+    return false;
 
-  if ( sfcgalHandler->hasFailed( errorMsg ) )
+  return QgsSfcgalEngine::intersects( mSfcgalGeom, other, errorMsg );
+}
+
+bool QgsSfcgalEngine::intersects( const sfcgal::unique_ptr &geomA, const sfcgal::unique_ptr &geomB, QString *errorMsg )
+{
+  sfcgal::errorHandler()->clearText();
+
+  bool result = false;
+  if ( sfcgal_geometry_is_3d( geomA.get() ) || sfcgal_geometry_is_3d( geomB.get() ) )
+    result = sfcgal_geometry_intersects_3d( geomA.get(), geomB.get() );
+  else
+    result = sfcgal_geometry_intersects( geomA.get(), geomB.get() );
+
+  if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
     return false;
 
   return result;
@@ -496,14 +695,14 @@ bool QgsSfcgalEngine::relatePattern( const QgsAbstractGeometry *geom, const QStr
 double QgsSfcgalEngine::area( QString *errorMsg ) const
 {
   double result = std::numeric_limits<double>::quiet_NaN();
-  sfcgalHandler->clearErrorText();
+  sfcgal::errorHandler()->clearText();
 
   if ( mGeometry->is3D() )
     result =  sfcgal_geometry_area_3d( mSfcgalGeom.get() ) ;
   else
     result = sfcgal_geometry_area( mSfcgalGeom.get() ) ;
 
-  if ( sfcgalHandler->hasFailed( errorMsg ) )
+  if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
     return std::numeric_limits<double>::quiet_NaN();
 
   return result;
@@ -518,17 +717,17 @@ double QgsSfcgalEngine::length( QString *errorMsg ) const
 
 bool QgsSfcgalEngine::isValid( QString *errorMsg, bool, QgsGeometry *errorLoc ) const
 {
-  sfcgalHandler->clearErrorText();
+  sfcgal::errorHandler()->clearText();
   bool result = false;
   char *reason;
   sfcgal_geometry_t *location;
   result = sfcgal_geometry_is_valid_detail( mSfcgalGeom.get(), &reason, &location );
 
-  if ( sfcgalHandler->hasFailed( errorMsg ) )
+  if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
     return false;
 
   if ( strlen( reason ) )
-    sfcgalHandler->addErrorText( QString( reason ) );
+    sfcgal::errorHandler()->addText( QString( reason ) );
 
   if ( location && errorLoc )
   {
@@ -550,12 +749,12 @@ bool QgsSfcgalEngine::isEqual( const QgsAbstractGeometry *geom, QString *errorMs
 
 bool QgsSfcgalEngine::isEmpty( QString *errorMsg ) const
 {
-  sfcgalHandler->clearErrorText();
+  sfcgal::errorHandler()->clearText();
   bool result = false;
 
   result = sfcgal_geometry_is_empty( mSfcgalGeom.get() );
 
-  if ( sfcgalHandler->hasFailed( errorMsg ) )
+  if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
     return false;
 
   return result;
@@ -582,13 +781,26 @@ QgsGeometryEngine::EngineOperationResult QgsSfcgalEngine::splitGeometry( const Q
 
 QgsAbstractGeometry *QgsSfcgalEngine::offsetCurve( double distance, int, Qgis::JoinStyle, double, QString *errorMsg ) const
 {
-  sfcgalHandler->clearErrorText();
+  sfcgal::errorHandler()->clearText();
   sfcgal_geometry_t *result = nullptr;
   result =  sfcgal_geometry_offset_polygon( mSfcgalGeom.get(), distance ) ;
 
-  if ( sfcgalHandler->hasFailed( errorMsg ) )
+  if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
     return nullptr;
 
   std::unique_ptr<QgsAbstractGeometry> out = toAbsGeometry( result );
   return out.release();
 }
+
+
+sfcgal::unique_ptr QgsSfcgalEngine::triangulate() const
+{
+  sfcgal::errorHandler()->clearText();
+  sfcgal_geometry_t *result = sfcgal_geometry_triangulate_2dz( mSfcgalGeom.get() );
+
+  if ( sfcgal::errorHandler()->hasFailed() )
+    return nullptr;
+
+  return sfcgal::unique_ptr( result );
+}
+
