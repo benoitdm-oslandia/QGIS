@@ -911,6 +911,7 @@ set(QGIS_CORE_SRCS
   geometry/qgsreferencedgeometry.cpp
   geometry/qgsregularpolygon.cpp
   geometry/qgssfcgalengine.cpp
+  geometry/qgssfcgalgeometry.cpp
   geometry/qgssphere.cpp
   geometry/qgssurface.cpp
   geometry/qgstriangle.cpp
@@ -1503,6 +1504,7 @@ set(QGIS_CORE_HDRS
   geometry/qgsreferencedgeometry.h
   geometry/qgsregularpolygon.h
   geometry/qgssfcgalengine.h
+  geometry/qgssfcgalgeometry.h
   geometry/qgssphere.h
   geometry/qgssurface.h
   geometry/qgstriangle.h

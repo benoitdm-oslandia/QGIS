@@ -18,10 +18,10 @@ email                : marco.hugentobler at sourcepole dot com
 
 #define SIP_NO_FILE
 
+#include <SFCGAL/capi/sfcgal_c.h>
 #include "qgis_core.h"
 #include "qgsgeometryengine.h"
 #include "qgsgeometry.h"
-#include <SFCGAL/capi/sfcgal_c.h>
 
 class QgsLineString;
 class QgsPolygon;
@@ -59,7 +59,10 @@ namespace sfcgal
   /**
    * Scoped SFCGAL pointer.
    */
-  using unique_ptr = std::unique_ptr< sfcgal_geometry_t, Deleter>;
+  using unique_ptr = std::unique_ptr< sfcgal_geometry_t, Deleter >;
+  using shared_ptr = std::shared_ptr< sfcgal_geometry_t >; // NO DELETER ==> added with function make_shared_ptr!!!!!
+
+  sfcgal::shared_ptr make_shared_ptr( sfcgal_geometry_t *geom );
 
   /**
    * Scoped SFCGAL prepared geometry pointer.
@@ -107,21 +110,22 @@ class CORE_EXPORT QgsSfcgalEngine: public QgsGeometryEngine
      * \param allowInvalidSubGeom Whether invalid sub-geometries should be skipped without error (since QGIS 3.38)
      */
     QgsSfcgalEngine( const QgsAbstractGeometry *geometry, double precision = 0 );
-    QgsSfcgalEngine( const sfcgal::unique_ptr &geometry, double precision = 0 );
+    QgsSfcgalEngine( sfcgal::shared_ptr geometry, double precision = 0 );
 
-    static sfcgal::unique_ptr cloneGeometry( const sfcgal::unique_ptr &geom );
-    static sfcgal::unique_ptr fromWkb( const QgsConstWkbPtr &wkbPtr, QString *errorMsg = nullptr );
-    static QgsConstWkbPtr toWkb( const sfcgal::unique_ptr &geom, QString *errorMsg = nullptr );
-    static sfcgal::unique_ptr fromWkt( const QString &wkt, QString *errorMsg = nullptr );
+    static sfcgal::shared_ptr cloneGeometry( const sfcgal_geometry_t *geom );
+    static sfcgal::shared_ptr fromWkb( const QgsConstWkbPtr &wkbPtr, QString *errorMsg = nullptr );
+    static QgsConstWkbPtr toWkb( const sfcgal_geometry_t *geom, QString *errorMsg = nullptr );
+    static sfcgal::shared_ptr fromWkt( const QString &wkt, QString *errorMsg = nullptr );
+    static QString toWkt( const sfcgal_geometry_t *geom, QString *errorMsg = nullptr );
 
     void geometryChanged() override;
     void prepareGeometry() override;
 
     QgsAbstractGeometry *intersection( const QgsAbstractGeometry *geom, QString *errorMsg = nullptr, const QgsGeometryParameters &parameters = QgsGeometryParameters() ) const override;
-    static sfcgal::unique_ptr intersection( const sfcgal::unique_ptr &geomA, const sfcgal::unique_ptr &geomB, QString *errorMsg = nullptr, const QgsGeometryParameters &parameters = QgsGeometryParameters() );
+    static sfcgal::shared_ptr intersection( const sfcgal_geometry_t *geomA, const sfcgal_geometry_t *geomB, QString *errorMsg = nullptr, const QgsGeometryParameters &parameters = QgsGeometryParameters() );
 
     QgsAbstractGeometry *difference( const QgsAbstractGeometry *geom, QString *errorMsg = nullptr, const QgsGeometryParameters &parameters = QgsGeometryParameters() ) const override;
-    static sfcgal::unique_ptr difference( const sfcgal::unique_ptr &geomA, const sfcgal::unique_ptr &geomB, QString *errorMsg = nullptr, const QgsGeometryParameters &parameters = QgsGeometryParameters() );
+    static sfcgal::shared_ptr difference( const sfcgal_geometry_t *geomA, const sfcgal_geometry_t *geomB, QString *errorMsg = nullptr, const QgsGeometryParameters &parameters = QgsGeometryParameters() );
 
 
     QgsAbstractGeometry *combine( const QgsAbstractGeometry *geom, QString *errorMsg = nullptr, const QgsGeometryParameters &parameters = QgsGeometryParameters() ) const override;
@@ -140,7 +144,7 @@ class CORE_EXPORT QgsSfcgalEngine: public QgsGeometryEngine
     bool distanceWithin( const QgsAbstractGeometry *geom, double maxdistance, QString *errorMsg = nullptr ) const override;
 
     bool intersects( const QgsAbstractGeometry *geom, QString *errorMsg = nullptr ) const override;
-    static bool intersects( const sfcgal::unique_ptr &geomA, const sfcgal::unique_ptr &geomB, QString *errorMsg = nullptr );
+    static bool intersects( const sfcgal_geometry_t *geomA, const sfcgal_geometry_t *geomB, QString *errorMsg = nullptr );
 
     bool touches( const QgsAbstractGeometry *geom, QString *errorMsg = nullptr ) const override;
     bool crosses( const QgsAbstractGeometry *geom, QString *errorMsg = nullptr ) const override;
@@ -165,7 +169,7 @@ class CORE_EXPORT QgsSfcgalEngine: public QgsGeometryEngine
 
     QgsAbstractGeometry *offsetCurve( double distance, int segments, Qgis::JoinStyle joinStyle, double miterLimit, QString *errorMsg = nullptr ) const override;
 
-    sfcgal::unique_ptr triangulate() const;
+    QgsAbstractGeometry *triangulate( QString *errorMsg = nullptr ) const;
 
     /**
      * Create a geometry from a sfcgal::geometry
@@ -173,15 +177,19 @@ class CORE_EXPORT QgsSfcgalEngine: public QgsGeometryEngine
      */
     static std::unique_ptr< QgsAbstractGeometry > toAbsGeometry( const sfcgal::geometry *sfcgal );
     static std::unique_ptr< QgsPolygon > toPolygon( const sfcgal::geometry *sfcgal );
+    static std::unique_ptr<QgsAbstractGeometry> toSfcgalGeometry( sfcgal::shared_ptr &geom );
 
     /**
      * Returns a sfcgal geometry - caller takes ownership of the object (should be deleted with SFCGALGeom_destroy_r)
      * \param geometry geometry to convert to SFCGAL representation
      * \param errorMsg pointer to QString to receive the error message if any
      */
-    static sfcgal::unique_ptr fromAbsGeometry( const QgsAbstractGeometry *geometry, QString *errorMsg = nullptr );
+    static sfcgal::shared_ptr fromAbsGeometry( const QgsAbstractGeometry *geometry, QString *errorMsg = nullptr );
 
-    static Qgis::WkbType wkbType( const sfcgal::unique_ptr &geom );
+    static Qgis::WkbType wkbType( const sfcgal_geometry_t *geom );
+
+    const QgsAbstractGeometry *qgsGeometry() const { return mGeometry; }
+    const sfcgal::shared_ptr sfcgalGeometry() const { return mSfcgalGeom; }
 
   private:
     int errorCallback( const char *, ... );
@@ -189,7 +197,7 @@ class CORE_EXPORT QgsSfcgalEngine: public QgsGeometryEngine
 
 
     //mutable QString errorMessage;
-    mutable sfcgal::unique_ptr mSfcgalGeom;
+    mutable sfcgal::shared_ptr mSfcgalGeom;
     sfcgal::prepared_unique_ptr mSfcgalPrepared;
     double mPrecision = 0.0;
 

@@ -49,6 +49,7 @@
 #include "qgsreferencedgeometry.h"
 
 #include "qgssfcgalengine.h"
+#include "qgssfcgalgeometry.h"
 
 //qgs unit test utility class
 
@@ -70,6 +71,8 @@ class TestQgsGeometry : public QgsTest
     {
       return geom->createEmptyWithSameType();
     }
+
+    bool compareLongStr( const QString &expectedWkt, const QString &actualWkt, int line = 0 );
 
   private slots:
     void initTestCase();// will be called before the first testfunction is executed.
@@ -197,9 +200,9 @@ class TestQgsGeometry : public QgsTest
     //! A helper method to dump to qdebug the geometry of a polyline
     void dumpPolyline( QgsPolylineXY &polyline );
 
-    void paintMultiPolygon( QgsGeometryCollection *multiPolygon );
-    void paintPolygon( QgsPolygon *polygon );
-    void paintCurve( QgsCurve *curve );
+    void paintMultiPolygon( const QgsGeometryCollection *multiPolygon );
+    void paintPolygon( const QgsPolygon *polygon );
+    void paintCurve( const QgsCurve *curve );
 
     // Release return with delete []
     unsigned char *hex2bytes( const char *hex, int *size )
@@ -1837,13 +1840,13 @@ void TestQgsGeometry::paintMultiPolygon( QgsMultiPolygonXY &multiPolygon )
   }
 }
 
-void TestQgsGeometry::paintMultiPolygon( QgsGeometryCollection *multiPolygon )
+void TestQgsGeometry::paintMultiPolygon( const QgsGeometryCollection *multiPolygon )
 {
   for ( int i = 0; i < multiPolygon->partCount(); i++ )
   {
-    QgsAbstractGeometry *part = multiPolygon->geometryN( i );
+    const QgsAbstractGeometry *part = multiPolygon->geometryN( i );
     QVERIFY2( part->wkbType() == Qgis::WkbType::Polygon || part->wkbType() == Qgis::WkbType::PolygonZ, "must be WkbType::PolygonXX" );
-    QgsPolygon *myPolygon = dynamic_cast<QgsPolygon *>( part );
+    const QgsPolygon *myPolygon = dynamic_cast<const QgsPolygon *>( part );
     paintPolygon( myPolygon );
   }
 }
@@ -1878,7 +1881,7 @@ void TestQgsGeometry::paintPolygon( QgsPolygonXY &polygon )
   mpPainter->drawPolygon( myPoints );
 }
 
-void TestQgsGeometry::paintPolygon( QgsPolygon *polygon )
+void TestQgsGeometry::paintPolygon( const QgsPolygon *polygon )
 {
   paintCurve( polygon->exteriorRing() );
   for ( int i = 0; i < polygon->numInteriorRings(); i++ )
@@ -1887,7 +1890,7 @@ void TestQgsGeometry::paintPolygon( QgsPolygon *polygon )
   }
 }
 
-void TestQgsGeometry::paintCurve( QgsCurve *curve )
+void TestQgsGeometry::paintCurve( const QgsCurve *curve )
 {
   curve->drawAsPolygon( *mpPainter );
 }
@@ -3132,12 +3135,12 @@ void TestQgsGeometry::sfcgalIntersection()
   QVERIFY2( errorMsg.isEmpty(), errorMsg.toStdString().c_str() );
 
   // should be a single polygon as A intersect B
-  QgsAbstractGeometry *intersectionGeom = engineGeomA->intersection( mpPolygonGeometryB.constGet(), &errorMsg );
+  QgsSfcgalGeometry *intersectionGeom = dynamic_cast<QgsSfcgalGeometry *>( engineGeomA->intersection( mpPolygonGeometryB.constGet(), &errorMsg ) );
   QVERIFY2( intersectionGeom, ( QString( "intersectionGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
   QCOMPARE( intersectionGeom->wkbType(), Qgis::WkbType::Polygon );
   qDebug() << "================ sfcgalIntersection: geom=" << intersectionGeom->asWkt( 2 );
 
-  QgsPolygon *intersectionPoly = dynamic_cast<QgsPolygon *>( intersectionGeom );
+  const QgsPolygon *intersectionPoly = dynamic_cast<const QgsPolygon *>( intersectionGeom->delegatedGeometry() );
   QVERIFY( intersectionPoly->exteriorRing()->length() > 0 ); //check that the union created a feature
   QCOMPARE( intersectionPoly->exteriorRing()->asWkt( 2 ), QStringLiteral( "LineString (40 80, 40 40, 80 40, 80 80, 40 80)" ) );
 
@@ -3154,36 +3157,47 @@ void TestQgsGeometry::sfcgalIntersection3d()
   std::unique_ptr< QgsSfcgalEngine > enginePolyZA( new QgsSfcgalEngine( mSfcgalPolygonZA.constGet() ) );
   std::unique_ptr< QgsSfcgalEngine > enginePolyZB( new QgsSfcgalEngine( mSfcgalPolygonZB.constGet() ) );
   std::unique_ptr< QgsSfcgalEngine > enginePolyZC( new QgsSfcgalEngine( mSfcgalPolygonZC.constGet() ) );
-  sfcgal::unique_ptr scTriangulatedA = enginePolyZA->triangulate();
-  sfcgal::unique_ptr scTriangulatedB = enginePolyZB->triangulate();
-  sfcgal::unique_ptr scTriangulatedC = enginePolyZC->triangulate();
+  QgsSfcgalGeometry *scTriangulatedA = dynamic_cast<QgsSfcgalGeometry *>( enginePolyZA->triangulate() );
+  QgsSfcgalGeometry *scTriangulatedB = dynamic_cast<QgsSfcgalGeometry *>( enginePolyZB->triangulate() );
+  QgsSfcgalGeometry *scTriangulatedC = dynamic_cast<QgsSfcgalGeometry *>( enginePolyZC->triangulate() );
 
   // second intersect triangulated polygons
-  QVERIFY( !QgsSfcgalEngine::intersects( scTriangulatedA, scTriangulatedB ) );
+  QVERIFY( !scTriangulatedA->intersects( scTriangulatedB ) );
 
   {
-    QVERIFY( QgsSfcgalEngine::intersects( scTriangulatedA, scTriangulatedC ) );
-    sfcgal::unique_ptr scInterGeom = QgsSfcgalEngine::intersection( scTriangulatedA, scTriangulatedC, &errorMsg );
-    std::unique_ptr<QgsAbstractGeometry> interGeom = QgsSfcgalEngine::toAbsGeometry( scInterGeom.get() );
-    QVERIFY2( interGeom && interGeom.get(), ( QString( "intersectionGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
-    QCOMPARE( interGeom->wkbType(), Qgis::WkbType::MultiLineStringZ );
-    qDebug() << "================ sfcgalIntersection3d (AC): geom=" << interGeom->asWkt( 2 );
+    QVERIFY( scTriangulatedA->intersects( scTriangulatedC ) );
+    QgsSfcgalGeometry *scInterGeom = scTriangulatedA->intersection( scTriangulatedC, &errorMsg );
+    QVERIFY2( scInterGeom, ( QString( "intersectionGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
+    QCOMPARE( scInterGeom->wkbType(), Qgis::WkbType::MultiLineStringZ );
+    QCOMPARE( scInterGeom->asWkt( 2 ),
+              QStringLiteral( "MULTILINESTRING Z("
+                              "(-64473037375252357/10995116277760 73351514274852871/21990232555520 20/1,"
+                              "-129431703432785341454725506788272017716469477079/23313107857443583859443690159709871847505920 41489508487091336404601688874406905270455411499/11656553928721791929721845079854935923752960 20/1),"
+                              "(-30350932332194981/5497558138880 78760671458957353/21990232555520 20/1,"
+                              "-129431703432785341454725506788272017716469477079/23313107857443583859443690159709871847505920 41489508487091336404601688874406905270455411499/11656553928721791929721845079854935923752960 20/1)"
+                              ")" ) );
 
-    QgsMultiCurve *interCurve = dynamic_cast<QgsMultiCurve *>( interGeom.get() );
+    const QgsMultiCurve *interCurve = dynamic_cast<const QgsMultiCurve *>( scInterGeom->delegatedGeometry() );
     QCOMPARE( interCurve->partCount(), 2 ); //check that the operation created 2 features
     QCOMPARE( interCurve->curveN( 0 )->asWkt( 2 ), QStringLiteral( "LineStringZ (-5863.79 3335.64 20, -5551.89 3559.33 20)" ) );
     QCOMPARE( interCurve->curveN( 1 )->asWkt( 2 ), QStringLiteral( "LineStringZ (-5520.8 3581.62 20, -5551.89 3559.33 20)" ) );
   }
 
   {
-    QVERIFY( QgsSfcgalEngine::intersects( scTriangulatedB, scTriangulatedC ) );
-    sfcgal::unique_ptr scInterGeom = QgsSfcgalEngine::intersection( scTriangulatedB, scTriangulatedC, &errorMsg );
-    std::unique_ptr<QgsAbstractGeometry> interGeom = QgsSfcgalEngine::toAbsGeometry( scInterGeom.get() );
-    QVERIFY2( interGeom && interGeom.get(), ( QString( "intersectionGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
-    QCOMPARE( interGeom->wkbType(), Qgis::WkbType::MultiLineStringZ );
-    qDebug() << "================ sfcgalIntersection3d (BC): geom=" << interGeom->asWkt( 2 );
+    QVERIFY( scTriangulatedB->intersects( scTriangulatedC ) );
+    QgsSfcgalGeometry *scInterGeom = scTriangulatedB->intersection( scTriangulatedC, &errorMsg );
+    QVERIFY2( scInterGeom, ( QString( "intersectionGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
+    QCOMPARE( scInterGeom->wkbType(), Qgis::WkbType::MultiLineStringZ );
+    QCOMPARE( scInterGeom->asWkt( 2 ),
+              QStringLiteral( "MULTILINESTRING Z("
+                              "(-83368668237302373871208994883224442596414327451/13187253007516584345419860333660204068503552 385244135769194833928359998705288105772518269397/105498024060132674763358882669281632548028416 0/1,"
+                              "-3694427387541401611431496726449054179068805833/593047719006612426355979511374504815230976 70556612052601521660517929315037655768347058877/18977527008211597643391344363984154087391232 0/1),"
+                              "(-6392704255083833/1099511627776 17661846043398399/4398046511104 0/1,"
+                              "-3694427387541401611431496726449054179068805833/593047719006612426355979511374504815230976 70556612052601521660517929315037655768347058877/18977527008211597643391344363984154087391232 0/1)"
+                              ")"
+                            ) );
 
-    QgsMultiCurve *interCurve = dynamic_cast<QgsMultiCurve *>( interGeom.get() );
+    const QgsMultiCurve *interCurve = dynamic_cast<const QgsMultiCurve *>( scInterGeom->delegatedGeometry() );
     QCOMPARE( interCurve->partCount(), 2 ); //check that the operation created 2 features
     QCOMPARE( interCurve->curveN( 0 )->asWkt( 2 ), QStringLiteral( "LineStringZ (-6321.91 3651.67 0, -6229.56 3717.9 0)" ) );
     QCOMPARE( interCurve->curveN( 1 )->asWkt( 2 ), QStringLiteral( "LineStringZ (-5814.13 4015.84 0, -6229.56 3717.9 0)" ) );
@@ -3198,14 +3212,13 @@ void TestQgsGeometry::sfcgalUnionCheck1()
   std::unique_ptr< QgsGeometryEngine > engineGeomA( new QgsSfcgalEngine( mpPolygonGeometryA.constGet() ) );
 
   QString errorMsg;
-  QgsAbstractGeometry *combinedGeom = engineGeomA->combine( mpPolygonGeometryC.constGet(), &errorMsg );
+  QgsSfcgalGeometry *combinedGeom = dynamic_cast<QgsSfcgalGeometry *>( engineGeomA->combine( mpPolygonGeometryC.constGet(), &errorMsg ) );
   QVERIFY2( combinedGeom, ( QString( "combinedGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
   QCOMPARE( combinedGeom->wkbType(), Qgis::WkbType::MultiPolygon );
   qDebug() << "================ sfcgalUnionCheck1: geom=" << combinedGeom->asWkt( 2 );
 
-  QgsGeometryCollection *combinedPoly = dynamic_cast<QgsGeometryCollection *>( combinedGeom );
-  QVERIFY( combinedPoly->partCount() > 0 ); //check that the union did not fail
-  paintMultiPolygon( combinedPoly );
+  QVERIFY( combinedGeom->partCount() > 0 ); //check that the union did not fail
+  paintMultiPolygon( dynamic_cast<const QgsGeometryCollection *>( combinedGeom->delegatedGeometry() ) );
   QGSVERIFYIMAGECHECK( "Checking A union C produces 2 polys (sfcgal)", "geometry_unionCheck1", mImage, QString(), 0 );
 
   // with Z
@@ -3219,14 +3232,13 @@ void TestQgsGeometry::sfcgalUnionCheck2()
   std::unique_ptr< QgsGeometryEngine > engineGeomA( new QgsSfcgalEngine( mpPolygonGeometryA.constGet() ) );
 
   QString errorMsg;
-  QgsAbstractGeometry *combinedGeom = engineGeomA->combine( mpPolygonGeometryB.constGet(), &errorMsg );
+  QgsSfcgalGeometry *combinedGeom = dynamic_cast<QgsSfcgalGeometry *>( engineGeomA->combine( mpPolygonGeometryB.constGet(), &errorMsg ) );
   QVERIFY2( combinedGeom, ( QString( "combinedGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
   QCOMPARE( combinedGeom->wkbType(), Qgis::WkbType::Polygon );
   qDebug() << "================ sfcgalUnionCheck2: geom=" << combinedGeom->asWkt( 2 );
 
-  QgsPolygon *combinedPoly = dynamic_cast<QgsPolygon *>( combinedGeom );
-  QVERIFY( combinedPoly->partCount() > 0 ); //check that the union did not fail
-  paintPolygon( combinedPoly );
+  QVERIFY( combinedGeom->partCount() > 0 ); //check that the union did not fail
+  paintPolygon( dynamic_cast<const QgsPolygon *>( combinedGeom->delegatedGeometry() ) );
   QGSVERIFYIMAGECHECK( "Checking A union B produces single union poly (sfcgal)", "geometry_unionCheck2", mImage, QString(), 0 );
 
   // with Z
@@ -3240,13 +3252,12 @@ void TestQgsGeometry::sfcgalDifferenceCheck1()
   std::unique_ptr< QgsGeometryEngine > engineGeomA( new QgsSfcgalEngine( mpPolygonGeometryA.constGet() ) );
 
   QString errorMsg;
-  QgsAbstractGeometry *diffGeom = engineGeomA->difference( mpPolygonGeometryC.constGet(), &errorMsg );
+  QgsSfcgalGeometry *diffGeom = dynamic_cast<QgsSfcgalGeometry *>( engineGeomA->difference( mpPolygonGeometryC.constGet(), &errorMsg ) );
   QCOMPARE( diffGeom->wkbType(), Qgis::WkbType::Polygon );
   qDebug() << "================ sfcgalDifferenceCheck1: geom=" << diffGeom->asWkt( 2 );
 
-  QgsPolygon *diffPoly = dynamic_cast<QgsPolygon *>( diffGeom );
-  QVERIFY( diffPoly->partCount() > 0 ); //check that the union did not fail
-  paintPolygon( diffPoly );
+  QVERIFY( diffGeom->partCount() > 0 ); //check that the union did not fail
+  paintPolygon( dynamic_cast<const QgsPolygon *>( diffGeom->delegatedGeometry() ) );
   QGSVERIFYIMAGECHECK( "Checking (A - C) = A", "geometry_differenceCheck1", mImage, QString(), 0 );
 }
 
@@ -3257,49 +3268,148 @@ void TestQgsGeometry::sfcgalDifferenceCheck2()
   std::unique_ptr< QgsGeometryEngine > engineGeomA( new QgsSfcgalEngine( mpPolygonGeometryA.constGet() ) );
 
   QString errorMsg;
-  QgsAbstractGeometry *diffGeom = engineGeomA->difference( mpPolygonGeometryB.constGet(), &errorMsg );
+  QgsSfcgalGeometry *diffGeom = dynamic_cast<QgsSfcgalGeometry *>( engineGeomA->difference( mpPolygonGeometryB.constGet(), &errorMsg ) );
   QCOMPARE( diffGeom->wkbType(), Qgis::WkbType::Polygon );
   qDebug() << "================ sfcgalDifferenceCheck2: geom=" << diffGeom->asWkt( 2 );
 
-  QgsPolygon *diffPoly = dynamic_cast<QgsPolygon *>( diffGeom );
-  QVERIFY( diffPoly->partCount() > 0 ); //check that the union did not fail
-  paintPolygon( diffPoly );
+  QVERIFY( diffGeom->partCount() > 0 ); //check that the union did not fail
+  paintPolygon( dynamic_cast<const QgsPolygon *>( diffGeom->delegatedGeometry() ) );
   QGSVERIFYIMAGECHECK( "Checking (A - B) = subset of A", "geometry_differenceCheck2", mImage, QString(), 0 );
+}
+
+bool TestQgsGeometry::compareLongStr( const QString &expectedWkt, const QString &actualWkt, int line )
+{
+  for ( int i = 0; ; i += 100 )
+  {
+    QString act = actualWkt.mid( i, 100 );
+    QString exp = expectedWkt.mid( i, 100 );
+    if ( act != exp )
+    {
+      qDebug() << "Comparison failed from char" << i + 100;
+      QTest::qCompare( act, exp, act.toStdString().c_str(), exp.toStdString().c_str(), __FILE__, line );
+      return false;
+    }
+
+    if ( act.length() < 100 )
+    {
+      break;
+    }
+  }
+  return true;
 }
 
 void TestQgsGeometry::sfcgalDifference3d()
 {
   initPainterTest();
   QString errorMsg;
+
   // first triangulate polygon as some are not coplanar
   std::unique_ptr< QgsSfcgalEngine > enginePolyZA( new QgsSfcgalEngine( mSfcgalPolygonZA.constGet() ) );
   std::unique_ptr< QgsSfcgalEngine > enginePolyZB( new QgsSfcgalEngine( mSfcgalPolygonZB.constGet() ) );
   std::unique_ptr< QgsSfcgalEngine > enginePolyZC( new QgsSfcgalEngine( mSfcgalPolygonZC.constGet() ) );
-  sfcgal::unique_ptr scTriangulatedA = enginePolyZA->triangulate();
-  sfcgal::unique_ptr scTriangulatedB = enginePolyZB->triangulate();
-  sfcgal::unique_ptr scTriangulatedC = enginePolyZC->triangulate();
+  QgsSfcgalGeometry *scTriangulatedA = dynamic_cast<QgsSfcgalGeometry *>( enginePolyZA->triangulate() );
+  QgsSfcgalGeometry *scTriangulatedB = dynamic_cast<QgsSfcgalGeometry *>( enginePolyZB->triangulate() );
+  QgsSfcgalGeometry *scTriangulatedC = dynamic_cast<QgsSfcgalGeometry *>( enginePolyZC->triangulate() );
 
   // second diff triangulated polygons
   {
-    sfcgal::unique_ptr scDiffGeom = QgsSfcgalEngine::difference( scTriangulatedA, scTriangulatedB, &errorMsg );
-    QCOMPARE( QgsSfcgalEngine::wkbType( scDiffGeom ), Qgis::WkbType::MultiLineStringZ );
-
-    std::unique_ptr<QgsAbstractGeometry> diffGeom = QgsSfcgalEngine::toAbsGeometry( scDiffGeom.get() );
-    QVERIFY2( diffGeom && diffGeom.get(), ( QString( "diffGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
+    QgsSfcgalGeometry *scDiffGeom = scTriangulatedA->difference( scTriangulatedB, &errorMsg );
+    QCOMPARE( scDiffGeom->wkbType(), Qgis::WkbType::MultiSurfaceZ );
+    QVERIFY2( scDiffGeom, ( QString( "diffGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
   }
   {
-    sfcgal::unique_ptr scDiffGeom = QgsSfcgalEngine::difference( scTriangulatedA, scTriangulatedC, &errorMsg );
-    std::unique_ptr<QgsAbstractGeometry> diffGeom = QgsSfcgalEngine::toAbsGeometry( scDiffGeom.get() );
-    QVERIFY2( diffGeom && diffGeom.get(), ( QString( "diffGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
+    QgsSfcgalGeometry *scDiffGeom = scTriangulatedA->difference( scTriangulatedC, &errorMsg );
+    QVERIFY2( scDiffGeom, ( QString( "diffGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
   }
   {
-    sfcgal::unique_ptr scDiffGeom = QgsSfcgalEngine::difference( scTriangulatedB, scTriangulatedC, &errorMsg );
-    std::unique_ptr<QgsAbstractGeometry> diffGeom = QgsSfcgalEngine::toAbsGeometry( scDiffGeom.get() );
-    QVERIFY2( diffGeom && diffGeom.get(), ( QString( "diffGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
-    QCOMPARE( diffGeom->wkbType(), Qgis::WkbType::MultiLineStringZ );
-    qDebug() << "================ sfcgalIntersection3d (BC): geom=" << diffGeom->asWkt( 2 );
+    QgsSfcgalGeometry *scDiffGeom = scTriangulatedB->difference( scTriangulatedC, &errorMsg );
+    QString expectedWkt( "TIN Z("
+                         "((-5890525903621561/1099511627776 3115491815924223/1099511627776 0/1,"
+                         "-7873337894152805/1099511627776 2563043188108637/549755813888 0/1,"
+                         "-673870830479029/137438953472 8543252406917189/4398046511104 0/1,"
+                         "-5890525903621561/1099511627776 3115491815924223/1099511627776 0/1)),"
+                         "((-5890525903621561/1099511627776 3115491815924223/1099511627776 0/1,"
+                         "-6298841531272921/1099511627776 4624533042139811/1099511627776 0/1,"
+                         "-7873337894152805/1099511627776 2563043188108637/549755813888 0/1,"
+                         "-5890525903621561/1099511627776 3115491815924223/1099511627776 0/1)),"
+                         "((-3721238720140437/1099511627776 1883724167562815/549755813888 0/1,"
+                         "-2819694600750157/549755813888 3161753877614061/1099511627776 0/1,"
+                         "-673870830479029/137438953472 8543252406917189/4398046511104 0/1,"
+                         "-3721238720140437/1099511627776 1883724167562815/549755813888 0/1)),"
+                         "((-3721238720140437/1099511627776 1883724167562815/549755813888 0/1,"
+                         "-6298841531272921/1099511627776 4624533042139811/1099511627776 0/1,"
+                         "-2819694600750157/549755813888 3161753877614061/1099511627776 0/1,"
+                         "-3721238720140437/1099511627776 1883724167562815/549755813888 0/1)),"
+                         "((-2819694600750157/549755813888 3161753877614061/1099511627776 0/1,"
+                         "-1426369441703343/274877906944 2970096906264799/1099511627776 0/1,"
+                         "-673870830479029/137438953472 8543252406917189/4398046511104 0/1,"
+                         "-2819694600750157/549755813888 3161753877614061/1099511627776 0/1)),"
+                         "((-2819694600750157/549755813888 3161753877614061/1099511627776 0/1,"
+                         "-6298841531272921/1099511627776 4624533042139811/1099511627776 0/1,"
+                         "-5890525903621561/1099511627776 3115491815924223/1099511627776 0/1,"
+                         "-2819694600750157/549755813888 3161753877614061/1099511627776 0/1)),"
+                         "((-1426369441703343/274877906944 2970096906264799/1099511627776 0/1,"
+                         "-5890525903621561/1099511627776 3115491815924223/1099511627776 0/1,"
+                         "-673870830479029/137438953472 8543252406917189/4398046511104 0/1,"
+                         "-1426369441703343/274877906944 2970096906264799/1099511627776 0/1)),"
+                         "((-1426369441703343/274877906944 2970096906264799/1099511627776 0/1,"
+                         "-2819694600750157/549755813888 3161753877614061/1099511627776 0/1,"
+                         "-5890525903621561/1099511627776 3115491815924223/1099511627776 0/1,"
+                         "-1426369441703343/274877906944 2970096906264799/1099511627776 0/1))"
+                         ")" );
+    QVERIFY( compareLongStr( expectedWkt, scTriangulatedB->asWkt( 2 ), __LINE__ ) );
 
-    QgsMultiCurve *interCurve = dynamic_cast<QgsMultiCurve *>( diffGeom.get() );
+    QCOMPARE( scTriangulatedC->asWkt( 2 ), QString( "TIN Z("
+              "((-7198998726695925/1099511627776 2804515677801965/549755813888 -50/1,"
+              "-4183586768106291/549755813888 6681974384406351/1099511627776 -50/1,"
+              "-4228028148491695/549755813888 4707505158253183/1099511627776 -50/1,"
+              "-7198998726695925/1099511627776 2804515677801965/549755813888 -50/1)),"
+              "((-5586409783471741/1099511627776 6443783332190539/2199023255552 50/1,"
+              "-7198998726695925/1099511627776 2804515677801965/549755813888 -50/1,"
+              "-4228028148491695/549755813888 4707505158253183/1099511627776 -50/1,"
+              "-5586409783471741/1099511627776 6443783332190539/2199023255552 50/1))"
+              ")" ) );
+
+    QVERIFY2( scDiffGeom, ( QString( "diffGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
+    QCOMPARE( scDiffGeom->wkbType(), Qgis::WkbType::MultiSurfaceZ );
+    expectedWkt = QString( "TIN Z("
+                           "((-1426369441703343/274877906944 2970096906264799/1099511627776 0/1,"
+                           "-5890525903621561/1099511627776 3115491815924223/1099511627776 0/1,"
+                           "-673870830479029/137438953472 8543252406917189/4398046511104 0/1,"
+                           "-1426369441703343/274877906944 2970096906264799/1099511627776 0/1)),"
+                           "((-1426369441703343/274877906944 2970096906264799/1099511627776 0/1,"
+                           "-2819694600750157/549755813888 3161753877614061/1099511627776 0/1,"
+                           "-5890525903621561/1099511627776 3115491815924223/1099511627776 0/1,"
+                           "-1426369441703343/274877906944 2970096906264799/1099511627776 0/1)),"
+                           "((-2819694600750157/549755813888 3161753877614061/1099511627776 0/1,"
+                           "-1426369441703343/274877906944 2970096906264799/1099511627776 0/1,"
+                           "-673870830479029/137438953472 8543252406917189/4398046511104 0/1,"
+                           "-2819694600750157/549755813888 3161753877614061/1099511627776 0/1)),"
+                           "((-3721238720140437/1099511627776 1883724167562815/549755813888 0/1,"
+                           "-2819694600750157/549755813888 3161753877614061/1099511627776 0/1,"
+                           "-673870830479029/137438953472 8543252406917189/4398046511104 0/1,"
+                           "-3721238720140437/1099511627776 1883724167562815/549755813888 0/1)),"
+                           "((-5890525903621561/1099511627776 3115491815924223/1099511627776 0/1,"
+                           "-6298841531272921/1099511627776 4624533042139811/1099511627776 0/1,"
+                           "-7873337894152805/1099511627776 2563043188108637/549755813888 0/1,"
+                           "-5890525903621561/1099511627776 3115491815924223/1099511627776 0/1)),"
+                           "((-3721238720140437/1099511627776 1883724167562815/549755813888 0/1,"
+                           "-6298841531272921/1099511627776 4624533042139811/1099511627776 0/1,"
+                           "-2819694600750157/549755813888 3161753877614061/1099511627776 0/1,"
+                           "-3721238720140437/1099511627776 1883724167562815/549755813888 0/1)),"
+                           "((-5890525903621561/1099511627776 3115491815924223/1099511627776 0/1,"
+                           "-7873337894152805/1099511627776 2563043188108637/549755813888 0/1,"
+                           "-673870830479029/137438953472 8543252406917189/4398046511104 0/1,"
+                           "-5890525903621561/1099511627776 3115491815924223/1099511627776 0/1)),"
+                           "((-2819694600750157/549755813888 3161753877614061/1099511627776 0/1,"
+                           "-6298841531272921/1099511627776 4624533042139811/1099511627776 0/1,"
+                           "-5890525903621561/1099511627776 3115491815924223/1099511627776 0/1,"
+                           "-2819694600750157/549755813888 3161753877614061/1099511627776 0/1))"
+                           ")"
+                         );
+    QVERIFY( compareLongStr( expectedWkt, scDiffGeom->asWkt( 2 ), __LINE__ ) );
+
+    const QgsMultiCurve *interCurve = dynamic_cast<const QgsMultiCurve *>( scDiffGeom->delegatedGeometry() );
     QCOMPARE( interCurve->partCount(), 2 ); //check that the operation created 2 features
     QCOMPARE( interCurve->curveN( 0 )->asWkt( 2 ), QStringLiteral( "LineStringZ (-6321.91 3651.67 0, -6229.56 3717.9 0)" ) );
     QCOMPARE( interCurve->curveN( 1 )->asWkt( 2 ), QStringLiteral( "LineStringZ (-5814.13 4015.84 0, -6229.56 3717.9 0)" ) );
