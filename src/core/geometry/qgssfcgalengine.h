@@ -116,7 +116,7 @@ class CORE_EXPORT QgsSfcgalEngine: public QgsGeometryEngine
     static sfcgal::shared_ptr fromWkb( const QgsConstWkbPtr &wkbPtr, QString *errorMsg = nullptr );
     static QgsConstWkbPtr toWkb( const sfcgal_geometry_t *geom, QString *errorMsg = nullptr );
     static sfcgal::shared_ptr fromWkt( const QString &wkt, QString *errorMsg = nullptr );
-    static QString toWkt( const sfcgal_geometry_t *geom, QString *errorMsg = nullptr );
+    static QString toWkt( const sfcgal_geometry_t *geom, int numDecimals = -1, QString *errorMsg = nullptr );
 
     void geometryChanged() override;
     void prepareGeometry() override;

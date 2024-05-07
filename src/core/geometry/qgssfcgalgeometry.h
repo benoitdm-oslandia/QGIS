@@ -49,7 +49,7 @@ class CORE_EXPORT QgsSfcgalGeometry: public QgsAbstractGeometry
     bool fromWkb( QgsConstWkbPtr &wkb ) override;
     int wkbSize( QgsAbstractGeometry::WkbFlags flags = QgsAbstractGeometry::WkbFlags() ) const override;
     QByteArray asWkb( QgsAbstractGeometry::WkbFlags flags = QgsAbstractGeometry::WkbFlags() ) const override;
-    QString asWkt( int precision = 17 ) const override;
+    QString asWkt( int precision = -1 ) const override;
 
     QgsAbstractGeometry *boundary() const override SIP_FACTORY;
 
