@@ -256,14 +256,14 @@ QgsConstWkbPtr QgsSfcgalEngine::toWkb( const sfcgal_geometry_t *geom, QString *e
   return QgsConstWkbPtr( reinterpret_cast<unsigned char *>( wkbHex ), len );
 }
 
-QString QgsSfcgalEngine::toWkt( const sfcgal_geometry_t *geom, QString *errorMsg )
+QString QgsSfcgalEngine::toWkt( const sfcgal_geometry_t *geom, int numDecimals, QString *errorMsg )
 {
   sfcgal::errorHandler()->clearText();
 
   std::unique_ptr<QgsAbstractGeometry> out;
   char *wkt;
   size_t len = 0;
-  sfcgal_geometry_as_text( geom, &wkt, &len );
+  sfcgal_geometry_as_text_decim( geom, numDecimals, &wkt, &len );
   if ( sfcgal::errorHandler()->hasFailed( errorMsg ) )
     return QString();
 

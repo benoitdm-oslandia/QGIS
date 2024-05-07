@@ -110,9 +110,15 @@ QByteArray QgsSfcgalGeometry::asWkb( QgsAbstractGeometry::WkbFlags ) const
   return QByteArray( reinterpret_cast<const char *>( wkbUnsignedPtr ), ptr.remaining() );
 }
 
-QString QgsSfcgalGeometry::asWkt( int ) const
+QString QgsSfcgalGeometry::asWkt( int numDecim ) const
 {
-  return QgsSfcgalEngine::toWkt( mSfcgalGeom.get() );
+  QString out = QgsSfcgalEngine::toWkt( mSfcgalGeom.get(), numDecim );
+
+  QString errorMsg;
+  if ( sfcgal::errorHandler()->hasFailed( &errorMsg ) )
+    QgsDebugError( QStringLiteral( "Unable to compute asWkt. Error: %1" ).arg( errorMsg ) );
+
+  return out;
 }
 
 
