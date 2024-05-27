@@ -624,6 +624,7 @@ class TestPyQgsOGRProviderSqlite(QgisTestCase):
 
         vl = QgsVectorLayer(os.path.join(self.basetestpath, 'points_z_empty.sqlite'), 'test', 'ogr')
         self.assertTrue(vl.isValid())
+        self.assertTrue(vl.featureCount() > 2)
 
         self.assertTrue(math.isnan(vl.extent().xMinimum()))
         self.assertTrue(math.isnan(vl.extent().yMinimum()))
