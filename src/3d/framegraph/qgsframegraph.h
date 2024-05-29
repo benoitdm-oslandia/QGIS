@@ -171,11 +171,7 @@ class QgsFrameGraph : public Qt3DCore::QEntity
     Qt3DRender::QCameraSelector *mPostProcessingCameraSelector = nullptr;
     Qt3DRender::QLayerFilter *mPostprocessPassLayerFilter = nullptr;
     Qt3DRender::QClearBuffers *mPostprocessClearBuffers = nullptr;
-    Qt3DRender::QRenderTargetSelector *mRenderCaptureTargetSelector = nullptr;
     Qt3DRender::QRenderCapture *mRenderCapture = nullptr;
-    // Post processing pass texture related objects:
-    Qt3DRender::QTexture2D *mRenderCaptureColorTexture = nullptr;
-    Qt3DRender::QTexture2D *mRenderCaptureDepthTexture = nullptr;
 
     // Ambient occlusion factor blur pass texture related objects:
     Qt3DRender::QTexture2D *mAmbientOcclusionBlurTexture = nullptr;

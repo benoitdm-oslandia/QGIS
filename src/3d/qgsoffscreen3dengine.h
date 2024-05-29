@@ -84,6 +84,9 @@ class _3D_EXPORT QgsOffscreen3DEngine : public QgsAbstract3DEngine
     Qt3DRender::QCamera *mCamera = nullptr;
     QOffscreenSurface *mOffscreenSurface = nullptr;
 
+    Qt3DRender::QTexture2D *mOffscreenColorTexture = nullptr;
+    Qt3DRender::QTexture2D *mOffscreenDepthTexture = nullptr;
+
     // basic Qt3D stuff
     Qt3DCore::QAspectEngine *mAspectEngine = nullptr;              // The aspect engine, which holds the scene and related aspects.
     Qt3DRender::QRenderAspect *mRenderAspect = nullptr;            // The render aspect, which deals with rendering the scene.

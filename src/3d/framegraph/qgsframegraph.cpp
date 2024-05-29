@@ -298,51 +298,11 @@ Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructPostprocessingPass()
   mPostProcessingCameraSelector->setCamera( shadowRenderView->lightCamera() );
 
   mPostprocessPassLayerFilter = new Qt3DRender::QLayerFilter( mPostProcessingCameraSelector );
+  mPostprocessPassLayerFilter->setObjectName( "PostprocessPassFilter" );
 
   mPostprocessClearBuffers = new Qt3DRender::QClearBuffers( mPostprocessPassLayerFilter );
 
-  mRenderCaptureTargetSelector = new Qt3DRender::QRenderTargetSelector( mPostprocessClearBuffers );
-  mRenderCaptureTargetSelector->setObjectName( "Postprocessing pass RenderTargetSelector" );
-
-  Qt3DRender::QRenderTarget *renderTarget = new Qt3DRender::QRenderTarget( mRenderCaptureTargetSelector );
-
-  // The lifetime of the objects created here is managed
-  // automatically, as they become children of this object.
-
-  // Create a render target output for rendering color.
-  Qt3DRender::QRenderTargetOutput *colorOutput = new Qt3DRender::QRenderTargetOutput( renderTarget );
-  colorOutput->setAttachmentPoint( Qt3DRender::QRenderTargetOutput::Color0 );
-
-  // Create a texture to render into.
-  mRenderCaptureColorTexture = new Qt3DRender::QTexture2D( colorOutput );
-  mRenderCaptureColorTexture->setSize( mSize.width(), mSize.height() );
-  mRenderCaptureColorTexture->setFormat( Qt3DRender::QAbstractTexture::RGB8_UNorm );
-  mRenderCaptureColorTexture->setMinificationFilter( Qt3DRender::QAbstractTexture::Linear );
-  mRenderCaptureColorTexture->setMagnificationFilter( Qt3DRender::QAbstractTexture::Linear );
-  mRenderCaptureColorTexture->setObjectName( "PostProcessingPass::ColorTarget" );
-
-  // Hook the texture up to our output, and the output up to this object.
-  colorOutput->setTexture( mRenderCaptureColorTexture );
-  renderTarget->addOutput( colorOutput );
-
-  Qt3DRender::QRenderTargetOutput *depthOutput = new Qt3DRender::QRenderTargetOutput( renderTarget );
-
-  depthOutput->setAttachmentPoint( Qt3DRender::QRenderTargetOutput::Depth );
-  mRenderCaptureDepthTexture = new Qt3DRender::QTexture2D( depthOutput );
-  mRenderCaptureDepthTexture->setSize( mSize.width(), mSize.height() );
-  mRenderCaptureDepthTexture->setFormat( Qt3DRender::QAbstractTexture::DepthFormat );
-  mRenderCaptureDepthTexture->setMinificationFilter( Qt3DRender::QAbstractTexture::Linear );
-  mRenderCaptureDepthTexture->setMagnificationFilter( Qt3DRender::QAbstractTexture::Linear );
-  mRenderCaptureDepthTexture->setComparisonFunction( Qt3DRender::QAbstractTexture::CompareLessEqual );
-  mRenderCaptureDepthTexture->setComparisonMode( Qt3DRender::QAbstractTexture::CompareRefToTexture );
-  mRenderCaptureDepthTexture->setObjectName( "PostProcessingPass::DepthTarget" );
-
-  depthOutput->setTexture( mRenderCaptureDepthTexture );
-  renderTarget->addOutput( depthOutput );
-
-  mRenderCaptureTargetSelector->setTarget( renderTarget );
-
-  mRenderCapture = new Qt3DRender::QRenderCapture( mRenderCaptureTargetSelector );
+  mRenderCapture = new Qt3DRender::QRenderCapture( mPostprocessClearBuffers );
 
   Qt3DRender::QLayer *postProcessingLayer = new Qt3DRender::QLayer();
   mPostprocessingEntity = new QgsPostprocessingEntity( this, postProcessingLayer, mRootEntity );
@@ -738,8 +698,6 @@ void QgsFrameGraph::setSize( QSize s )
     renderView->updateTargetOutputSize( mSize.width(), mSize.height() );
   }
 
-  mRenderCaptureColorTexture->setSize( mSize.width(), mSize.height() );
-  mRenderCaptureDepthTexture->setSize( mSize.width(), mSize.height() );
   mRenderSurfaceSelector->setExternalRenderTargetSize( mSize );
 
   // TODO: TEMP DISABLE
@@ -751,7 +709,6 @@ void QgsFrameGraph::setRenderCaptureEnabled( bool enabled )
   if ( enabled == mRenderCaptureEnabled )
     return;
   mRenderCaptureEnabled = enabled;
-  mRenderCaptureTargetSelector->setEnabled( mRenderCaptureEnabled );
 }
 
 void QgsFrameGraph::setDebugOverlayEnabled( bool enabled )
