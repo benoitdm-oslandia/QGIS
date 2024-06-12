@@ -154,19 +154,12 @@ std::unique_ptr<QgsAbstractGeometry> QgsSfcgalEngine::toAbsGeometry( const sfcga
   if ( sfcgal::errorHandler()->hasFailed() )
     return nullptr;
 
-  wkbHex [len] = 0; // temp fix bad ended array
-
-  int byteLen = 0;
-  unsigned char *wkbBytesData = sfcgal::hex2bytes( wkbHex, &byteLen );
-
-  QgsConstWkbPtr ptr( ( const unsigned char * )wkbBytesData, byteLen );
+  QgsConstWkbPtr ptr( ( const unsigned char * )wkbHex, static_cast<int>( len ) );
   out = QgsGeometryFactory::geomFromWkb( ptr );
   if ( !out )
   {
-    QgsConstWkbPtr ptrError( ( const unsigned char * )wkbBytesData, byteLen );
-    QgsDebugError( QStringLiteral( "Wkb contains unmanaged geometry type %1" ).arg( static_cast<int>( ptrError.readHeader() ) ) );
+    sfcgal::errorHandler()->addText( "Wkb contains unmanaged geometry" );
   }
-  delete [] wkbBytesData;
 
   return out;
 }
@@ -840,4 +833,3 @@ QgsAbstractGeometry *QgsSfcgalEngine::triangulate( QString *errorMsg ) const
   sfcgal::shared_ptr sharedResult = sfcgal::make_shared_ptr( result );
   return toSfcgalGeometry( sharedResult ).release();
 }
-
