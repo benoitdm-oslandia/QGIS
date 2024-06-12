@@ -169,7 +169,7 @@ if(WITH_CORE)
       endif()
   endif()
 
-  set (WITH_SFCGAL TRUE CACHE BOOL "Determines whether SFCgal geometry library should be built")
+  set (WITH_SFCGAL FALSE CACHE BOOL "Determines whether SFCgal geometry library should be built")
 
   set (WITH_3D TRUE CACHE BOOL "Determines whether QGIS 3D library should be built")
 
