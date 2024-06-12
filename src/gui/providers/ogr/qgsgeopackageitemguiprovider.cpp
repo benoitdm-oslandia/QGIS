@@ -85,6 +85,24 @@ void QgsGeoPackageItemGuiProvider::populateContextMenu( QgsDataItem *item, QMenu
 
   if ( QgsGeoPackageCollectionItem *collectionItem = qobject_cast< QgsGeoPackageCollectionItem * >( item ) )
   {
+    if ( !( item->capabilities2() & Qgis::BrowserItemCapability::ItemRepresentsFile ) )
+    {
+      // add a refresh action, but ONLY if the collection item isn't representing a file
+      // (if so, then QgsAppFileItemGuiProvider will add the Refresh item)
+      QAction *actionRefresh = new QAction( QObject::tr( "Refresh" ), menu );
+      connect( actionRefresh, &QAction::triggered, collectionItem, [collectionItem] { collectionItem->refresh(); } );
+      if ( !menu->actions().empty() )
+      {
+        QAction *firstAction = menu->actions().at( 0 );
+        menu->insertAction( firstAction, actionRefresh );
+        menu->insertSeparator( firstAction );
+      }
+      else
+      {
+        menu->addAction( actionRefresh );
+      }
+    }
+
     menu->addSeparator();
 
     if ( QgsOgrDbConnection::connectionList( QStringLiteral( "GPKG" ) ).contains( collectionItem->name() ) )
@@ -337,8 +355,8 @@ bool QgsGeoPackageItemGuiProvider::handleDropGeopackage( QgsGeoPackageCollection
   bool hasError = false;
 
   // Main task
-  std::unique_ptr< QgsConcurrentFileWriterImportTask > mainTask( new QgsConcurrentFileWriterImportTask( tr( "GeoPackage import" ) ) );
-  QgsTaskList importTasks;
+  std::unique_ptr< QgsTaskWithSerialSubTasks > mainTask( new QgsTaskWithSerialSubTasks( tr( "GeoPackage import" ) ) );
+  bool hasSubTasks = false;
 
   const auto lst = QgsMimeDataUtils::decodeUriList( data );
   for ( const QgsMimeDataUtils::Uri &dropUri : lst )
@@ -419,8 +437,8 @@ bool QgsGeoPackageItemGuiProvider::handleDropGeopackage( QgsGeoPackageCollection
             options.insert( QStringLiteral( "overwrite" ), true );
             options.insert( QStringLiteral( "layerName" ), dropUri.name );
             QgsVectorLayerExporterTask *exportTask = new QgsVectorLayerExporterTask( vectorSrcLayer, uri, QStringLiteral( "ogr" ), vectorSrcLayer->crs(), options, owner );
-            mainTask->addSubTask( exportTask, importTasks );
-            importTasks << exportTask;
+            mainTask->addSubTask( exportTask );
+            hasSubTasks = true;
             // when export is successful:
             connect( exportTask, &QgsVectorLayerExporterTask::exportComplete, item, [ = ]()
             {
@@ -444,8 +462,8 @@ bool QgsGeoPackageItemGuiProvider::handleDropGeopackage( QgsGeoPackageCollection
           else  // Import raster
           {
             QgsGeoPackageRasterWriterTask  *exportTask = new QgsGeoPackageRasterWriterTask( dropUri, item->path() );
-            mainTask->addSubTask( exportTask, importTasks );
-            importTasks << exportTask;
+            mainTask->addSubTask( exportTask );
+            hasSubTasks = true;
             // when export is successful:
             connect( exportTask, &QgsGeoPackageRasterWriterTask::writeComplete, item, [ = ]()
             {
@@ -487,7 +505,7 @@ bool QgsGeoPackageItemGuiProvider::handleDropGeopackage( QgsGeoPackageCollection
     output->setMessage( tr( "Failed to import some layers!\n\n" ) + importResults.join( QLatin1Char( '\n' ) ), QgsMessageOutput::MessageText );
     output->showMessage();
   }
-  if ( ! importTasks.isEmpty() )
+  if ( hasSubTasks )
   {
     QgsApplication::taskManager()->addTask( mainTask.release() );
   }

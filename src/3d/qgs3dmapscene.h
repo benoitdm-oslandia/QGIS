@@ -22,7 +22,6 @@
 
 #include "qgsrectangle.h"
 #include "qgscameracontroller.h"
-#include "qgs3dmapsceneentity_p.h"
 
 #ifndef SIP_RUN
 namespace Qt3DRender
@@ -57,12 +56,12 @@ class Qgs3DMapExportSettings;
 class QgsPostprocessingEntity;
 class QgsChunkNode;
 class QgsDoubleRange;
+class Qgs3DMapSceneEntity;
 
 
 /**
  * \ingroup 3d
  * \brief Entity that encapsulates our 3D scene - contains all other entities (such as terrain) as children.
- * \note Not available in Python bindings
  */
 #ifndef SIP_RUN
 class _3D_EXPORT Qgs3DMapScene : public Qt3DCore::QEntity
@@ -278,7 +277,6 @@ class _3D_EXPORT Qgs3DMapScene : public QObject
     void updateScene( bool forceUpdate = false );
     void finalizeNewEntity( Qt3DCore::QEntity *newEntity );
     int maximumTextureSize() const;
-    Qgs3DMapSceneEntity::SceneContext buildSceneContext( ) const;
 
   private:
     Qgs3DMapSettings &mMap;

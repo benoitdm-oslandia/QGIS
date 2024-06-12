@@ -168,10 +168,10 @@ QgsRasterLayer *QgsRasterLayer::clone() const
   {
     options.transformContext = mDataProvider->transformContext();
   }
-  QgsRasterLayer *layer = new QgsRasterLayer( source(), name(), mProviderKey, options );
-  QgsMapLayer::clone( layer );
+  std::unique_ptr< QgsRasterLayer > layer = std::make_unique< QgsRasterLayer >( source(), name(), mProviderKey, options );
+  QgsMapLayer::clone( layer.get() );
   layer->mElevationProperties = mElevationProperties->clone();
-  layer->mElevationProperties->setParent( layer );
+  layer->mElevationProperties->setParent( layer.get() );
   layer->setMapTipTemplate( mapTipTemplate() );
   layer->setMapTipsEnabled( mapTipsEnabled() );
 
@@ -182,8 +182,14 @@ QgsRasterLayer *QgsRasterLayer::clone() const
       layer->pipe()->set( mPipe->at( i )->clone() );
   }
   layer->pipe()->setDataDefinedProperties( mPipe->dataDefinedProperties() );
+  layer->setResamplingStage( mPipe->resamplingStage() );
+  if ( mDataProvider && layer->dataProvider() )
+  {
+    layer->dataProvider()->setZoomedInResamplingMethod( mDataProvider->zoomedInResamplingMethod() );
+    layer->dataProvider()->setZoomedOutResamplingMethod( mDataProvider->zoomedOutResamplingMethod() );
+  }
 
-  return layer;
+  return layer.release();
 }
 
 QgsAbstractProfileGenerator *QgsRasterLayer::createProfileGenerator( const QgsProfileRequest &request )
@@ -363,7 +369,7 @@ void QgsRasterLayer::draw( QPainter *theQPainter,
   {
     // Force provider resampling if reprojection is needed
     if ( mDataProvider != nullptr &&
-         ( mDataProvider->providerCapabilities() & QgsRasterDataProvider::ProviderHintCanPerformProviderResampling ) &&
+         ( mDataProvider->providerCapabilities() & Qgis::RasterProviderCapability::ProviderHintCanPerformProviderResampling ) &&
          rasterViewPort->mSrcCRS != rasterViewPort->mDestCRS &&
          oldResamplingState != Qgis::RasterResamplingStage::Provider )
     {
@@ -415,7 +421,7 @@ QString QgsRasterLayer::htmlMetadata() const
 
                 // Raster Width
                 QStringLiteral( "<tr><td class=\"highlight\">" ) % tr( "Width" ) % QStringLiteral( "</td><td>" );
-  if ( dataProvider()->capabilities() & QgsRasterDataProvider::Size )
+  if ( dataProvider()->capabilities() & Qgis::RasterInterfaceCapability::Size )
     myMetadata += QString::number( width() );
   else
     myMetadata += tr( "n/a" );
@@ -423,7 +429,7 @@ QString QgsRasterLayer::htmlMetadata() const
 
                 // Raster height
                 QStringLiteral( "<tr><td class=\"highlight\">" ) + tr( "Height" ) + QStringLiteral( "</td><td>" );
-  if ( dataProvider()->capabilities() & QgsRasterDataProvider::Size )
+  if ( dataProvider()->capabilities() & Qgis::RasterInterfaceCapability::Size )
     myMetadata += QString::number( height() );
   else
     myMetadata += tr( "n/a" );
@@ -592,7 +598,7 @@ QPixmap QgsRasterLayer::paletteAsPixmap( int bandNumber )
     {
       QgsDebugMsgLevel( QStringLiteral( "....got color ramp item list" ), 4 );
       myShader.setColorRampItemList( myColorRampItemList );
-      myShader.setColorRampType( QgsColorRampShader::Discrete );
+      myShader.setColorRampType( Qgis::ShaderInterpolationMethod::Discrete );
       // Draw image
       const int mySize = 100;
       QPixmap myPalettePixmap( mySize, mySize );
@@ -648,7 +654,7 @@ double QgsRasterLayer::rasterUnitsPerPixelX() const
 // horisontal one.
 
   if ( mDataProvider &&
-       mDataProvider->capabilities() & QgsRasterDataProvider::Size && !qgsDoubleNear( mDataProvider->xSize(), 0.0 ) )
+       mDataProvider->capabilities() & Qgis::RasterInterfaceCapability::Size && !qgsDoubleNear( mDataProvider->xSize(), 0.0 ) )
   {
     return mDataProvider->extent().width() / mDataProvider->xSize();
   }
@@ -660,7 +666,7 @@ double QgsRasterLayer::rasterUnitsPerPixelY() const
   QGIS_PROTECT_QOBJECT_THREAD_ACCESS
 
   if ( mDataProvider &&
-       mDataProvider->capabilities() & QgsRasterDataProvider::Size && !qgsDoubleNear( mDataProvider->ySize(), 0.0 ) )
+       mDataProvider->capabilities() & Qgis::RasterInterfaceCapability::Size && !qgsDoubleNear( mDataProvider->ySize(), 0.0 ) )
   {
     return mDataProvider->extent().height() / mDataProvider->ySize();
   }
@@ -755,7 +761,7 @@ void QgsRasterLayer::setDataProvider( QString const &provider, const QgsDataProv
     return;
   }
 
-  if ( mDataProvider->providerCapabilities() & QgsRasterDataProvider::ReadLayerMetadata )
+  if ( mDataProvider->providerCapabilities() & Qgis::RasterProviderCapability::ReadLayerMetadata )
   {
     setMetadata( mDataProvider->layerMetadata() );
     QgsDebugMsgLevel( QStringLiteral( "Set Data provider QgsLayerMetadata identifier[%1]" ).arg( metadata().identifier() ), 4 );
@@ -894,7 +900,7 @@ void QgsRasterLayer::setDataProvider( QString const &provider, const QgsDataProv
           // TODO: this should go somewhere else
           QgsRasterShader *shader = new QgsRasterShader();
           QgsColorRampShader *colorRampShader = new QgsColorRampShader();
-          colorRampShader->setColorRampType( QgsColorRampShader::Interpolated );
+          colorRampShader->setColorRampType( Qgis::ShaderInterpolationMethod::Linear );
           colorRampShader->setColorRampItemList( colorTable );
           shader->setRasterShaderFunction( colorRampShader );
           r->setShader( shader );
@@ -943,7 +949,7 @@ void QgsRasterLayer::setDataProvider( QString const &provider, const QgsDataProv
   QgsRasterResampleFilter *resampleFilter = new QgsRasterResampleFilter();
   mPipe->set( resampleFilter );
 
-  if ( mDataProvider->providerCapabilities() & QgsRasterDataProvider::ProviderHintBenefitsFromResampling )
+  if ( mDataProvider->providerCapabilities() & Qgis::RasterProviderCapability::ProviderHintBenefitsFromResampling )
   {
     const QgsSettings settings;
     QString resampling = settings.value( QStringLiteral( "/Raster/defaultZoomedInResampling" ), QStringLiteral( "nearest neighbour" ) ).toString();
@@ -968,7 +974,7 @@ void QgsRasterLayer::setDataProvider( QString const &provider, const QgsDataProv
     resampleFilter->setMaxOversampling( maxOversampling );
     mDataProvider->setMaxOversampling( maxOversampling );
 
-    if ( ( mDataProvider->providerCapabilities() & QgsRasterDataProvider::ProviderHintCanPerformProviderResampling ) &&
+    if ( ( mDataProvider->providerCapabilities() & Qgis::RasterProviderCapability::ProviderHintCanPerformProviderResampling ) &&
          QgsRasterLayer::settingsRasterDefaultEarlyResampling->value() )
     {
       setResamplingStage( Qgis::RasterResamplingStage::Provider );
@@ -984,22 +990,22 @@ void QgsRasterLayer::setDataProvider( QString const &provider, const QgsDataProv
   mPipe->set( projector );
 
   // Set default identify format - use the richest format available
-  const int capabilities = mDataProvider->capabilities();
+  const Qgis::RasterInterfaceCapabilities capabilities = mDataProvider->capabilities();
   Qgis::RasterIdentifyFormat identifyFormat = Qgis::RasterIdentifyFormat::Undefined;
-  if ( capabilities & QgsRasterInterface::IdentifyHtml )
+  if ( capabilities & Qgis::RasterInterfaceCapability::IdentifyHtml )
   {
     // HTML is usually richest
     identifyFormat = Qgis::RasterIdentifyFormat::Html;
   }
-  else if ( capabilities & QgsRasterInterface::IdentifyFeature )
+  else if ( capabilities & Qgis::RasterInterfaceCapability::IdentifyFeature )
   {
     identifyFormat = Qgis::RasterIdentifyFormat::Feature;
   }
-  else if ( capabilities & QgsRasterInterface::IdentifyText )
+  else if ( capabilities & Qgis::RasterInterfaceCapability::IdentifyText )
   {
     identifyFormat = Qgis::RasterIdentifyFormat::Text;
   }
-  else if ( capabilities & QgsRasterInterface::IdentifyValue )
+  else if ( capabilities & Qgis::RasterInterfaceCapability::IdentifyValue )
   {
     identifyFormat = Qgis::RasterIdentifyFormat::Value;
   }
@@ -1849,17 +1855,19 @@ bool QgsRasterLayer::writeSld( QDomNode &node, QDomDocument &doc, QString &error
       userStyleElem.appendChild( nameElem );
     }
 
-    if ( !abstract().isEmpty() )
+    const QString abstract = !metadata().abstract().isEmpty() ? metadata().abstract() : serverProperties()->abstract();
+    if ( !abstract.isEmpty() )
     {
       QDomElement abstractElem = doc.createElement( QStringLiteral( "sld:Abstract" ) );
-      abstractElem.appendChild( doc.createTextNode( abstract() ) );
+      abstractElem.appendChild( doc.createTextNode( abstract ) );
       userStyleElem.appendChild( abstractElem );
     }
 
-    if ( !title().isEmpty() )
+    const QString title = !metadata().title().isEmpty() ? metadata().title() : serverProperties()->title();
+    if ( !title.isEmpty() )
     {
       QDomElement titleElem = doc.createElement( QStringLiteral( "sld:Title" ) );
-      titleElem.appendChild( doc.createTextNode( title() ) );
+      titleElem.appendChild( doc.createTextNode( title ) );
       userStyleElem.appendChild( titleElem );
     }
 

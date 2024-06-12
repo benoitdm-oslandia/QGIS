@@ -109,6 +109,14 @@ The development version
     typedef QFlags<Qgis::LayerFilter> LayerFilters;
 
 
+    enum class LoadStyleFlag /BaseType=IntFlag/
+    {
+      IgnoreMissingStyleErrors,
+    };
+
+    typedef QFlags<Qgis::LoadStyleFlag> LoadStyleFlags;
+
+
     enum class WkbType /BaseType=IntEnum/
       {
       Unknown,
@@ -550,6 +558,12 @@ The development version
       AllowOverlapAtNoCost,
     };
 
+    enum class LabelPrioritization /BaseType=IntEnum/
+    {
+      PreferCloser,
+      PreferPositionOrdering,
+    };
+
     enum class LabelPlacement /BaseType=IntEnum/
       {
       AroundPoint,
@@ -577,6 +591,7 @@ The development version
       BottomMiddle,
       BottomSlightlyRight,
       BottomRight,
+      OverPoint,
     };
 
     enum class LabelOffsetType /BaseType=IntEnum/
@@ -662,6 +677,20 @@ The development version
     typedef QFlags<Qgis::SublayerFlag> SublayerFlags;
 
 
+    enum class ShaderInterpolationMethod /BaseType=IntEnum/
+      {
+      Linear,
+      Discrete,
+      Exact,
+    };
+
+    enum class ShaderClassificationMethod /BaseType=IntEnum/
+      {
+      Continuous,
+      EqualInterval,
+      Quantile,
+    };
+
     enum class RasterPipeInterfaceRole /BaseType=IntEnum/
       {
       Unknown,
@@ -685,6 +714,7 @@ The development version
     enum class RasterRendererFlag /BaseType=IntFlag/
     {
       InternalLayerOpacityHandling,
+      UseNoDataForOutOfRangePixels,
     };
 
     typedef QFlags<Qgis::RasterRendererFlag> RasterRendererFlags;
@@ -768,6 +798,15 @@ The development version
       AskExcludingRasterBands,
       NeverAskSkip,
       NeverAskLoadAll,
+    };
+
+    enum class FieldOrigin /BaseType=IntEnum/
+      {
+      Unknown,
+      Provider,
+      Join,
+      Edit,
+      Expression
     };
 
     enum class FieldConfigurationFlag /BaseType=IntFlag/
@@ -892,6 +931,14 @@ The development version
       Estimated,
       Manual,
       Simulation,
+    };
+
+    enum class GpsNavigationStatus /BaseType=IntEnum/
+    {
+      NotValid,
+      Safe,
+      Caution,
+      Unsafe,
     };
 
     enum class GpsInformationComponent /BaseType=IntFlag/
@@ -1258,6 +1305,7 @@ The development version
       TemporalRangeFromDataProvider,
       RedrawLayerOnly,
       FixedRangePerBand,
+      RepresentsTemporalValues,
     };
 
     enum class TemporalIntervalMatchMethod /BaseType=IntEnum/
@@ -1425,6 +1473,25 @@ The development version
       SuperScript,
       SubScript,
     };
+
+    enum class VectorSimplificationAlgorithm /BaseType=IntEnum/
+      {
+      Distance,
+      SnapToGrid,
+      Visvalingam,
+      SnappedToGridGlobal,
+    };
+
+    enum class VectorRenderingSimplificationFlag /BaseType=IntFlag/
+    {
+      NoSimplification,
+      GeometrySimplification,
+      AntialiasingSimplification,
+      FullSimplification,
+    };
+
+    typedef QFlags<Qgis::VectorRenderingSimplificationFlag> VectorRenderingSimplificationFlags;
+
 
     enum class RenderSubcomponentProperty /BaseType=IntEnum/
     {
@@ -1789,6 +1856,13 @@ The development version
       ModelOutput,
     };
 
+    enum class ProcessingModelChildAlgorithmExecutionStatus /BaseType=IntEnum/
+    {
+      NotExecuted,
+      Success,
+      Failed,
+    };
+
     enum class ProcessingTinInputLayerType /BaseType=IntEnum/
       {
       Vertices,
@@ -1815,6 +1889,13 @@ The development version
       DefaultValue,
       Sum,
       GeometryWeighted,
+    };
+
+    enum class FieldDuplicatePolicy /BaseType=IntEnum/
+    {
+      DefaultValue,
+      Duplicate,
+      UnsetField,
     };
 
     enum class FieldDomainType /BaseType=IntEnum/
@@ -1863,7 +1944,8 @@ The development version
     enum class MeshElevationMode /BaseType=IntEnum/
     {
       FixedElevationRange,
-      FromVertices
+      FromVertices,
+      FixedRangePerGroup,
     };
 
     enum class BetweenLineConstraint /BaseType=IntEnum/
@@ -2247,6 +2329,42 @@ The development version
       Html,
       Feature,
     };
+
+
+    enum class RasterInterfaceCapability /BaseType=IntFlag/
+    {
+      NoCapabilities,
+      Size,
+      Create,
+      Remove,
+      BuildPyramids,
+      Identify,
+      IdentifyValue,
+      IdentifyText,
+      IdentifyHtml,
+      IdentifyFeature,
+      Prefetch,
+    };
+
+    typedef QFlags<Qgis::RasterInterfaceCapability> RasterInterfaceCapabilities;
+
+
+
+    enum class RasterProviderCapability /BaseType=IntFlag/
+    {
+      NoProviderCapabilities,
+      ReadLayerMetadata,
+      WriteLayerMetadata,
+      ProviderHintBenefitsFromResampling,
+      ProviderHintCanPerformProviderResampling,
+      ReloadData,
+      DpiDependentData,
+      NativeRasterAttributeTable,
+      BuildPyramids,
+    };
+
+    typedef QFlags<Qgis::RasterProviderCapability> RasterProviderCapabilities;
+
 
     enum class ElevationMapCombineMethod /BaseType=IntEnum/
     {
@@ -2862,6 +2980,8 @@ QFlags<Qgis::MapLayerProperty> operator|(Qgis::MapLayerProperty f1, QFlags<Qgis:
 
 QFlags<Qgis::MapLayerRendererFlag> operator|(Qgis::MapLayerRendererFlag f1, QFlags<Qgis::MapLayerRendererFlag> f2);
 
+QFlags<Qgis::LoadStyleFlag> operator|(Qgis::LoadStyleFlag f1, QFlags<Qgis::LoadStyleFlag> f2);
+
 QFlags<Qgis::MapSettingsFlag> operator|(Qgis::MapSettingsFlag f1, QFlags<Qgis::MapSettingsFlag> f2);
 
 QFlags<Qgis::MarkerLinePlacement> operator|(Qgis::MarkerLinePlacement f1, QFlags<Qgis::MarkerLinePlacement> f2);
@@ -2944,6 +3064,10 @@ QFlags<Qgis::StringStatistic> operator|(Qgis::StringStatistic f1, QFlags<Qgis::S
 
 QFlags<Qgis::RasterBandStatistic> operator|(Qgis::RasterBandStatistic f1, QFlags<Qgis::RasterBandStatistic> f2);
 
+QFlags<Qgis::RasterInterfaceCapability> operator|(Qgis::RasterInterfaceCapability f1, QFlags<Qgis::RasterInterfaceCapability> f2);
+
+QFlags<Qgis::RasterProviderCapability> operator|(Qgis::RasterProviderCapability f1, QFlags<Qgis::RasterProviderCapability> f2);
+
 QFlags<Qgis::ProcessingProviderFlag> operator|(Qgis::ProcessingProviderFlag f1, QFlags<Qgis::ProcessingProviderFlag> f2);
 
 QFlags<Qgis::ProcessingAlgorithmFlag> operator|(Qgis::ProcessingAlgorithmFlag f1, QFlags<Qgis::ProcessingAlgorithmFlag> f2);
@@ -2956,6 +3080,7 @@ QFlags<Qgis::ProcessingParameterFlag> operator|(Qgis::ProcessingParameterFlag f1
 
 QFlags<Qgis::DataItemProviderCapability> operator|(Qgis::DataItemProviderCapability f1, QFlags<Qgis::DataItemProviderCapability> f2);
 
+QFlags<Qgis::VectorRenderingSimplificationFlag> operator|(Qgis::VectorRenderingSimplificationFlag f1, QFlags<Qgis::VectorRenderingSimplificationFlag> f2);
 
 
 

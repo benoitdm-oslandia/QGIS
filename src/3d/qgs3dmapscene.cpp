@@ -293,18 +293,6 @@ float Qgs3DMapScene::worldSpaceError( float epsilon, float distance ) const
   return err;
 }
 
-Qgs3DMapSceneEntity::SceneContext Qgs3DMapScene::buildSceneContext( ) const
-{
-  Qt3DRender::QCamera *camera = mEngine->camera();
-  Qgs3DMapSceneEntity::SceneContext sceneContext;
-  sceneContext.cameraFov = camera->fieldOfView();
-  sceneContext.cameraPos = camera->position();
-  const QSize size = mEngine->size();
-  sceneContext.screenSizePx = std::max( size.width(), size.height() ); // TODO: is this correct?
-  sceneContext.viewProjectionMatrix = camera->projectionMatrix() * camera->viewMatrix();
-  return sceneContext;
-}
-
 void Qgs3DMapScene::onCameraChanged()
 {
   if ( mMap.projectionType() == Qt3DRender::QCameraLens::OrthographicProjection )
@@ -332,45 +320,20 @@ void Qgs3DMapScene::onCameraChanged()
   emit viewed2DExtentFrom3DChanged( extent2D );
 }
 
-void removeQLayerComponentsFromHierarchy( Qt3DCore::QEntity *entity )
-{
-  QVector<Qt3DCore::QComponent *> toBeRemovedComponents;
-  const Qt3DCore::QComponentVector entityComponents = entity->components();
-  for ( Qt3DCore::QComponent *component : entityComponents )
-  {
-    Qt3DRender::QLayer *layer = qobject_cast<Qt3DRender::QLayer *>( component );
-    if ( layer != nullptr )
-      toBeRemovedComponents.push_back( layer );
-  }
-  for ( Qt3DCore::QComponent *component : toBeRemovedComponents )
-    entity->removeComponent( component );
-  const QList< Qt3DCore::QEntity *> childEntities = entity->findChildren<Qt3DCore::QEntity *>();
-  for ( Qt3DCore::QEntity *obj : childEntities )
-  {
-    if ( obj != nullptr )
-      removeQLayerComponentsFromHierarchy( obj );
-  }
-}
-
-void addQLayerComponentsToHierarchy( Qt3DCore::QEntity *entity, const QVector<Qt3DRender::QLayer *> &layers )
-{
-  for ( Qt3DRender::QLayer *layer : layers )
-    entity->addComponent( layer );
-
-  const QList< Qt3DCore::QEntity *> childEntities = entity->findChildren<Qt3DCore::QEntity *>();
-  for ( Qt3DCore::QEntity *child : childEntities )
-  {
-    if ( child != nullptr )
-      addQLayerComponentsToHierarchy( child, layers );
-  }
-}
-
 void Qgs3DMapScene::updateScene( bool forceUpdate )
 {
   if ( forceUpdate )
     QgsEventTracing::addEvent( QgsEventTracing::Instant, QStringLiteral( "3D" ), QStringLiteral( "Update Scene" ) );
 
-  Qgs3DMapSceneEntity::SceneContext sceneContext = buildSceneContext();
+  Qgs3DMapSceneEntity::SceneContext sceneContext;
+  Qt3DRender::QCamera *camera = mEngine->camera();
+  sceneContext.cameraFov = camera->fieldOfView();
+  sceneContext.cameraPos = camera->position();
+  const QSize size = mEngine->size();
+  sceneContext.screenSizePx = std::max( size.width(), size.height() ); // TODO: is this correct?
+  sceneContext.viewProjectionMatrix = camera->projectionMatrix() * camera->viewMatrix();
+
+
   for ( Qgs3DMapSceneEntity *entity : std::as_const( mSceneEntities ) )
   {
     if ( forceUpdate || ( entity->isEnabled() && entity->needsUpdate() ) )
@@ -996,6 +959,7 @@ void Qgs3DMapScene::onDebugDepthMapSettingsChanged()
 void Qgs3DMapScene::onDebugOverlayEnabledChanged()
 {
   mEngine->frameGraph()->setDebugOverlayEnabled( mMap.isDebugOverlayEnabled() );
+  mEngine->renderSettings()->setRenderPolicy( mMap.isDebugOverlayEnabled() ? Qt3DRender::QRenderSettings::Always : Qt3DRender::QRenderSettings::OnDemand );
 }
 
 void Qgs3DMapScene::onEyeDomeShadingSettingsChanged()

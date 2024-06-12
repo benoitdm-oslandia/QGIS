@@ -277,28 +277,34 @@ QVariant QgsLayerTreeModel::data( const QModelIndex &index, int role ) const
     {
       if ( QgsMapLayer *layer = QgsLayerTree::toLayer( node )->layer() )
       {
-        QString title =
-          !layer->title().isEmpty() ? layer->title() :
-          !layer->shortName().isEmpty() ? layer->shortName() :
-          layer->name();
+        QString title = !layer->metadata().title().isEmpty() ? layer->metadata().title() :
+                        !layer->serverProperties()->title().isEmpty() ? layer->serverProperties()->title() :
+                        !layer->serverProperties()->shortName().isEmpty() ? layer->serverProperties()->shortName() :
+                        layer->name();
 
         title = "<b>" + title.toHtmlEscaped() + "</b>";
 
         if ( layer->isSpatial() && layer->crs().isValid() )
         {
+          QString layerCrs = layer->crs().authid();
+          if ( !std::isnan( layer->crs().coordinateEpoch() ) )
+          {
+            layerCrs += QStringLiteral( " @ %1" ).arg( qgsDoubleToString( layer->crs().coordinateEpoch(), 3 ) );
+          }
           if ( QgsVectorLayer *vl = qobject_cast<QgsVectorLayer *>( layer ) )
-            title += tr( " (%1 - %2)" ).arg( QgsWkbTypes::displayString( vl->wkbType() ), layer->crs().authid() ).toHtmlEscaped();
+            title += tr( " (%1 - %2)" ).arg( QgsWkbTypes::displayString( vl->wkbType() ), layerCrs ).toHtmlEscaped();
           else
-            title += tr( " (%1)" ).arg( layer->crs().authid() ).toHtmlEscaped();
+            title += tr( " (%1)" ).arg( layerCrs ).toHtmlEscaped();
         }
 
         QStringList parts;
         parts << title;
 
-        if ( !layer->abstract().isEmpty() )
+        const QString abstract = !layer->metadata().abstract().isEmpty() ? layer->metadata().abstract() : layer->serverProperties()->abstract();
+        if ( !abstract.isEmpty() )
         {
           parts << QString();
-          const QStringList abstractLines = layer->abstract().split( '\n' );
+          const QStringList abstractLines = abstract.split( '\n' );
           for ( const auto &l : abstractLines )
           {
             parts << l.toHtmlEscaped();

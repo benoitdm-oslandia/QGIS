@@ -24,6 +24,7 @@
 #include "qgsgdalproviderbase.h"
 #include "qgsrectangle.h"
 #include "qgscolorrampshader.h"
+#include "qgsogrutils.h"
 #include "qgsrasterbandstats.h"
 #include "qgsprovidermetadata.h"
 #include "qgsprovidersublayerdetails.h"
@@ -131,7 +132,7 @@ class QgsGdalProvider final: public QgsRasterDataProvider, QgsGdalProviderBase
 
     QString description() const override;
     Qgis::DataProviderFlags flags() const override;
-    QgsRasterDataProvider::ProviderCapabilities providerCapabilities() const override;
+    Qgis::RasterProviderCapabilities providerCapabilities() const override;
     QgsCoordinateReferenceSystem crs() const override;
     QgsRectangle extent() const override;
     bool isValid() const override;
@@ -139,7 +140,7 @@ class QgsGdalProvider final: public QgsRasterDataProvider, QgsGdalProviderBase
     double sample( const QgsPointXY &point, int band, bool *ok = nullptr, const QgsRectangle &boundingBox = QgsRectangle(), int width = 0, int height = 0, int dpi = 96 ) override;
     QString lastErrorTitle() override;
     QString lastError() override;
-    int capabilities() const override;
+    Qgis::RasterInterfaceCapabilities capabilities() const override;
     Qgis::DataType dataType( int bandNo ) const override;
     Qgis::DataType sourceDataType( int bandNo ) const override;
     int bandCount() const override;
@@ -203,7 +204,7 @@ class QgsGdalProvider final: public QgsRasterDataProvider, QgsGdalProviderBase
 
     bool isEditable() const override;
     bool setEditable( bool enabled ) override;
-    bool write( void *data, int band, int width, int height, int xOffset, int yOffset ) override;
+    bool write( const void *data, int band, int width, int height, int xOffset, int yOffset ) override;
 
     bool setNoDataValue( int bandNo, double noDataValue ) override;
     bool remove() override;
@@ -371,6 +372,9 @@ class QgsGdalProvider final: public QgsRasterDataProvider, QgsGdalProviderBase
       const QgsRectangle &reqExtent,
       int bufferWidthPix,
       int bufferHeightPix );
+
+    //! Invalidate GDAL /vsicurl/ RAM cache for this uri
+    void invalidateNetworkCache();
 };
 
 /**
@@ -416,6 +420,9 @@ class QgsGdalProviderMetadata final: public QgsProviderMetadata
                     const QString &uiFileContent, bool useAsDefault, QString &errCause ) override;
     QString loadStyle( const QString &uri, QString &errCause ) override;
     QString loadStoredStyle( const QString &uri, QString &styleName, QString &errCause ) override;
+  private:
+    //! Get layer name from gdal url
+    static QString getLayerNameForStyle( const QString &uri, gdal::dataset_unique_ptr &ds );
 };
 
 ///@endcond

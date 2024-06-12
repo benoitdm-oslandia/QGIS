@@ -2346,9 +2346,9 @@ bool QgsWmsProvider::calculateExtent() const
 }
 
 
-int QgsWmsProvider::capabilities() const
+Qgis::RasterInterfaceCapabilities QgsWmsProvider::capabilities() const
 {
-  int capability = NoCapabilities;
+  Qgis::RasterInterfaceCapabilities capability = Qgis::RasterInterfaceCapability::NoCapabilities;
   bool canIdentify = false;
 
   if ( mSettings.mTiled && mTileLayer )
@@ -2382,14 +2382,14 @@ int QgsWmsProvider::capabilities() const
     capability = mCaps.identifyCapabilities();
     if ( capability )
     {
-      capability |= Capability::Identify;
+      capability |= Qgis::RasterInterfaceCapability::Identify;
     }
   }
 
   bool enablePrefetch = QgsSettingsRegistryCore::settingsEnableWMSTilePrefetching->value();
   if ( mSettings.mXyz || enablePrefetch )
   {
-    capability |= Capability::Prefetch;
+    capability |= Qgis::RasterInterfaceCapability::Prefetch;
   }
 
   QgsDebugMsgLevel( QStringLiteral( "capability = %1" ).arg( capability ), 2 );
@@ -3866,7 +3866,7 @@ QgsRasterIdentifyResult QgsWmsProvider::identify( const QgsPointXY &point, Qgis:
 
             for ( ; fieldIterator != properties.constEnd(); ++fieldIterator )
             {
-              fields.append( QgsField( fieldIterator.key(), QVariant::String ) );
+              fields.append( QgsField( fieldIterator.key(), QMetaType::Type::QString ) );
             }
 
             QgsFeature feature( fields );
@@ -4020,19 +4020,19 @@ QgsCoordinateReferenceSystem QgsWmsProvider::crs() const
   return mCrs;
 }
 
-QgsRasterDataProvider::ProviderCapabilities QgsWmsProvider::providerCapabilities() const
+Qgis::RasterProviderCapabilities QgsWmsProvider::providerCapabilities() const
 {
-  QgsRasterDataProvider::ProviderCapabilities capabilities;
+  Qgis::RasterProviderCapabilities capabilities;
   if ( mConverter )
-    capabilities = ProviderCapability::ReadLayerMetadata |
-                   ProviderCapability::ProviderHintBenefitsFromResampling |
-                   ProviderCapability::ProviderHintCanPerformProviderResampling;
+    capabilities = Qgis::RasterProviderCapability::ReadLayerMetadata |
+                   Qgis::RasterProviderCapability::ProviderHintBenefitsFromResampling |
+                   Qgis::RasterProviderCapability::ProviderHintCanPerformProviderResampling;
   else
-    capabilities = ProviderCapability::ReadLayerMetadata;
+    capabilities = Qgis::RasterProviderCapability::ReadLayerMetadata;
 
   if ( mSettings.mTiled || mSettings.mXyz )
   {
-    capabilities |= DpiDependentData;
+    capabilities |= Qgis::RasterProviderCapability::DpiDependentData;
   }
 
   return capabilities;
@@ -5258,7 +5258,7 @@ QVariantMap QgsWmsProviderMetadata::decodeUri( const QString &uri ) const
     {
       if ( decoded.contains( item.first ) )
       {
-        if ( decoded[ item.first ].type() == QVariant::String )
+        if ( decoded[ item.first ].userType() == QMetaType::Type::QString )
         {
           decoded[ item.first ] = QStringList() << decoded[ item.first ].toString();
         }
@@ -5295,7 +5295,7 @@ QString QgsWmsProviderMetadata::encodeUri( const QVariantMap &parts ) const
     }
     else
     {
-      if ( it.value().type() == QVariant::StringList )
+      if ( it.value().userType() == QMetaType::Type::QStringList )
       {
         listItems.push_back( { it.key(), it.value().toStringList() } );
       }

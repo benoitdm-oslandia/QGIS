@@ -94,6 +94,11 @@ QgsVectorLayer.NoMarker = Qgis.VertexMarkerType.NoMarker
 QgsVectorLayer.NoMarker.is_monkey_patched = True
 QgsVectorLayer.NoMarker.__doc__ = "No marker"
 
+QgsMapToPixelSimplifier.Distance = Qgis.VectorSimplificationAlgorithm.Distance
+QgsMapToPixelSimplifier.SnapToGrid = Qgis.VectorSimplificationAlgorithm.SnapToGrid
+QgsMapToPixelSimplifier.Visvalingam = Qgis.VectorSimplificationAlgorithm.Visvalingam
+QgsMapToPixelSimplifier.SnappedToGridGlobal = Qgis.VectorSimplificationAlgorithm.SnappedToGridGlobal
+
 # Monkey patch static const "QgsDataProvider.SUBLAYER_SEPARATOR" which was removed for QGIS 3.12
 QgsDataProvider.SUBLAYER_SEPARATOR = QgsDataProvider.sublayerSeparator()
 
@@ -310,6 +315,18 @@ def set_overrun_distance_scale(self, scale):
 
 QgsPalLayerSettings.overrunDistanceMapUnitScale = property(get_overrun_distance_scale)
 QgsPalLayerSettings.overrunDistanceMapUnitScale = QgsPalLayerSettings.overrunDistanceMapUnitScale.setter(set_overrun_distance_scale)
+
+
+def get_quad_offset(self):
+    return self.pointSettings().quadrant()
+
+
+def set_quad_offset(self, quadrant):
+    self.pointSettings().setQuadrant(quadrant)
+
+
+QgsPalLayerSettings.quadOffset = property(get_quad_offset)
+QgsPalLayerSettings.quadOffset = QgsPalLayerSettings.quadOffset.setter(set_quad_offset)
 
 
 def get_limit_num_labels(self):

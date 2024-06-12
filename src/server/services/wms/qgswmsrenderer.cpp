@@ -937,7 +937,7 @@ namespace QgsWms
       QgsLayoutFrame *htmlFrame = html->frame( 0 );
       bool ok = false;
       const QString htmlId = htmlFrame->id();
-      const QString url = mWmsParameters.layoutParameter( htmlId, ok );
+      const QString htmlValue = mWmsParameters.layoutParameter( htmlId, ok );
 
       if ( !ok )
       {
@@ -947,15 +947,22 @@ namespace QgsWms
 
       //remove exported Htmls referenced in the request
       //but with empty string
-      if ( url.isEmpty() )
+      if ( htmlValue.isEmpty() )
       {
         c->removeMultiFrame( html );
         delete html;
         continue;
       }
 
-      QUrl newUrl( url );
-      html->setUrl( newUrl );
+      if ( html->contentMode() == QgsLayoutItemHtml::Url )
+      {
+        QUrl newUrl( htmlValue );
+        html->setUrl( newUrl );
+      }
+      else if ( html->contentMode() == QgsLayoutItemHtml::ManualHtml )
+      {
+        html->setHtml( htmlValue );
+      }
       html->update();
     }
 
@@ -1174,6 +1181,11 @@ namespace QgsWms
     QgsDxfExport::Flags flags;
     if ( mWmsParameters.noMText() )
       flags.setFlag( QgsDxfExport::Flag::FlagNoMText );
+
+    if ( mWmsParameters.exportLinesWithZeroWidth() )
+    {
+      flags.setFlag( QgsDxfExport::Flag::FlagHairlineWidthExport );
+    }
 
     dxf->setFlags( flags );
 
@@ -1649,7 +1661,7 @@ namespace QgsWms
             }
 
             layerElement.setAttribute( QStringLiteral( "name" ), layerName );
-            const QString layerTitle = layer->title();
+            const QString layerTitle = layer->serverProperties()->title();
             if ( !layerTitle.isEmpty() )
             {
               layerElement.setAttribute( QStringLiteral( "title" ), layerTitle );
@@ -1725,7 +1737,7 @@ namespace QgsWms
               const QList<QgsMapLayer *> constLayers { mContext.layerGroups()[ql] };
               for ( const QgsMapLayer *ml : constLayers )
               {
-                if ( ( ! ml->shortName().isEmpty() &&  ml->shortName() == queryLayer ) || ( ml->name() == queryLayer ) )
+                if ( ( ! ml->serverProperties()->shortName().isEmpty() &&  ml->serverProperties()->shortName() == queryLayer ) || ( ml->name() == queryLayer ) )
                 {
                   param.mValue = ql;
                 }
@@ -2169,14 +2181,14 @@ namespace QgsWms
 
     QgsMessageLog::logMessage( QStringLiteral( "infoPoint: %1 %2" ).arg( infoPoint->x() ).arg( infoPoint->y() ), QStringLiteral( "Server" ), Qgis::MessageLevel::Info );
 
-    if ( !( layer->dataProvider()->capabilities() & QgsRasterDataProvider::IdentifyValue ) &&
-         !( layer->dataProvider()->capabilities() & QgsRasterDataProvider::IdentifyFeature ) )
+    if ( !( layer->dataProvider()->capabilities() & Qgis::RasterInterfaceCapability::IdentifyValue ) &&
+         !( layer->dataProvider()->capabilities() & Qgis::RasterInterfaceCapability::IdentifyFeature ) )
     {
       return false;
     }
 
     const Qgis::RasterIdentifyFormat identifyFormat(
-      static_cast<bool>( layer->dataProvider()->capabilities() & QgsRasterDataProvider::IdentifyFeature )
+      static_cast<bool>( layer->dataProvider()->capabilities() & Qgis::RasterInterfaceCapability::IdentifyFeature )
       ? Qgis::RasterIdentifyFormat::Feature
       : Qgis::RasterIdentifyFormat::Value );
 
@@ -2218,7 +2230,7 @@ namespace QgsWms
         int index = 0;
         for ( auto it = attributes.constBegin(); it != attributes.constEnd(); ++it )
         {
-          fields.append( QgsField( layer->bandName( it.key() ), QVariant::Double ) );
+          fields.append( QgsField( layer->bandName( it.key() ), QMetaType::Type::Double ) );
           feature.setAttribute( index++, QString::number( it.value().toDouble() ) );
         }
         feature.setFields( fields );
@@ -2232,13 +2244,13 @@ namespace QgsWms
         for ( auto it = values.constBegin(); it != values.constEnd(); ++it )
         {
           QVariant value = it.value();
-          if ( value.type() == QVariant::Bool && !value.toBool() )
+          if ( value.userType() == QMetaType::Type::Bool && !value.toBool() )
           {
             // sublayer not visible or not queryable
             continue;
           }
 
-          if ( value.type() == QVariant::String )
+          if ( value.userType() == QMetaType::Type::QString )
           {
             continue;
           }
@@ -2284,13 +2296,13 @@ namespace QgsWms
         for ( auto it = values.constBegin(); it != values.constEnd(); ++it )
         {
           QVariant value = it.value();
-          if ( value.type() == QVariant::Bool && !value.toBool() )
+          if ( value.userType() == QMetaType::Type::Bool && !value.toBool() )
           {
             // sublayer not visible or not queryable
             continue;
           }
 
-          if ( value.type() == QVariant::String )
+          if ( value.userType() == QMetaType::Type::QString )
           {
             continue;
           }

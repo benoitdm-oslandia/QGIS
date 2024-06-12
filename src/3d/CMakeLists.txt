@@ -17,6 +17,7 @@ set(QGIS_3D_SRCS
   qgs3dmapcanvas.cpp
   qgs3dsceneexporter.cpp
   qgs3dutils.cpp
+  qgs3dwiredmesh_p.cpp
   qgscameracontroller.cpp
   qgscamerapose.cpp
   qgsfeature3dhandler_p.cpp
@@ -25,7 +26,7 @@ set(QGIS_3D_SRCS
   qgsimagetexture.cpp
   qgslayoutitem3dmap.cpp
   qgsoffscreen3dengine.cpp
-  qgsraycastingutils_p.cpp
+  qgsraycastingutils.cpp
   qgsrulebased3drenderer.cpp
   qgsrulebasedchunkloader_p.cpp
   qgstessellatedpolygongeometry.cpp
@@ -121,6 +122,7 @@ set(QGIS_3D_HDRS
   qgs3dtypes.h
   qgs3dutils.h
   qgs3dmapcanvas.h
+  qgs3dwiredmesh_p.h
   qgsaabb.h
   qgsabstract3dengine.h
   qgsabstractvectorlayer3drenderer.h
@@ -131,6 +133,7 @@ set(QGIS_3D_HDRS
   qgslayoutitem3dmap.h
   qgsmeshlayer3drenderer.h
   qgsoffscreen3dengine.h
+  qgsraycastingutils.h
   qgsrulebased3drenderer.h
   qgstessellatedpolygongeometry.h
   qgstiledscenechunkloader_p.h

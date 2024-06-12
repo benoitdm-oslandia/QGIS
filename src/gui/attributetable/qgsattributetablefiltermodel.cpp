@@ -120,7 +120,10 @@ QVariant QgsAttributeTableFilterModel::headerData( int section, Qt::Orientation 
     if ( mColumnMapping.at( section ) == -1 && role == Qt::DisplayRole )
       return tr( "Actions" );
     else
-      return QSortFilterProxyModel::headerData( section, orientation, role );
+    {
+      const int sourceSection = mapColumnToSource( section );
+      return sourceModel()->headerData( sourceSection, orientation, role );
+    }
   }
   else
   {
@@ -704,10 +707,9 @@ QModelIndex QgsAttributeTableFilterModel::mapToSource( const QModelIndex &proxyI
 
   int sourceColumn = mapColumnToSource( proxyIndex.column() );
 
-  // For the action column there is no matching column in the source model, just return the first one
-  // so we are still able to query for the feature id, the feature...
+  // For the action column there is no matching column in the source model, just return invalid
   if ( sourceColumn == -1 )
-    sourceColumn = 0;
+    return QModelIndex();
 
   return QSortFilterProxyModel::mapToSource( index( proxyIndex.row(), sourceColumn, proxyIndex.parent() ) );
 }
@@ -735,4 +737,19 @@ Qt::ItemFlags QgsAttributeTableFilterModel::flags( const QModelIndex &index ) co
 
   const QModelIndex source_index = mapToSource( index );
   return masterModel()->flags( source_index );
+}
+
+QModelIndex QgsAttributeTableFilterModel::mapToMaster( const QModelIndex &proxyIndex ) const
+{
+  if ( !proxyIndex.isValid() )
+    return QModelIndex();
+
+  int sourceColumn = mapColumnToSource( proxyIndex.column() );
+
+  // For the action column there is no matching column in the source model, just return the first one
+  // so we are still able to query for the feature id, the feature...
+  if ( sourceColumn == -1 )
+    sourceColumn = 0;
+
+  return QSortFilterProxyModel::mapToSource( index( proxyIndex.row(), sourceColumn, proxyIndex.parent() ) );
 }

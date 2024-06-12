@@ -130,8 +130,8 @@ void TestQgisAppClipboard::copyToText()
 
   //set clipboard to some QgsFeatures
   QgsFields fields;
-  fields.append( QgsField( QStringLiteral( "int_field" ), QVariant::Int ) );
-  fields.append( QgsField( QStringLiteral( "string_field" ), QVariant::String ) );
+  fields.append( QgsField( QStringLiteral( "int_field" ), QMetaType::Type::Int ) );
+  fields.append( QgsField( QStringLiteral( "string_field" ), QMetaType::Type::QString ) );
   QgsFeature feat( fields, 5 );
   feat.setAttribute( QStringLiteral( "int_field" ), 9 );
   feat.setAttribute( QStringLiteral( "string_field" ), "val" );
@@ -158,10 +158,15 @@ void TestQgisAppClipboard::copyToText()
   mQgisApp->clipboard()->generateClipboardText( result, resultHtml );
   QCOMPARE( result, QString( "wkt_geom\tint_field\tstring_field\nPoint (5 6)\t9\tval\nPoint (7 8)\t19\tval2" ) );
 
+  // attributes with WKB
+  settings.setEnumValue( QStringLiteral( "/qgis/copyFeatureFormat" ), QgsClipboard::AttributesWithWKB );
+  mQgisApp->clipboard()->generateClipboardText( result, resultHtml );
+  QCOMPARE( result, QString( "wkb_geom\tint_field\tstring_field\n010100000000000000000014400000000000001840\t9\tval\n01010000000000000000001c400000000000002040\t19\tval2" ) );
+
   // HTML test
   mQgisApp->clipboard()->replaceWithCopyOf( feats );
   result = mQgisApp->clipboard()->data( "text/html" );
-  QCOMPARE( result, QString( "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\"><html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\"/></head><body><table border=\"1\"><tr><td>wkt_geom</td><td>int_field</td><td>string_field</td></tr><tr><td>Point (5 6)</td><td>9</td><td>val</td></tr><tr><td>Point (7 8)</td><td>19</td><td>val2</td></tr></table></body></html>" ) );
+  QCOMPARE( result, QString( "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\"><html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\"/></head><body><table border=\"1\"><tr><td>wkb_geom</td><td>int_field</td><td>string_field</td></tr><tr><td>010100000000000000000014400000000000001840</td><td>9</td><td>val</td></tr><tr><td>01010000000000000000001c400000000000002040</td><td>19</td><td>val2</td></tr></table></body></html>" ) );
 
   // GeoJSON
   settings.setEnumValue( QStringLiteral( "/qgis/copyFeatureFormat" ), QgsClipboard::GeoJSON );
@@ -229,6 +234,11 @@ void TestQgisAppClipboard::copyToText()
   mQgisApp->clipboard()->generateClipboardText( result, resultHtml );
   QCOMPARE( result, QString( "wkt_geom\tint_field\tstring_field\nPoint (5 6)\t1\tSingle line text\nPoint (7 8)\t2\t\"Unix Multiline \nText\"\nPoint (9 10)\t3\t\"Windows Multiline \r\nText\"" ) );
 
+  // attributes with WKB
+  settings.setEnumValue( QStringLiteral( "/qgis/copyFeatureFormat" ), QgsClipboard::AttributesWithWKB );
+  mQgisApp->clipboard()->generateClipboardText( result, resultHtml );
+  QCOMPARE( result, QString( "wkb_geom\tint_field\tstring_field\n010100000000000000000014400000000000001840\t1\tSingle line text\n01010000000000000000001c400000000000002040\t2\t\"Unix Multiline \nText\"\n010100000000000000000022400000000000002440\t3\t\"Windows Multiline \r\nText\"" ) );
+
 }
 
 void TestQgisAppClipboard::copyToTextNoFields()
@@ -253,10 +263,15 @@ void TestQgisAppClipboard::copyToTextNoFields()
   mQgisApp->clipboard()->generateClipboardText( result, resultHtml );
   QCOMPARE( result, QStringLiteral( "Point (5 6)\nPoint (7 8)" ) );
 
+  // attributes with WKB
+  settings.setEnumValue( QStringLiteral( "/qgis/copyFeatureFormat" ), QgsClipboard::AttributesWithWKB );
+  mQgisApp->clipboard()->generateClipboardText( result, resultHtml );
+  QCOMPARE( result, QStringLiteral( "010100000000000000000014400000000000001840\n01010000000000000000001c400000000000002040" ) );
+
   // HTML test
   mQgisApp->clipboard()->replaceWithCopyOf( feats );
   result = mQgisApp->clipboard()->data( "text/html" );
-  QCOMPARE( result, QStringLiteral( "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\"><html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\"/></head><body><table border=\"1\"><tr><td>wkt_geom</td></tr><tr><td>Point (5 6)</td></tr><tr><td>Point (7 8)</td></tr></table></body></html>" ) );
+  QCOMPARE( result, QStringLiteral( "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\"><html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\"/></head><body><table border=\"1\"><tr><td>wkb_geom</td></tr><tr><td>010100000000000000000014400000000000001840</td></tr><tr><td>01010000000000000000001c400000000000002040</td></tr></table></body></html>" ) );
 
   // GeoJSON
   settings.setEnumValue( QStringLiteral( "/qgis/copyFeatureFormat" ), QgsClipboard::GeoJSON );
@@ -428,7 +443,7 @@ void TestQgisAppClipboard::pasteWkt()
 void TestQgisAppClipboard::pasteGeoJson()
 {
   QgsFields fields;
-  fields.append( QgsField( QStringLiteral( "name" ), QVariant::String ) );
+  fields.append( QgsField( QStringLiteral( "name" ), QMetaType::Type::QString ) );
   mQgisApp->clipboard()->setText( QStringLiteral( "{\n\"type\": \"Feature\",\"geometry\": {\"type\": \"Point\",\"coordinates\": [125, 10]},\"properties\": {\"name\": \"Dinagat Islands\"}}" ) );
 
   const QgsFeatureList features = mQgisApp->clipboard()->copyOf( fields );
@@ -461,9 +476,9 @@ void TestQgisAppClipboard::retrieveFields()
   fields = mQgisApp->clipboard()->fields();
   QCOMPARE( fields.count(), 2 );
   QCOMPARE( fields.at( 0 ).name(), QString( "name" ) );
-  QCOMPARE( fields.at( 0 ).type(), QVariant::String );
+  QCOMPARE( fields.at( 0 ).type(), QMetaType::Type::QString );
   QCOMPARE( fields.at( 1 ).name(), QString( "height" ) );
-  QCOMPARE( fields.at( 1 ).type(), QVariant::Double );
+  QCOMPARE( fields.at( 1 ).type(), QMetaType::Type::Double );
 }
 
 void TestQgisAppClipboard::clipboardLogic()
@@ -473,15 +488,15 @@ void TestQgisAppClipboard::clipboardLogic()
   QgsFields fields = mQgisApp->clipboard()->fields();
   QCOMPARE( fields.count(), 1 );
   QCOMPARE( fields.at( 0 ).name(), QString( "name" ) );
-  QCOMPARE( fields.at( 0 ).type(), QVariant::String );
+  QCOMPARE( fields.at( 0 ).type(), QMetaType::Type::QString );
   QgsFeatureList features = mQgisApp->clipboard()->copyOf( mQgisApp->clipboard()->fields() );
   QCOMPARE( features.length(), 1 );
   QCOMPARE( features.at( 0 ).attribute( "name" ).toString(), QString( "Dinagat Islands" ) );
 
   //set clipboard to some QgsFeatures
   fields = QgsFields();
-  fields.append( QgsField( QStringLiteral( "int_field" ), QVariant::Int ) );
-  fields.append( QgsField( QStringLiteral( "date_field" ), QVariant::Date ) );
+  fields.append( QgsField( QStringLiteral( "int_field" ), QMetaType::Type::Int ) );
+  fields.append( QgsField( QStringLiteral( "date_field" ), QMetaType::Type::QDate ) );
   QgsFeature feat( fields, 5 );
   feat.setAttribute( QStringLiteral( "int_field" ), 9 );
   feat.setAttribute( QStringLiteral( "date_field" ), QVariant( QDate( 2010, 9, 5 ) ) );
@@ -500,9 +515,9 @@ void TestQgisAppClipboard::clipboardLogic()
   fields = mQgisApp->clipboard()->fields();
   QCOMPARE( fields.count(), 2 );
   QCOMPARE( fields.at( 0 ).name(), QString( "int_field" ) );
-  QCOMPARE( fields.at( 0 ).type(), QVariant::Int );
+  QCOMPARE( fields.at( 0 ).type(), QMetaType::Type::Int );
   QCOMPARE( fields.at( 1 ).name(), QString( "date_field" ) );
-  QCOMPARE( fields.at( 1 ).type(), QVariant::Date );
+  QCOMPARE( fields.at( 1 ).type(), QMetaType::Type::QDate );
   features = mQgisApp->clipboard()->copyOf( mQgisApp->clipboard()->fields() );
   QCOMPARE( features.length(), 2 );
   QCOMPARE( features.at( 0 ).id(), 5LL );
@@ -517,7 +532,7 @@ void TestQgisAppClipboard::clipboardLogic()
   fields = mQgisApp->clipboard()->fields();
   QCOMPARE( fields.count(), 1 );
   QCOMPARE( fields.at( 0 ).name(), QString( "name" ) );
-  QCOMPARE( fields.at( 0 ).type(), QVariant::String );
+  QCOMPARE( fields.at( 0 ).type(), QMetaType::Type::QString );
   features = mQgisApp->clipboard()->copyOf( mQgisApp->clipboard()->fields() );
   QCOMPARE( features.length(), 1 );
   QCOMPARE( features.at( 0 ).attribute( "name" ).toString(), QString( "Dinagat Islands" ) );

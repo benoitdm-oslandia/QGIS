@@ -21,7 +21,6 @@
 
 #include "qgsactionmanager.h"
 #include "qgsjoindialog.h"
-#include "qgssldexportcontext.h"
 #include "qgsvectorlayerselectionproperties.h"
 #include "qgswmsdimensiondialog.h"
 #include "qgsapplication.h"
@@ -348,24 +347,24 @@ QgsVectorLayerProperties::QgsVectorLayerProperties(
   mLegendConfigEmbeddedWidget->setLayer( mLayer );
 
   // WMS Name as layer short name
-  mLayerShortNameLineEdit->setText( mLayer->shortName() );
+  mLayerShortNameLineEdit->setText( mLayer->serverProperties()->shortName() );
   // WMS Name validator
   QValidator *shortNameValidator = new QRegularExpressionValidator( QgsApplication::shortNameRegularExpression(), this );
   mLayerShortNameLineEdit->setValidator( shortNameValidator );
 
   //layer title and abstract
-  mLayerTitleLineEdit->setText( mLayer->title() );
-  mLayerAbstractTextEdit->setPlainText( mLayer->abstract() );
-  mLayerKeywordListLineEdit->setText( mLayer->keywordList() );
-  mLayerDataUrlLineEdit->setText( mLayer->dataUrl() );
+  mLayerTitleLineEdit->setText( mLayer->serverProperties()->title() );
+  mLayerAbstractTextEdit->setPlainText( mLayer->serverProperties()->abstract() );
+  mLayerKeywordListLineEdit->setText( mLayer->serverProperties()->keywordList() );
+  mLayerDataUrlLineEdit->setText( mLayer->serverProperties()->dataUrl() );
   mLayerDataUrlFormatComboBox->setCurrentIndex(
     mLayerDataUrlFormatComboBox->findText(
-      mLayer->dataUrlFormat()
+      mLayer->serverProperties()->dataUrlFormat()
     )
   );
   //layer attribution
-  mLayerAttributionLineEdit->setText( mLayer->attribution() );
-  mLayerAttributionUrlLineEdit->setText( mLayer->attributionUrl() );
+  mLayerAttributionLineEdit->setText( mLayer->serverProperties()->attribution() );
+  mLayerAttributionUrlLineEdit->setText( mLayer->serverProperties()->attributionUrl() );
 
   // Setup the layer metadata URL
   tableViewMetadataUrl->setSelectionMode( QAbstractItemView::SingleSelection );
@@ -620,7 +619,7 @@ void QgsVectorLayerProperties::syncToLayer()
 
   // get simplify drawing configuration
   const QgsVectorSimplifyMethod &simplifyMethod = mLayer->simplifyMethod();
-  mSimplifyDrawingGroupBox->setChecked( simplifyMethod.simplifyHints() != QgsVectorSimplifyMethod::NoSimplification );
+  mSimplifyDrawingGroupBox->setChecked( simplifyMethod.simplifyHints() != Qgis::VectorRenderingSimplificationFlags( Qgis::VectorRenderingSimplificationFlag::NoSimplification ) );
   mSimplifyDrawingSpinBox->setValue( simplifyMethod.threshold() );
   mSimplifyDrawingSpinBox->setClearValue( 1.0 );
 
@@ -693,10 +692,10 @@ void QgsVectorLayerProperties::syncToLayer()
   }
 
   // Default local simplification algorithm
-  mSimplifyAlgorithmComboBox->addItem( tr( "Distance" ), QgsVectorSimplifyMethod::Distance );
-  mSimplifyAlgorithmComboBox->addItem( tr( "SnapToGrid" ), QgsVectorSimplifyMethod::SnapToGrid );
-  mSimplifyAlgorithmComboBox->addItem( tr( "Visvalingam" ), QgsVectorSimplifyMethod::Visvalingam );
-  mSimplifyAlgorithmComboBox->setCurrentIndex( mSimplifyAlgorithmComboBox->findData( simplifyMethod.simplifyAlgorithm() ) );
+  mSimplifyAlgorithmComboBox->addItem( tr( "Distance" ), QVariant::fromValue( Qgis::VectorSimplificationAlgorithm::Distance ) );
+  mSimplifyAlgorithmComboBox->addItem( tr( "SnapToGrid" ), QVariant::fromValue( Qgis::VectorSimplificationAlgorithm::SnapToGrid ) );
+  mSimplifyAlgorithmComboBox->addItem( tr( "Visvalingam" ), QVariant::fromValue( Qgis::VectorSimplificationAlgorithm::Visvalingam ) );
+  mSimplifyAlgorithmComboBox->setCurrentIndex( mSimplifyAlgorithmComboBox->findData( QVariant::fromValue( simplifyMethod.simplifyAlgorithm() ) ) );
 
   QStringList myScalesList = Qgis::defaultProjectScales().split( ',' );
   myScalesList.append( QStringLiteral( "1:1" ) );
@@ -827,38 +826,38 @@ void QgsVectorLayerProperties::apply()
   }
 
   //layer title and abstract
-  if ( mLayer->shortName() != mLayerShortNameLineEdit->text() )
+  if ( mLayer->serverProperties()->shortName() != mLayerShortNameLineEdit->text() )
     mMetadataFilled = false;
-  mLayer->setShortName( mLayerShortNameLineEdit->text() );
+  mLayer->serverProperties()->setShortName( mLayerShortNameLineEdit->text() );
 
-  if ( mLayer->title() != mLayerTitleLineEdit->text() )
+  if ( mLayer->serverProperties()->title() != mLayerTitleLineEdit->text() )
     mMetadataFilled = false;
-  mLayer->setTitle( mLayerTitleLineEdit->text() );
+  mLayer->serverProperties()->setTitle( mLayerTitleLineEdit->text() );
 
-  if ( mLayer->abstract() != mLayerAbstractTextEdit->toPlainText() )
+  if ( mLayer->serverProperties()->abstract() != mLayerAbstractTextEdit->toPlainText() )
     mMetadataFilled = false;
-  mLayer->setAbstract( mLayerAbstractTextEdit->toPlainText() );
+  mLayer->serverProperties()->setAbstract( mLayerAbstractTextEdit->toPlainText() );
 
-  if ( mLayer->keywordList() != mLayerKeywordListLineEdit->text() )
+  if ( mLayer->serverProperties()->keywordList() != mLayerKeywordListLineEdit->text() )
     mMetadataFilled = false;
-  mLayer->setKeywordList( mLayerKeywordListLineEdit->text() );
+  mLayer->serverProperties()->setKeywordList( mLayerKeywordListLineEdit->text() );
 
-  if ( mLayer->dataUrl() != mLayerDataUrlLineEdit->text() )
+  if ( mLayer->serverProperties()->dataUrl() != mLayerDataUrlLineEdit->text() )
     mMetadataFilled = false;
-  mLayer->setDataUrl( mLayerDataUrlLineEdit->text() );
+  mLayer->serverProperties()->setDataUrl( mLayerDataUrlLineEdit->text() );
 
-  if ( mLayer->dataUrlFormat() != mLayerDataUrlFormatComboBox->currentText() )
+  if ( mLayer->serverProperties()->dataUrlFormat() != mLayerDataUrlFormatComboBox->currentText() )
     mMetadataFilled = false;
-  mLayer->setDataUrlFormat( mLayerDataUrlFormatComboBox->currentText() );
+  mLayer->serverProperties()->setDataUrlFormat( mLayerDataUrlFormatComboBox->currentText() );
 
   //layer attribution
-  if ( mLayer->attribution() != mLayerAttributionLineEdit->text() )
+  if ( mLayer->serverProperties()->attribution() != mLayerAttributionLineEdit->text() )
     mMetadataFilled = false;
-  mLayer->setAttribution( mLayerAttributionLineEdit->text() );
+  mLayer->serverProperties()->setAttribution( mLayerAttributionLineEdit->text() );
 
-  if ( mLayer->attributionUrl() != mLayerAttributionUrlLineEdit->text() )
+  if ( mLayer->serverProperties()->attributionUrl() != mLayerAttributionUrlLineEdit->text() )
     mMetadataFilled = false;
-  mLayer->setAttributionUrl( mLayerAttributionUrlLineEdit->text() );
+  mLayer->serverProperties()->setAttributionUrl( mLayerAttributionUrlLineEdit->text() );
 
   // Metadata URL
   QList<QgsMapLayerServerProperties::MetadataUrl> metaUrls;
@@ -883,15 +882,16 @@ void QgsVectorLayerProperties::apply()
   mLayer->setLegendUrlFormat( mLayerLegendUrlFormatComboBox->currentText() );
 
   //layer simplify drawing configuration
-  QgsVectorSimplifyMethod::SimplifyHints simplifyHints = QgsVectorSimplifyMethod::NoSimplification;
+  Qgis::VectorRenderingSimplificationFlags simplifyHints = Qgis::VectorRenderingSimplificationFlag::NoSimplification;
   if ( mSimplifyDrawingGroupBox->isChecked() )
   {
-    simplifyHints |= QgsVectorSimplifyMethod::GeometrySimplification;
-    if ( mSimplifyDrawingSpinBox->value() > 1 ) simplifyHints |= QgsVectorSimplifyMethod::AntialiasingSimplification;
+    simplifyHints |= Qgis::VectorRenderingSimplificationFlag::GeometrySimplification;
+    if ( mSimplifyDrawingSpinBox->value() > 1 )
+      simplifyHints |= Qgis::VectorRenderingSimplificationFlag::AntialiasingSimplification;
   }
   QgsVectorSimplifyMethod simplifyMethod = mLayer->simplifyMethod();
   simplifyMethod.setSimplifyHints( simplifyHints );
-  simplifyMethod.setSimplifyAlgorithm( static_cast< QgsVectorSimplifyMethod::SimplifyAlgorithm >( mSimplifyAlgorithmComboBox->currentData().toInt() ) );
+  simplifyMethod.setSimplifyAlgorithm( mSimplifyAlgorithmComboBox->currentData().value< Qgis::VectorSimplificationAlgorithm >() );
   simplifyMethod.setThreshold( mSimplifyDrawingSpinBox->value() );
   simplifyMethod.setForceLocalOptimization( !mSimplifyDrawingAtProvider->isChecked() );
   simplifyMethod.setMaximumScale( mSimplifyMaximumScaleComboBox->scale() );

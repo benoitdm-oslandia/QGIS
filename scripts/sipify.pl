@@ -949,7 +949,7 @@ sub fix_annotations {
     # combine multiple annotations
     # https://regex101.com/r/uvCt4M/5
     do {no warnings 'uninitialized';
-        $line =~ s/\/([\w,]+(=\"?\w+\"?)?)\/\s*\/([\w,]+(=\"?\w+\"?)?)\//\/$1,$3\//;
+        $line =~ s/\/([\w,]+(=\"?[\w, [\]]+\"?)?)\/\s*\/([\w,]+(=\"?[\w, [\]]+\"?)?)\//\/$1,$3\//;
         (! $3) or dbg_info("combine multiple annotations -- works only for 2");
     };
 
@@ -1755,6 +1755,9 @@ while ($LINE_IDX < $LINE_COUNT){
     $IS_OVERRIDE_OR_MAKE_PRIVATE = PREPEND_CODE_VIRTUAL if ( $LINE =~ m/\bFINAL\b/);
     $IS_OVERRIDE_OR_MAKE_PRIVATE = PREPEND_CODE_MAKE_PRIVATE if ( $LINE =~ m/\bSIP_MAKE_PRIVATE\b/);
 
+    # remove Q_INVOKABLE
+    $LINE =~ s/^(\s*)Q_INVOKABLE /$1/;
+
     # keyword fixes
     do {no warnings 'uninitialized';
         $LINE =~ s/^(\s*template\s*<)(?:class|typename) (\w+>)(.*)$/$1$2$3/;
@@ -1860,9 +1863,6 @@ while ($LINE_IDX < $LINE_COUNT){
            }
         }
     }
-
-    # remove Q_INVOKABLE
-    $LINE =~ s/^(\s*)Q_INVOKABLE /$1/;
 
     do {no warnings 'uninitialized';
         # remove keywords

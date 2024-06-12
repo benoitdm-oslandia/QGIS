@@ -152,6 +152,25 @@ class CORE_EXPORT Qgis
     Q_FLAG( LayerFilters )
 
     /**
+     * Flags for loading layer styles.
+     *
+     * \since QGIS 3.38
+     */
+    enum class LoadStyleFlag : int SIP_ENUM_BASETYPE( IntFlag )
+    {
+      IgnoreMissingStyleErrors = 1 << 0, //!< If the style is missing, then don't flag it as an error. This flag can be used when the caller is not certain that a style exists, and accordingly a failure to find the style does not indicate an issue with loading the style itself.
+    };
+    Q_ENUM( LoadStyleFlag )
+
+    /**
+     * Flags for loading layer styles.
+     *
+     * \since QGIS 3.38
+     */
+    Q_DECLARE_FLAGS( LoadStyleFlags, LoadStyleFlag )
+    Q_FLAG( LoadStyleFlags )
+
+    /**
      * The WKB type describes the number of dimensions a geometry has
      *
      * - Point
@@ -904,6 +923,18 @@ class CORE_EXPORT Qgis
     Q_ENUM( LabelOverlapHandling )
 
     /**
+     * Label prioritization.
+     *
+     * \since QGIS 3.38
+     */
+    enum class LabelPrioritization : int
+    {
+      PreferCloser, //!< Prefer closer labels, falling back to alternate positions before larger distances
+      PreferPositionOrdering, //!< Prefer labels follow position ordering, falling back to more distance labels before alternate positions
+    };
+    Q_ENUM( LabelPrioritization )
+
+    /**
      * Placement modes which determine how label candidates are generated for a feature.
      *
      * \note Prior to QGIS 3.26 this was available as QgsPalLayerSettings::Placement
@@ -945,6 +976,7 @@ class CORE_EXPORT Qgis
       BottomMiddle, //!< Label directly below point
       BottomSlightlyRight, //!< Label below point, slightly right of center
       BottomRight, //!< Label on bottom right of point
+      OverPoint, //!< Label directly centered over point (since QGIS 3.38)
     };
     Q_ENUM( LabelPredefinedPointPosition )
 
@@ -1113,6 +1145,36 @@ class CORE_EXPORT Qgis
     Q_FLAG( SublayerFlags )
 
     /**
+     * Color ramp shader interpolation methods.
+     *
+     * \note Prior to QGIS 3.38 this was available as QgsColorRampShader::Type
+     *
+     * \since QGIS 3.38
+     */
+    enum class ShaderInterpolationMethod SIP_MONKEYPATCH_SCOPEENUM_UNNEST( QgsColorRampShader, Type ) : int
+      {
+      Linear SIP_MONKEYPATCH_COMPAT_NAME( Interpolated ) = 0, //!< Interpolates the color between two class breaks linearly
+      Discrete = 1, //!< Assigns the color of the higher class for every pixel between two class breaks
+      Exact = 2, //!< Assigns the color of the exact matching value in the color ramp item list
+    };
+    Q_ENUM( ShaderInterpolationMethod )
+
+    /**
+     * Color ramp shader classification methods.
+     *
+     * \note Prior to QGIS 3.38 this was available as QgsColorRampShader::ClassificationMode
+     *
+     * \since QGIS 3.38
+     */
+    enum class ShaderClassificationMethod SIP_MONKEYPATCH_SCOPEENUM_UNNEST( QgsColorRampShader, ClassificationMode ) : int
+      {
+      Continuous = 1, //!< Uses breaks from color palette
+      EqualInterval = 2, //!< Uses equal interval
+      Quantile = 3, //!< Uses quantile (i.e. equal pixel) count
+    };
+    Q_ENUM( ShaderClassificationMethod )
+
+    /**
      * Raster pipe interface roles.
      *
      * \since QGIS 3.22
@@ -1151,6 +1213,7 @@ class CORE_EXPORT Qgis
     enum class RasterRendererFlag : int SIP_ENUM_BASETYPE( IntFlag )
     {
       InternalLayerOpacityHandling = 1 << 0, //!< The renderer internally handles the raster layer's opacity, so the default layer level opacity handling should not be applied.
+      UseNoDataForOutOfRangePixels = 1 << 1, //!< Out of range pixels (eg those values outside of the rendered map's z range filter) should be set using additional nodata values instead of additional transparency values (since QGIS 3.38)
     };
 
     /**
@@ -1296,6 +1359,23 @@ class CORE_EXPORT Qgis
       NeverAskLoadAll, //!< Never ask users to select sublayers, instead automatically load all available sublayers
     };
     Q_ENUM( SublayerPromptMode )
+
+    /**
+     * Field origin.
+     *
+     * \note Prior to QGIS 3.38 this was available as QgsFields::FieldOrigin
+     *
+     * \since QGIS 3.38
+    */
+    enum class FieldOrigin SIP_MONKEYPATCH_SCOPEENUM_UNNEST( QgsFields, FieldOrigin ) : int
+      {
+      Unknown SIP_MONKEYPATCH_COMPAT_NAME( OriginUnknown ), //!< The field origin has not been specified
+      Provider SIP_MONKEYPATCH_COMPAT_NAME( OriginProvider ), //!< Field originates from the underlying data provider of the vector layer
+      Join SIP_MONKEYPATCH_COMPAT_NAME( OriginJoin ), //!< Field originates from a joined layer
+      Edit SIP_MONKEYPATCH_COMPAT_NAME( OriginEdit ), //!< Field has been temporarily added in editing mode
+      Expression SIP_MONKEYPATCH_COMPAT_NAME( OriginExpression ) //!< Field is calculated from an expression
+    };
+    Q_ENUM( FieldOrigin )
 
     /**
      * Configuration flags for fields
@@ -1519,6 +1599,20 @@ class CORE_EXPORT Qgis
       Simulation, //!< Simulation mode
     };
     Q_ENUM( GpsQualityIndicator )
+
+    /**
+     * GPS navigation status.
+     *
+     * \since QGIS 3.38
+     */
+    enum class GpsNavigationStatus : int
+    {
+      NotValid, //!< Navigation status not valid
+      Safe, //!< Safe
+      Caution, //!< Caution
+      Unsafe, //!< Unsafe
+    };
+    Q_ENUM( GpsNavigationStatus );
 
     /**
      * GPS information component.
@@ -2145,6 +2239,7 @@ class CORE_EXPORT Qgis
       TemporalRangeFromDataProvider SIP_MONKEYPATCH_COMPAT_NAME( ModeTemporalRangeFromDataProvider ) = 1, //!< Mode when raster layer delegates temporal range handling to the dataprovider.
       RedrawLayerOnly SIP_MONKEYPATCH_COMPAT_NAME( ModeRedrawLayerOnly ) = 2, //!< Redraw the layer when temporal range changes, but don't apply any filtering. Useful when raster symbology expressions depend on the time range. (since QGIS 3.22)
       FixedRangePerBand = 3, //!< Layer has a fixed temporal range per band (since QGIS 3.38)
+      RepresentsTemporalValues = 4, //!< Pixel values represent an datetime
     };
     Q_ENUM( RasterTemporalMode )
 
@@ -2454,6 +2549,48 @@ class CORE_EXPORT Qgis
       SubScript, //!< Characters are placed below the base line for normal text.
     };
     Q_ENUM( TextCharacterVerticalAlignment )
+
+    /**
+     * Simplification algorithms for vector features.
+     *
+     * \note Prior to QGIS 3.38 this was available as QgsVectorSimplifyMethod::SimplifyAlgorithm
+     *
+     * \since QGIS 3.38
+     */
+    enum class VectorSimplificationAlgorithm SIP_MONKEYPATCH_SCOPEENUM_UNNEST( QgsVectorSimplifyMethod, SimplifyAlgorithm ) : int
+      {
+      Distance = 0, //!< The simplification uses the distance between points to remove duplicate points
+      SnapToGrid = 1, //!< The simplification uses a grid (similar to ST_SnapToGrid) to remove duplicate points
+      Visvalingam = 2, //!< The simplification gives each point in a line an importance weighting, so that least important points are removed first
+      SnappedToGridGlobal = 3, //!< Snap to a global grid based on the tolerance. Good for consistent results for incoming vertices, regardless of their feature
+    };
+    Q_ENUM( VectorSimplificationAlgorithm )
+
+    /**
+     * Simplification flags for vector feature rendering.
+     *
+     * \note Prior to QGIS 3.38 this was available as QgsVectorSimplifyMethod::SimplifyHint
+     *
+     * \since QGIS 3.38
+     */
+    enum class VectorRenderingSimplificationFlag SIP_MONKEYPATCH_SCOPEENUM_UNNEST( QgsVectorSimplifyMethod, SimplifyHint ) : int SIP_ENUM_BASETYPE( IntFlag )
+    {
+      NoSimplification           = 0, //!< No simplification can be applied
+      GeometrySimplification     = 1, //!< The geometries can be simplified using the current map2pixel context state
+      AntialiasingSimplification = 2, //!< The geometries can be rendered with 'AntiAliasing' disabled because of it is '1-pixel size'
+      FullSimplification         = 3, //!< All simplification hints can be applied ( Geometry + AA-disabling )
+    };
+    Q_ENUM( VectorRenderingSimplificationFlag )
+
+    /**
+     * Simplification flags for vector feature rendering.
+     *
+     * \note Prior to QGIS 3.38 this was available as QgsVectorSimplifyMethod::SimplifyHints
+     *
+     * \since QGIS 3.38
+     */
+    Q_DECLARE_FLAGS( VectorRenderingSimplificationFlags, VectorRenderingSimplificationFlag ) SIP_MONKEYPATCH_FLAGS_UNNEST( QgsVectorSimplifyMethod, SimplifyHints )
+    Q_FLAG( VectorRenderingSimplificationFlags )
 
     /**
      * Rendering subcomponent properties.
@@ -3144,6 +3281,19 @@ class CORE_EXPORT Qgis
     Q_ENUM( ProcessingModelChildParameterSource )
 
     /**
+     * Reflects the status of a child algorithm in a Processing model.
+     *
+     * \since QGIS 3.38
+     */
+    enum class ProcessingModelChildAlgorithmExecutionStatus : int
+    {
+      NotExecuted, //!< Child has not been executed
+      Success, //!< Child was successfully executed
+      Failed, //!< Child encountered an error while executing
+    };
+    Q_ENUM( ProcessingModelChildAlgorithmExecutionStatus )
+
+    /**
      * Defines the type of input layer for a Processing TIN input.
      *
      * \note Prior to QGIS 3.36 this was available as QgsProcessingParameterTinInputLayers::Type
@@ -3202,6 +3352,21 @@ class CORE_EXPORT Qgis
       GeometryWeighted, //!< New values are computed as the weighted average of the source values
     };
     Q_ENUM( FieldDomainMergePolicy )
+
+    /**
+     * Duplicate policy for fields.
+     *
+     * When a feature is duplicated, defines how the value of attributes are computed.
+     *
+     * \since QGIS 3.38
+     */
+    enum class FieldDuplicatePolicy : int
+    {
+      DefaultValue, //!< Use default field value
+      Duplicate, //!< Duplicate original value
+      UnsetField, //!< Clears the field value so that the data provider backend will populate using any backend triggers or similar logic (since QGIS 3.30)
+    };
+    Q_ENUM( FieldDuplicatePolicy )
 
     /**
      * Types of field domain
@@ -3290,7 +3455,8 @@ class CORE_EXPORT Qgis
     enum class MeshElevationMode : int
     {
       FixedElevationRange = 0, //!< Layer has a fixed elevation range
-      FromVertices = 1 //!< Elevation should be taken from mesh vertices
+      FromVertices = 1, //!< Elevation should be taken from mesh vertices
+      FixedRangePerGroup = 2, //!< Layer has a fixed (manually specified) elevation range per group
     };
     Q_ENUM( MeshElevationMode )
 
@@ -4016,6 +4182,74 @@ class CORE_EXPORT Qgis
       Feature SIP_MONKEYPATCH_COMPAT_NAME( IdentifyFormatFeature ) = 1 << 3, //!< WMS GML/JSON -> feature
     };
     Q_ENUM( RasterIdentifyFormat )
+
+    // TODO QGIS 4 -- remove NoCapabilities and rely on RasterInterfaceCapabilities() instead
+    // remove deprecated members
+    // Remove "Identify" member, and replace with combinations of IdentifyValue/IdentifyText/etc
+
+    /**
+     * Raster interface capabilities.
+     *
+     * \note Prior to QGIS 3.38 this was available as QgsRasterInterface::Capability
+     *
+     * \since QGIS 3.38
+     */
+    enum class RasterInterfaceCapability SIP_MONKEYPATCH_SCOPEENUM_UNNEST( QgsRasterInterface, Capability ) : int SIP_ENUM_BASETYPE( IntFlag )
+    {
+      NoCapabilities = 0, //!< No capabilities
+      Size = 1 << 1, //!< Original data source size (and thus resolution) is known, it is not always available, for example for WMS
+      Create = 1 << 2, //!< Create new datasets (Unused and deprecated -- will be removed in QGIS 4)
+      Remove = 1 << 3, //!< Delete datasets (Unused and deprecated -- will be removed in QGIS 4)
+      BuildPyramids = 1 << 4, //!< Supports building of pyramids (overviews) (Deprecated since QGIS 3.38 -- use RasterProviderCapability::BuildPyramids instead)
+      Identify = 1 << 5, //!< At least one identify format supported
+      IdentifyValue = 1 << 6, //!< Numerical values
+      IdentifyText = 1 << 7, //!< WMS text
+      IdentifyHtml = 1 << 8, //!< WMS HTML
+      IdentifyFeature = 1 << 9, //!< WMS GML -> feature
+      Prefetch = 1 << 10, //!< Allow prefetching of out-of-view images
+    };
+    Q_ENUM( RasterInterfaceCapability )
+
+    /**
+     * Raster interface capabilities.
+     *
+     * \since QGIS 3.38
+     */
+    Q_DECLARE_FLAGS( RasterInterfaceCapabilities, RasterInterfaceCapability )
+    Q_FLAG( RasterInterfaceCapabilities )
+
+    // TODO QGIS 4 -- remove NoProviderCapabilities and rely on RasterProviderCapabilities() instead
+
+    /**
+     * Raster data provider capabilities.
+     *
+     * \note Prior to QGIS 3.38 this was available as QgsRasterDataProvider::ProviderCapability
+     *
+     * \since QGIS 3.38
+     */
+    enum class RasterProviderCapability SIP_MONKEYPATCH_SCOPEENUM_UNNEST( QgsRasterDataProvider, ProviderCapability ) : int SIP_ENUM_BASETYPE( IntFlag )
+    {
+      NoProviderCapabilities = 0, //!< Provider has no capabilities
+      ReadLayerMetadata = 1 << 1, //!< Provider can read layer metadata from data store. Since QGIS 3.0. See QgsDataProvider::layerMetadata()
+      WriteLayerMetadata = 1 << 2, //!< Provider can write layer metadata to the data store. Since QGIS 3.0. See QgsDataProvider::writeLayerMetadata()
+      ProviderHintBenefitsFromResampling = 1 << 3, //!< Provider benefits from resampling and should apply user default resampling settings (since QGIS 3.10)
+      ProviderHintCanPerformProviderResampling = 1 << 4, //!< Provider can perform resampling (to be opposed to post rendering resampling) (since QGIS 3.16)
+      ReloadData = 1 << 5, //!< Is able to force reload data / clear local caches. Since QGIS 3.18, see QgsDataProvider::reloadProviderData()
+      DpiDependentData = 1 << 6, //! Provider's rendering is dependent on requested pixel size of the viewport (since QGIS 3.20)
+      NativeRasterAttributeTable = 1 << 7, //!< Indicates that the provider supports native raster attribute table (since QGIS 3.30)
+      BuildPyramids = 1 << 8, //!< Supports building of pyramids (overviews) (since QGIS 3.38 -- this is a replacement for RasterInterfaceCapability::BuildPyramids)
+    };
+    Q_ENUM( RasterProviderCapability )
+
+    /**
+     * Raster data provider capabilities.
+     *
+     * \note Prior to QGIS 3.38 this was available as QgsRasterDataProvider::ProviderCapabilities
+     *
+     * \since QGIS 3.38
+     */
+    Q_DECLARE_FLAGS( RasterProviderCapabilities, RasterProviderCapability ) SIP_MONKEYPATCH_FLAGS_UNNEST( QgsRasterDataProvider, ProviderCapabilities )
+    Q_FLAG( RasterProviderCapabilities )
 
     /**
      * Methods used to select the elevation when two elevation maps are combined
@@ -5004,6 +5238,7 @@ Q_DECLARE_OPERATORS_FOR_FLAGS( Qgis::MapLayerActionFlags )
 Q_DECLARE_OPERATORS_FOR_FLAGS( Qgis::MapLayerActionTargets )
 Q_DECLARE_OPERATORS_FOR_FLAGS( Qgis::MapLayerProperties )
 Q_DECLARE_OPERATORS_FOR_FLAGS( Qgis::MapLayerRendererFlags )
+Q_DECLARE_OPERATORS_FOR_FLAGS( Qgis::LoadStyleFlags )
 Q_DECLARE_OPERATORS_FOR_FLAGS( Qgis::MapSettingsFlags )
 Q_DECLARE_OPERATORS_FOR_FLAGS( Qgis::MarkerLinePlacements )
 Q_DECLARE_OPERATORS_FOR_FLAGS( Qgis::PlotToolFlags )
@@ -5045,13 +5280,15 @@ Q_DECLARE_OPERATORS_FOR_FLAGS( Qgis::Statistics )
 Q_DECLARE_OPERATORS_FOR_FLAGS( Qgis::DateTimeStatistics )
 Q_DECLARE_OPERATORS_FOR_FLAGS( Qgis::StringStatistics )
 Q_DECLARE_OPERATORS_FOR_FLAGS( Qgis::RasterBandStatistics )
+Q_DECLARE_OPERATORS_FOR_FLAGS( Qgis::RasterInterfaceCapabilities )
+Q_DECLARE_OPERATORS_FOR_FLAGS( Qgis::RasterProviderCapabilities )
 Q_DECLARE_OPERATORS_FOR_FLAGS( Qgis::ProcessingProviderFlags )
 Q_DECLARE_OPERATORS_FOR_FLAGS( Qgis::ProcessingAlgorithmFlags )
 Q_DECLARE_OPERATORS_FOR_FLAGS( Qgis::ProcessingFeatureSourceFlags )
 Q_DECLARE_OPERATORS_FOR_FLAGS( Qgis::ProcessingParameterTypeFlags )
 Q_DECLARE_OPERATORS_FOR_FLAGS( Qgis::ProcessingParameterFlags )
 Q_DECLARE_OPERATORS_FOR_FLAGS( Qgis::DataItemProviderCapabilities )
-
+Q_DECLARE_OPERATORS_FOR_FLAGS( Qgis::VectorRenderingSimplificationFlags )
 
 // hack to workaround warnings when casting void pointers
 // retrieved from QLibrary::resolve to function pointers.
@@ -5478,6 +5715,14 @@ template<class T> QString qgsFlagValueToKeys( const T &value, bool *returnOk = n
  */
 template<class T> T qgsFlagKeysToValue( const QString &keys, const T &defaultValue, bool tryValueAsKey = true,  bool *returnOk = nullptr ) SIP_SKIP
 {
+  if ( keys.isEmpty() )
+  {
+    if ( returnOk )
+    {
+      *returnOk = false;
+    }
+    return defaultValue;
+  }
   const QMetaEnum metaEnum = QMetaEnum::fromType<T>();
   Q_ASSERT( metaEnum.isValid() );
   bool ok = false;

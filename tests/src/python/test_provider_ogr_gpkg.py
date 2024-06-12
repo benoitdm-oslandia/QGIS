@@ -2323,7 +2323,8 @@ class TestPyQgsOGRProviderGpkg(QgisTestCase):
 
         tmpfile = os.path.join(
             self.basetestpath, 'testVectorLayerExporterDeferredSpatialIndex.gpkg')
-        gdal.Unlink(tmpfile)
+        if os.path.exists(tmpfile):
+            os.unlink(tmpfile)
         options = {}
         options['driverName'] = 'GPKG'
         options['layerName'] = 'table1'
@@ -2442,7 +2443,10 @@ class TestPyQgsOGRProviderGpkg(QgisTestCase):
 
         ds = ogr.Open(tmpfile, update=1)
         gdal.PushErrorHandler()
-        ds.ExecuteSQL('DROP TRIGGER gpkg_metadata_reference_column_name_update')
+        try:
+            ds.ExecuteSQL('DROP TRIGGER gpkg_metadata_reference_column_name_update')
+        except Exception:
+            pass
         gdal.PopErrorHandler()
         # inject wrong trigger on purpose
         wrong_trigger = "CREATE TRIGGER 'gpkg_metadata_reference_column_name_update' " + \
@@ -2715,6 +2719,34 @@ class TestPyQgsOGRProviderGpkg(QgisTestCase):
         got = [feat for feat in vl.getFeatures()]
         self.assertEqual(got[0]["dt"], new_dt)
 
+    def testWriteDateTimeFromLocalTime(self):
+
+        tmpfile = os.path.join(self.basetestpath, 'testWriteDateTimeFromLocalTime.gpkg')
+        ds = ogr.GetDriverByName('GPKG').CreateDataSource(tmpfile)
+        lyr = ds.CreateLayer('test', geom_type=ogr.wkbNone)
+        lyr.CreateField(ogr.FieldDefn('dt', ogr.OFTDateTime))
+        ds = None
+
+        vl = QgsVectorLayer(tmpfile, 'test', 'ogr')
+
+        f = QgsFeature(vl.fields())
+        dt = QDateTime(QDate(2023, 1, 28), QTime(12, 34, 56, 789), Qt.TimeSpec.LocalTime)
+        f.setAttribute(1, dt)
+        self.assertTrue(vl.startEditing())
+        self.assertTrue(vl.addFeatures([f]))
+        self.assertTrue(vl.commitChanges())
+
+        got = [feat for feat in vl.getFeatures()]
+        self.assertEqual(got[0]["dt"], dt.toUTC())
+
+        self.assertTrue(vl.startEditing())
+        dt = QDateTime(QDate(2024, 1, 1), QTime(12, 34, 56, 789), Qt.TimeSpec.LocalTime)
+        self.assertTrue(vl.changeAttributeValue(1, 1, dt))
+        self.assertTrue(vl.commitChanges())
+
+        got = [feat for feat in vl.getFeatures()]
+        self.assertEqual(got[0]["dt"], dt.toUTC())
+
     def testTransactionModeAutoWithFilter(self):
 
         temp_dir = QTemporaryDir()
@@ -2860,6 +2892,9 @@ class TestPyQgsOGRProviderGpkg(QgisTestCase):
         lyr.CreateField(ogr.FieldDefn('datetime_field', ogr.OFTDateTime))
         lyr.CreateField(ogr.FieldDefn('date_field', ogr.OFTDateTime))
         lyr.CreateField(ogr.FieldDefn('string_field', ogr.OFTString))
+        fld_defn = ogr.FieldDefn('bool_field', ogr.OFTInteger)
+        fld_defn.SetSubType(ogr.OFSTBoolean)
+        lyr.CreateField(fld_defn)
         f = ogr.Feature(lyr.GetLayerDefn())
         lyr.CreateFeature(f)
         ds = None
@@ -2886,6 +2921,9 @@ class TestPyQgsOGRProviderGpkg(QgisTestCase):
         self.assertFalse(vl.dataProvider().changeAttributeValues({1: {4: "not a datetime"}}))
         self.assertFalse(vl.dataProvider().changeAttributeValues({1: {5: "not a date"}}))
 
+        # wrong value for attribute 7 of feature 1: wrong
+        self.assertFalse(vl.dataProvider().changeAttributeValues({1: {7: "wrong"}}))
+
         # OK
         # int_field
         self.assertTrue(vl.dataProvider().changeAttributeValues({1: {1: 1}}))
@@ -2903,6 +2941,89 @@ class TestPyQgsOGRProviderGpkg(QgisTestCase):
         # string_field
         self.assertTrue(vl.dataProvider().changeAttributeValues({1: {6: "foo"}}))
         self.assertTrue(vl.dataProvider().changeAttributeValues({1: {6: 12345}}))
+        # bool field
+        self.assertTrue(vl.dataProvider().changeAttributeValues({1: {7: True}}))
+        self.assertEqual([feat["bool_field"] for feat in vl.getFeatures()][0], True)
+        self.assertTrue(vl.dataProvider().changeAttributeValues({1: {7: False}}))
+        self.assertEqual([feat["bool_field"] for feat in vl.getFeatures()][0], False)
+        self.assertTrue(vl.dataProvider().changeAttributeValues({1: {7: 1}}))
+        self.assertEqual([feat["bool_field"] for feat in vl.getFeatures()][0], True)
+        self.assertTrue(vl.dataProvider().changeAttributeValues({1: {7: 0}}))
+        self.assertEqual([feat["bool_field"] for feat in vl.getFeatures()][0], False)
+        self.assertTrue(vl.dataProvider().changeAttributeValues({1: {7: "true"}}))
+        self.assertEqual([feat["bool_field"] for feat in vl.getFeatures()][0], True)
+        self.assertTrue(vl.dataProvider().changeAttributeValues({1: {7: "false"}}))
+        self.assertEqual([feat["bool_field"] for feat in vl.getFeatures()][0], False)
+        self.assertTrue(vl.dataProvider().changeAttributeValues({1: {7: "1"}}))
+        self.assertEqual([feat["bool_field"] for feat in vl.getFeatures()][0], True)
+        self.assertTrue(vl.dataProvider().changeAttributeValues({1: {7: "0"}}))
+        self.assertEqual([feat["bool_field"] for feat in vl.getFeatures()][0], False)
+
+    def testAttributeBoolean(self):
+
+        tmpfile = os.path.join(self.basetestpath, 'testAttributeBoolean.gpkg')
+        ds = ogr.GetDriverByName('GPKG').CreateDataSource(tmpfile)
+        lyr = ds.CreateLayer('test', geom_type=ogr.wkbPoint)
+        fld_defn = ogr.FieldDefn('bool_field', ogr.OFTInteger)
+        fld_defn.SetSubType(ogr.OFSTBoolean)
+        lyr.CreateField(fld_defn)
+        ds = None
+
+        vl = QgsVectorLayer(f'{tmpfile}' + "|layername=" + "test", 'test', 'ogr')
+
+        f = QgsFeature(vl.fields())
+        f.setAttribute(1, False)
+        ret, _ = vl.dataProvider().addFeatures([f])
+        self.assertTrue(ret)
+
+        f = QgsFeature(vl.fields())
+        f.setAttribute(1, True)
+        vl.dataProvider().addFeatures([f])
+        self.assertTrue(ret)
+
+        f = QgsFeature(vl.fields())
+        f.setAttribute(1, 0)
+        ret, _ = vl.dataProvider().addFeatures([f])
+        self.assertTrue(ret)
+
+        f = QgsFeature(vl.fields())
+        f.setAttribute(1, 1)
+        vl.dataProvider().addFeatures([f])
+        self.assertTrue(ret)
+
+        # Test compatibility with use case of https://github.com/qgis/QGIS/issues/55517
+        f = QgsFeature(vl.fields())
+        f.setAttribute(1, "false")
+        ret, _ = vl.dataProvider().addFeatures([f])
+        self.assertTrue(ret)
+
+        f = QgsFeature(vl.fields())
+        f.setAttribute(1, "true")
+        vl.dataProvider().addFeatures([f])
+        self.assertTrue(ret)
+
+        f = QgsFeature(vl.fields())
+        f.setAttribute(1, "0")
+        ret, _ = vl.dataProvider().addFeatures([f])
+        self.assertTrue(ret)
+
+        f = QgsFeature(vl.fields())
+        f.setAttribute(1, "1")
+        vl.dataProvider().addFeatures([f])
+        self.assertTrue(ret)
+
+        f = QgsFeature(vl.fields())
+        f.setAttribute(1, "invalid")
+        ret, _ = vl.dataProvider().addFeatures([f])
+        self.assertFalse(ret)
+
+        f = QgsFeature(vl.fields())
+        f.setAttribute(1, [1])
+        ret, _ = vl.dataProvider().addFeatures([f])
+        self.assertFalse(ret)
+
+        self.assertEqual([feat["bool_field"] for feat in vl.getFeatures()],
+                         [False, True, False, True, False, True, False, True])
 
     def testExtent(self):
         # 2D points
