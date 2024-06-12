@@ -52,6 +52,9 @@ QgsSfcgalGeometry::QgsSfcgalGeometry( const QgsSfcgalGeometry &geom )
 {
   mSfcgalGeom = QgsSfcgalEngine::cloneGeometry( geom.mSfcgalGeom.get() );
   mQgsGeom = QgsSfcgalEngine::toAbsGeometry( mSfcgalGeom.get() );
+  QString errorMsg;
+  if ( sfcgal::errorHandler()->hasFailed( &errorMsg ) )
+    QgsDebugError( QStringLiteral( "Unable to init qgs: unmanaged geometry from sfcgal geom. Error: %1" ).arg( errorMsg ) );
 
   mWkbType = geom.mWkbType;
 }
