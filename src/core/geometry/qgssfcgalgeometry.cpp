@@ -269,9 +269,9 @@ QgsAbstractGeometry *QgsSfcgalGeometry::toCurveType() const
   return mQgsGeom->toCurveType();
 }
 
-QgsAbstractGeometry *QgsSfcgalGeometry::snappedToGrid( double hSpacing, double vSpacing, double dSpacing, double mSpacing ) const
+QgsAbstractGeometry *QgsSfcgalGeometry::snappedToGrid( double hSpacing, double vSpacing, double dSpacing, double mSpacing, bool removeRedundantPoints ) const
 {
-  return mQgsGeom->snappedToGrid( hSpacing, vSpacing, dSpacing, mSpacing );
+  return mQgsGeom->snappedToGrid( hSpacing, vSpacing, dSpacing, mSpacing, removeRedundantPoints );
 }
 
 bool QgsSfcgalGeometry::removeDuplicateNodes( double, bool )
@@ -368,4 +368,3 @@ QgsSfcgalGeometry *QgsSfcgalGeometry::difference( const QgsAbstractGeometry *geo
   auto engine = std::make_unique<QgsSfcgalEngine>( mSfcgalGeom );
   return dynamic_cast<QgsSfcgalGeometry *>( engine->difference( geom, errorMsg, parameters ) );
 }
-

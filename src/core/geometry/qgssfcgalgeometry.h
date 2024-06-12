@@ -81,7 +81,7 @@ class CORE_EXPORT QgsSfcgalGeometry: public QgsAbstractGeometry
     bool deleteVertex( QgsVertexId position ) override;
     double segmentLength( QgsVertexId startVertex ) const override;
     QgsAbstractGeometry *toCurveType() const override;
-    QgsAbstractGeometry *snappedToGrid( double hSpacing, double vSpacing, double dSpacing, double mSpacing ) const override;
+    QgsAbstractGeometry *snappedToGrid( double hSpacing, double vSpacing, double dSpacing, double mSpacing, bool removeRedundantPoints = false ) const override;
     bool removeDuplicateNodes( double epsilon, bool useZValues ) override;
     double vertexAngle( QgsVertexId vertex ) const override;
     int vertexCount( int part, int ring ) const override;
