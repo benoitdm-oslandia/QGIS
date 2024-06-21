@@ -48,6 +48,118 @@ typedef Qt3DCore::QGeometry Qt3DQGeometry;
 #include <Qt3DRender/QNoDepthMask>
 #include <Qt3DRender/QBlendEquationArguments>
 
+namespace
+{
+
+  QString formatNode( const Qt3DCore::QNode *n )
+  {
+    QString res = QString( QLatin1String( "%1{%2" ) )
+                  .arg( QLatin1String( n->metaObject()->className() ) )
+                  .arg( n->id().id() );
+    if ( !n->objectName().isEmpty() )
+      res += QString( QLatin1String( "/%1" ) ).arg( n->objectName() );
+    res += "}";
+    if ( !n->isEnabled() )
+      res += QLatin1String( " [D]" );
+    return res;
+  }
+
+  QString dumpEntity( const Qt3DCore::QEntity *n )
+  {
+    QString res = formatNode( n );
+    const auto &components = n->components();
+    if ( components.size() )
+    {
+      QStringList componentNames;
+      for ( const auto &c : components )
+      {
+        componentNames << formatNode( c );
+      }
+      res += QString( QLatin1String( " [ %1 ]" ) ).arg( componentNames.join( QLatin1String( ", " ) ) );
+    }
+
+    return res;
+  }
+
+  QStringList dumpSG( const Qt3DCore::QNode *n, int level = 0 )
+  {
+    QStringList reply;
+    const auto *entity = qobject_cast<const Qt3DCore::QEntity *>( n );
+    if ( entity != nullptr )
+    {
+      QString res = dumpEntity( entity );
+      reply += res.rightJustified( res.length() + level * 2, ' ' );
+      level++;
+    }
+
+    const auto children = n->childNodes();
+    for ( auto *child : children )
+      reply += dumpSG( child, level );
+
+    return reply;
+  }
+
+  QString dumpNode( const Qt3DRender::QFrameGraphNode *n )
+  {
+    QString res = formatNode( n );
+    const auto *lf = qobject_cast<const Qt3DRender::QLayerFilter *>( n );
+    if ( lf )
+    {
+      QStringList sl;
+      const auto layers = lf->layers();
+      for ( auto l : layers )
+      {
+        QString s = "{" + QString::number( l->id().id() );
+        if ( !l->objectName().isEmpty() )
+          s += QString( "/%1" ).arg( l->objectName() );
+        sl += s + "}";
+      }
+      res += QString( " (%1: %2)" ).arg( QMetaEnum::fromType<Qt3DRender::QLayerFilter::FilterMode>().key( lf->filterMode() ), sl.join( QLatin1String( ", " ) ) );
+    }
+    auto cs = qobject_cast<const Qt3DRender::QCameraSelector *>( n );
+    if ( cs )
+      res += QString( " ({%1/%2})" ).arg( cs->camera()->id().id() ).arg( cs->camera()->objectName() );
+    auto rs = qobject_cast<const Qt3DRender::QRenderTargetSelector *>( n );
+    if ( rs && rs->target() )
+    {
+      QStringList sl;
+      const auto outputs = rs->target()->outputs();
+      for ( auto o : outputs )
+      {
+        sl += QString( "(%1: {%2/%3})" ).arg( QMetaEnum::fromType<Qt3DRender::QRenderTargetOutput::AttachmentPoint>().key( o->attachmentPoint() ), QString::number( o->texture()->id().id() ), o->texture()->objectName() );
+      }
+      res += QString( " " ) + sl.join( ", " );
+    }
+//    if (!n->isEnabled())
+//        res += QLatin1String(" [D]");
+    return res;
+  }
+
+  QStringList dumpFG( const Qt3DCore::QNode *n, int level = 0 )
+  {
+    QStringList reply;
+
+    const Qt3DRender::QFrameGraphNode *fgNode = qobject_cast<const Qt3DRender::QFrameGraphNode *>( n );
+    if ( fgNode )
+    {
+      QString res = dumpNode( fgNode );
+      reply += res.rightJustified( res.length() + level * 2, ' ' );
+    }
+
+    const auto children = n->childNodes();
+    const int inc = fgNode ? 1 : 0;
+    for ( auto *child : children )
+    {
+      auto *childFGNode = qobject_cast<Qt3DCore::QNode *>( child );
+      if ( childFGNode != nullptr )
+        reply += dumpFG( childFGNode, level + inc );
+    }
+
+    return reply;
+  }
+
+} // End of namespace
+
 Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructTexturesPreviewPass()
 {
   mPreviewLayerFilter = new Qt3DRender::QLayerFilter;
@@ -794,6 +906,15 @@ void QgsFrameGraph::setupDirectionalLight( const QgsDirectionalLightSettings &li
 
   mPostprocessingEntity->setupShadowRenderingExtent( minX, maxX, minZ, maxZ );
   mPostprocessingEntity->setupDirectionalLight( lightPosition, lightDirection );
+}
+
+void QgsFrameGraph::dump()
+{
+  auto fg = dumpFG( mRenderSurfaceSelector );
+  auto sg = dumpSG( mRootEntity );
+
+  qDebug() << "FrameGraph:\n" << qPrintable( fg.join( "\n" ) );
+  qDebug() << "SceneGraph:\n" << qPrintable( sg.join( "\n" ) );
 }
 
 void QgsFrameGraph::setClearColor( const QColor &clearColor )

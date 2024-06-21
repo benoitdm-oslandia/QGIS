@@ -59,3 +59,9 @@ bool QgsAbstract3DEngine::renderCaptureEnabled() const
 {
   return mFrameGraph->renderCaptureEnabled();
 }
+
+void QgsAbstract3DEngine::dumpFrameGraph()
+{
+  if ( mFrameGraph )
+    mFrameGraph->dump();
+}

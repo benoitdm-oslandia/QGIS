@@ -216,6 +216,9 @@ class QgsFrameGraph : public Qt3DCore::QEntity
      */
     void setDebugOverlayEnabled( bool enabled );
 
+    //! Dump frame graph and scene graph to the console
+    void dump();
+
   private:
     Qt3DRender::QRenderSurfaceSelector *mRenderSurfaceSelector = nullptr;
     Qt3DRender::QViewport *mMainViewPort = nullptr;

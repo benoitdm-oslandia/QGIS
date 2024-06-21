@@ -125,6 +125,12 @@ class _3D_EXPORT QgsAbstract3DEngine : public QObject
      * \since QGIS 3.18
      */
     bool renderCaptureEnabled() const;
+
+    /**
+     * Dump the current frame graph and scene graph to the console
+     */
+    void dumpFrameGraph();
+
   signals:
     //! Emitted after a call to requestCaptureImage() to return the captured image.
     void imageCaptured( const QImage &image );
