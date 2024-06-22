@@ -610,9 +610,9 @@ QgsFrameGraph::QgsFrameGraph( QSurface *surface, QSize s, Qt3DRender::QCamera *m
   constructAmbientOcclusionRenderPass();
 
   // TODO: TEMP DISABLE
-//  Qt3DRender::QFrameGraphNode *ambientOcclusionBlurPass = constructAmbientOcclusionBlurPass();
-//  ambientOcclusionBlurPass->setParent( mMainViewPort );
-  mAmbientOcclusionBlurTexture = renderView( QgsFrameGraph::AO_RENDERVIEW )->outputTexture( Qt3DRender::QRenderTargetOutput::Color0 );
+  Qt3DRender::QFrameGraphNode *ambientOcclusionBlurPass = constructAmbientOcclusionBlurPass();
+  ambientOcclusionBlurPass->setParent( mMainViewPort );
+  // mAmbientOcclusionBlurTexture = renderView( QgsFrameGraph::AO_RENDERVIEW )->outputTexture( Qt3DRender::QRenderTargetOutput::Color0 );
 
   // shadow rendering pass
   constructShadowRenderPass();
@@ -743,7 +743,7 @@ void QgsFrameGraph::setSize( QSize s )
   mRenderSurfaceSelector->setExternalRenderTargetSize( mSize );
 
   // TODO: TEMP DISABLE
-  //mAmbientOcclusionBlurTexture->setSize( mSize.width(), mSize.height() );
+  mAmbientOcclusionBlurTexture->setSize( mSize.width(), mSize.height() );
 }
 
 void QgsFrameGraph::setRenderCaptureEnabled( bool enabled )
