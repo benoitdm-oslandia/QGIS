@@ -19,7 +19,8 @@
 #include <QSize>
 
 #include "qgsabstract3dengine.h"
-
+#include "qgsframegraph.h"
+#include "qgspostprocessingentity.h"
 
 namespace Qt3DExtras
 {

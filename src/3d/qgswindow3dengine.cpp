@@ -19,10 +19,7 @@
 #include <Qt3DRender/QRenderSettings>
 
 #include "qgsabstractrenderview.h"
-#include "qgspreviewquad.h"
 #include "qgs3dmapcanvas.h"
-
-#include "qgsframegraph.h"
 
 QgsWindow3DEngine::QgsWindow3DEngine( Qgs3DMapCanvas *parent )
   : QgsAbstract3DEngine( parent )

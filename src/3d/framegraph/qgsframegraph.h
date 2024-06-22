@@ -43,7 +43,6 @@ class QgsCameraController;
 class QgsRectangle;
 class QgsPostprocessingEntity;
 class QgsAmbientOcclusionRenderEntity;
-class QgsPreviewQuad;
 class QgsAmbientOcclusionBlurEntity;
 class QgsAbstractRenderView;
 class QgsDebugTextureEntity;
