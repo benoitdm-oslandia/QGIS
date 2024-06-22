@@ -15,13 +15,13 @@
 
 #include "qgswindow3dengine.h"
 
+#include "framegraph/qgsframegraph.h"
+
 #include <Qt3DExtras/QForwardRenderer>
 #include <Qt3DRender/QRenderSettings>
 
 #include "framegraph/qgsabstractrenderview.h"
 #include "qgs3dmapcanvas.h"
-
-#include "framegraph/qgsframegraph.h"
 
 QgsWindow3DEngine::QgsWindow3DEngine( Qgs3DMapCanvas *parent )
   : QgsAbstract3DEngine( parent )

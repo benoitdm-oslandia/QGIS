@@ -16,7 +16,6 @@
 #include "qgsframegraph.h"
 #include "qgsdirectionallightsettings.h"
 #include "qgspostprocessingentity.h"
-#include "qgspreviewquad.h"
 #include "qgs3dutils.h"
 #include "qgsfgutils.h"
 #include "qgsabstractrenderview.h"

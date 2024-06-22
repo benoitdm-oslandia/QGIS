@@ -959,7 +959,10 @@ void Qgs3DMapScene::onDebugShadowMapSettingsChanged()
   {
     QgsAbstractRenderView *shadowRenderView = mEngine->frameGraph()->renderView( QgsFrameGraph::SHADOW_RENDERVIEW );
     Qt3DRender::QTexture2D *shadowDepthTexture = shadowRenderView->outputTexture( Qt3DRender::QRenderTargetOutput::Depth );
-    mShadowTextureDebugging = new QgsDebugTextureEntity( mEngine->frameGraph(), shadowDepthTexture );
+
+    QgsAbstractRenderView *debugRenderView = mEngine->frameGraph()->renderView( QgsFrameGraph::DEBUG_RENDERVIEW );
+
+    mShadowTextureDebugging = new QgsDebugTextureEntity( shadowDepthTexture, debugRenderView->layerToFilter(), mEngine->frameGraph()->rootEntity() );
   }
 
   mEngine->frameGraph()->setEnableRenderView( QgsFrameGraph::DEBUG_RENDERVIEW, mMap.debugShadowMapEnabled() || mMap.debugDepthMapEnabled() );
@@ -975,7 +978,10 @@ void Qgs3DMapScene::onDebugDepthMapSettingsChanged()
   {
     QgsAbstractRenderView *forwardRenderView = mEngine->frameGraph()->renderView( QgsFrameGraph::FORWARD_RENDERVIEW );
     Qt3DRender::QTexture2D *forwardDepthTexture = forwardRenderView->outputTexture( Qt3DRender::QRenderTargetOutput::Depth );
-    mDepthTextureDebugging = new QgsDebugTextureEntity( mEngine->frameGraph(), forwardDepthTexture );
+
+    QgsAbstractRenderView *debugRenderView = mEngine->frameGraph()->renderView( QgsFrameGraph::DEBUG_RENDERVIEW );
+
+    mDepthTextureDebugging = new QgsDebugTextureEntity( forwardDepthTexture, debugRenderView->layerToFilter(), mEngine->frameGraph()->rootEntity() );
   }
 
   mEngine->frameGraph()->setEnableRenderView( QgsFrameGraph::DEBUG_RENDERVIEW, mMap.debugShadowMapEnabled() || mMap.debugDepthMapEnabled() );
