@@ -613,8 +613,9 @@ Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructPostprocessingPass()
 
   mRenderCapture = new Qt3DRender::QRenderCapture( mRenderCaptureTargetSelector );
 
-  mPostprocessingEntity = new QgsPostprocessingEntity( this, mRootEntity );
-  mPostprocessPassLayerFilter->addLayer( mPostprocessingEntity->layer() );
+  Qt3DRender::QLayer *postProcessingLayer = new Qt3DRender::QLayer();
+  mPostprocessingEntity = new QgsPostprocessingEntity( this, postProcessingLayer, mRootEntity );
+  mPostprocessPassLayerFilter->addLayer( postProcessingLayer );
   mPostprocessingEntity->setObjectName( "PostProcessingPassEntity" );
 
   return mPostProcessingCameraSelector;
@@ -661,8 +662,9 @@ Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructAmbientOcclusionRenderPass(
 
   mAmbientOcclusionRenderCaptureTargetSelector->setTarget( colorRenderTarget );
 
-  mAmbientOcclusionRenderEntity = new QgsAmbientOcclusionRenderEntity( mForwardDepthTexture, mMainCamera, mRootEntity );
-  mAmbientOcclusionRenderLayerFilter->addLayer( mAmbientOcclusionRenderEntity->layer() );
+  Qt3DRender::QLayer *ambientOcclusionRenderLayer = new Qt3DRender::QLayer();
+  mAmbientOcclusionRenderEntity = new QgsAmbientOcclusionRenderEntity( mForwardDepthTexture, ambientOcclusionRenderLayer, mMainCamera, mRootEntity );
+  mAmbientOcclusionRenderLayerFilter->addLayer( ambientOcclusionRenderLayer );
 
   return mAmbientOcclusionRenderCameraSelector;
 }
@@ -708,8 +710,9 @@ Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructAmbientOcclusionBlurPass()
 
   mAmbientOcclusionBlurRenderCaptureTargetSelector->setTarget( depthRenderTarget );
 
-  mAmbientOcclusionBlurEntity = new QgsAmbientOcclusionBlurEntity( mAmbientOcclusionRenderTexture, mRootEntity );
-  mAmbientOcclusionBlurLayerFilter->addLayer( mAmbientOcclusionBlurEntity->layer() );
+  Qt3DRender::QLayer *ambientOcclusionBlurlayer = new Qt3DRender::QLayer();
+  mAmbientOcclusionBlurEntity = new QgsAmbientOcclusionBlurEntity( mAmbientOcclusionRenderTexture, ambientOcclusionBlurlayer, mRootEntity );
+  mAmbientOcclusionBlurLayerFilter->addLayer( ambientOcclusionBlurlayer );
 
   return mAmbientOcclusionBlurCameraSelector;
 }
