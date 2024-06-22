@@ -20,7 +20,6 @@
 
 #include "qgsabstract3dengine.h"
 
-
 namespace Qt3DExtras
 {
   class QForwardRenderer;
