@@ -74,6 +74,8 @@ set(TESTS
   testqgsexternalresourcewidgetwrapper.cpp
   testqgsquerybuilder.cpp
   testqgsqueryresultwidget.cpp
+  testqgscompoundcolorwidget.cpp
+  testqgsmaskingwidget.cpp
 )
 
 foreach(TESTSRC ${TESTS})

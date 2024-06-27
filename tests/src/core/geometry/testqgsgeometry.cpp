@@ -152,6 +152,8 @@ class TestQgsGeometry : public QgsTest
     void isSimple_data();
     void isSimple();
 
+    void contains();
+
     void reshapeGeometryLineMerge();
     void createCollectionOfType();
 
@@ -590,7 +592,7 @@ void TestQgsGeometry::geos()
   polyWithEmptyParts.addGeometry( new QgsPolygon( new QgsLineString() ) );
   polyWithEmptyParts.addGeometry( new QgsPolygon( new QgsLineString( QVector< QgsPoint >() << QgsPoint( 10, 0 ) << QgsPoint( 10, 1 ) << QgsPoint( 11, 1 ) << QgsPoint( 10, 0 ) ) ) );
   asGeos = QgsGeos::asGeos( &polyWithEmptyParts );
-  QCOMPARE( GEOSGetNumGeometries_r( QgsGeos::getGEOSHandler(), asGeos.get() ), 2 );
+  QCOMPARE( GEOSGetNumGeometries_r( QgsGeosContext::get(), asGeos.get() ), 2 );
   res = QgsGeometry( QgsGeos::fromGeos( asGeos.get() ) );
   QCOMPARE( res.asWkt(), QStringLiteral( "MultiPolygon (((0 0, 0 1, 1 1, 0 0)),((10 0, 10 1, 11 1, 10 0)))" ) );
 
@@ -1347,7 +1349,7 @@ void TestQgsGeometry::simplifyCheck1()
   initPainterTest();
   QVERIFY( mpPolylineGeometryD->simplify( 0.5 ) );
   // should be a single polygon as A intersect B
-  QgsGeometry *mypSimplifyGeometry  =  mpPolylineGeometryD->simplify( 0.5 );
+  QgsGeometry *mypSimplifyGeometry = mpPolylineGeometryD->simplify( 0.5 );
   qDebug( "Geometry Type: %s", Qgis::WkbType::displayString( mypSimplifyGeometry->wkbType() ) );
   QVERIFY( mypSimplifyGeometry->wkbType() == Qgis::WkbType::LineString );
   QgsPolyline myLine = mypSimplifyGeometry->asPolyline();
@@ -1369,7 +1371,7 @@ void TestQgsGeometry::intersectionCheck1()
   QVERIFY( engine->intersects( mpPolygonGeometryB.constGet() ) );
 
   // should be a single polygon as A intersect B
-  QgsGeometry mypIntersectionGeometry  =  mpPolygonGeometryA.intersection( mpPolygonGeometryB );
+  QgsGeometry mypIntersectionGeometry = mpPolygonGeometryA.intersection( mpPolygonGeometryB );
   QVERIFY( mypIntersectionGeometry.wkbType() == Qgis::WkbType::Polygon );
   QgsPolygonXY myPolygon = mypIntersectionGeometry.asPolygon();
   QVERIFY( myPolygon.size() > 0 ); //check that the union created a feature
@@ -1460,7 +1462,7 @@ void TestQgsGeometry::unionCheck1()
 {
   initPainterTest();
   // should be a multipolygon with 2 parts as A does not intersect C
-  QgsGeometry mypUnionGeometry  =  mpPolygonGeometryA.combine( mpPolygonGeometryC );
+  QgsGeometry mypUnionGeometry = mpPolygonGeometryA.combine( mpPolygonGeometryC );
   QVERIFY( mypUnionGeometry.wkbType() == Qgis::WkbType::MultiPolygon );
   QgsMultiPolygonXY myMultiPolygon = mypUnionGeometry.asMultiPolygon();
   QVERIFY( myMultiPolygon.size() > 0 ); //check that the union did not fail
@@ -1472,7 +1474,7 @@ void TestQgsGeometry::unionCheck2()
 {
   initPainterTest();
   // should be a single polygon as A intersect B
-  QgsGeometry mypUnionGeometry  =  mpPolygonGeometryA.combine( mpPolygonGeometryB );
+  QgsGeometry mypUnionGeometry = mpPolygonGeometryA.combine( mpPolygonGeometryB );
   QVERIFY( mypUnionGeometry.wkbType() == Qgis::WkbType::Polygon );
   QgsPolygonXY myPolygon = mypUnionGeometry.asPolygon();
   QVERIFY( myPolygon.size() > 0 ); //check that the union created a feature
@@ -1708,11 +1710,11 @@ void TestQgsGeometry::dataStream()
   QCOMPARE( geom.constGet()->asWkt(), resultGeometry.constGet()->asWkt() );
 
   //also test with geometry without data
-  std::unique_ptr<QgsGeometry> emptyGeom( new QgsGeometry() );
+  QgsGeometry emptyGeom;
 
   QByteArray ba2;
   QDataStream ds2( &ba2, QIODevice::ReadWrite );
-  ds2 << emptyGeom.get();
+  ds2 << emptyGeom;
 
   ds2.device()->seek( 0 );
   ds2 >> resultGeometry;
@@ -2074,6 +2076,21 @@ void TestQgsGeometry::isSimple()
 
   bool res = gInput.isSimple();
   QCOMPARE( res, simple );
+}
+
+void TestQgsGeometry::contains()
+{
+  QgsGeometry geomTest = QgsGeometry::fromWkt( QStringLiteral( "Polygon((0 0, 5 5, -2.1 12.1, -7.1 7.1))" ) );
+
+  QgsPointXY pointInside( 1, 2 );
+  QVERIFY( geomTest.contains( &pointInside ) );
+  QVERIFY( geomTest.contains( QgsGeometry::fromWkt( QStringLiteral( "Point(1 2)" ) ) ) );
+  QVERIFY( geomTest.contains( pointInside.x(), pointInside.y() ) );
+
+  QgsPointXY pointOutside( 3, 1 );
+  QVERIFY( !geomTest.contains( &pointOutside ) );
+  QVERIFY( !geomTest.contains( QgsGeometry::fromWkt( QStringLiteral( "Point(3 1)" ) ) ) );
+  QVERIFY( !geomTest.contains( pointOutside.x(), pointOutside.y() ) );
 }
 
 void TestQgsGeometry::reshapeGeometryLineMerge()
@@ -2578,6 +2595,27 @@ void TestQgsGeometry::snappedToGrid()
     QCOMPARE( snapped->asWkt( 5 ), QStringLiteral( "LineStringZM (68 415 11 57, 27 505 24 49, 27 406 40 32)" ) );
     snapped.reset( curve.constGet()->snappedToGrid( 1, 1, 10, 10 ) );
     QCOMPARE( snapped->asWkt( 5 ), QStringLiteral( "LineStringZM (68 415 10 60, 27 505 20 50, 27 406 40 30)" ) );
+
+    // with removal of redundant vertices
+    curve = QgsGeometry::fromWkt( "LineString( 68.1 415.2, 68.1 505.2, 27.1 505.2 )" );
+    curve = curve.densifyByCount( 10 );
+    // no removal of redundant vertices
+    snapped.reset( curve.constGet()->snappedToGrid( 1, 1, 0, 0, false ) );
+    QCOMPARE( snapped->nCoordinates(), 23 );
+    // removal of redundant vertices
+    snapped.reset( curve.constGet()->snappedToGrid( 1, 1, 0, 0, true ) );
+    QCOMPARE( snapped->asWkt( 5 ), QStringLiteral( "LineString (68 415, 68 505, 27 505)" ) );
+    curve = curve.densifyByCount( 1000 );
+    snapped.reset( curve.constGet()->snappedToGrid( 1, 1, 0, 0, true ) );
+    QCOMPARE( snapped->asWkt( 5 ), QStringLiteral( "LineString (68 415, 68 505, 27 505)" ) );
+
+    // closed linestring, where the first vertex becomes redundant
+    curve = QgsGeometry::fromWkt( "LineString( 68.1 415.2, 90.1 415.2, 90.1 505.2, 27.1 505.2, 27.3 414.9, 68.1 415.2 )" );
+    snapped.reset( curve.constGet()->snappedToGrid( 1, 1, 0, 0, true ) );
+    QCOMPARE( snapped->asWkt( 5 ), QStringLiteral( "LineString (90 415, 90 505, 27 505, 27 415, 90 415)" ) );
+    curve = curve.densifyByCount( 10 );
+    snapped.reset( curve.constGet()->snappedToGrid( 1, 1, 0, 0, true ) );
+    QCOMPARE( snapped->asWkt( 5 ), QStringLiteral( "LineString (90 415, 90 505, 27 505, 27 415, 90 415)" ) );
   }
 
   //compound curve

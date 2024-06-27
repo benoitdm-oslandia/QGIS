@@ -103,6 +103,8 @@
 #include "qgsannotationlayer.h"
 #include "qgsprocessingparameteralignrasterlayers.h"
 #include "qgsprocessingalignrasterlayerswidgetwrapper.h"
+#include "qgsprocessingrasteroptionswidgetwrapper.h"
+#include "qgsrasterformatsaveoptionswidget.h"
 
 
 class TestParamType : public QgsProcessingParameterDefinition
@@ -319,6 +321,7 @@ class TestProcessingGui : public QObject
     void testTinInputLayerWrapper();
     void testDxfLayersWrapper();
     void testAlignRasterLayersWrapper();
+    void testRasterOptionsWrapper();
     void testMeshDatasetWrapperLayerInProject();
     void testMeshDatasetWrapperLayerOutsideProject();
     void testModelGraphicsView();
@@ -522,6 +525,21 @@ void TestProcessingGui::testWrapperFactoryRegistry()
   wrapper = registry.createParameterWidgetWrapper( &numParam, QgsProcessingGui::Standard );
   QVERIFY( wrapper );
   QCOMPARE( wrapper->parameterDefinition()->type(), QStringLiteral( "num" ) );
+  delete wrapper;
+
+  // creating wrapper using metadata
+  TestParamType customParam( QStringLiteral( "custom" ), QStringLiteral( "custom" ) );
+  wrapper = registry.createParameterWidgetWrapper( &customParam, QgsProcessingGui::Standard );
+  QVERIFY( !wrapper );
+  customParam.setMetadata( {{
+      QStringLiteral( "widget_wrapper" ), QVariantMap(
+      {{QStringLiteral( "widget_type" ), QStringLiteral( "str" ) }}
+      )
+    }
+  } );
+  wrapper = registry.createParameterWidgetWrapper( &customParam, QgsProcessingGui::Standard );
+  QVERIFY( wrapper );
+  QCOMPARE( wrapper->parameterDefinition()->type(), QStringLiteral( "custom" ) );
   delete wrapper;
 
   // removing
@@ -3320,14 +3338,14 @@ void TestProcessingGui::testFieldWrapper()
 
     // filtering fields
     QgsFields f;
-    f.append( QgsField( QStringLiteral( "string" ), QVariant::String ) );
-    f.append( QgsField( QStringLiteral( "double" ), QVariant::Double ) );
-    f.append( QgsField( QStringLiteral( "int" ), QVariant::Int ) );
-    f.append( QgsField( QStringLiteral( "date" ), QVariant::Date ) );
-    f.append( QgsField( QStringLiteral( "time" ), QVariant::Time ) );
-    f.append( QgsField( QStringLiteral( "datetime" ), QVariant::DateTime ) );
-    f.append( QgsField( QStringLiteral( "binary" ), QVariant::ByteArray ) );
-    f.append( QgsField( QStringLiteral( "boolean" ), QVariant::Bool ) );
+    f.append( QgsField( QStringLiteral( "string" ), QMetaType::Type::QString ) );
+    f.append( QgsField( QStringLiteral( "double" ), QMetaType::Type::Double ) );
+    f.append( QgsField( QStringLiteral( "int" ), QMetaType::Type::Int ) );
+    f.append( QgsField( QStringLiteral( "date" ), QMetaType::Type::QDate ) );
+    f.append( QgsField( QStringLiteral( "time" ), QMetaType::Type::QTime ) );
+    f.append( QgsField( QStringLiteral( "datetime" ), QMetaType::Type::QDateTime ) );
+    f.append( QgsField( QStringLiteral( "binary" ), QMetaType::Type::QByteArray ) );
+    f.append( QgsField( QStringLiteral( "boolean" ), QMetaType::Type::Bool ) );
 
     QgsFields f2 = wrapper3.filterFields( f );
     QCOMPARE( f2, f );
@@ -8340,12 +8358,12 @@ void TestProcessingGui::testFieldMapWidget()
 
   QVariantMap map;
   map.insert( QStringLiteral( "name" ), QStringLiteral( "n" ) );
-  map.insert( QStringLiteral( "type" ), static_cast< int >( QVariant::Double ) );
+  map.insert( QStringLiteral( "type" ), static_cast< int >( QMetaType::Type::Double ) );
   map.insert( QStringLiteral( "length" ), 8 );
   map.insert( QStringLiteral( "precision" ), 5 );
   QVariantMap map2;
   map2.insert( QStringLiteral( "name" ), QStringLiteral( "n2" ) );
-  map2.insert( QStringLiteral( "type" ), static_cast< int >( QVariant::String ) );
+  map2.insert( QStringLiteral( "type" ), static_cast< int >( QMetaType::Type::QString ) );
   map2.insert( QStringLiteral( "expression" ), QStringLiteral( "'abc' || \"def\"" ) );
   map2.insert( QStringLiteral( "alias" ), QStringLiteral( "my alias" ) );
   map2.insert( QStringLiteral( "comment" ), QStringLiteral( "my comment" ) );
@@ -8356,12 +8374,12 @@ void TestProcessingGui::testFieldMapWidget()
 
   QCOMPARE( widget.value().toList().size(), 2 );
   QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "name" ) ).toString(), QStringLiteral( "n" ) );
-  QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QVariant::Double ) );
+  QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QMetaType::Type::Double ) );
   QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "length" ) ).toInt(), 8 );
   QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "precision" ) ).toInt(), 5 );
   QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "expression" ) ).toString(), QString() );
   QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "name" ) ).toString(), QStringLiteral( "n2" ) );
-  QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QVariant::String ) );
+  QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QMetaType::Type::QString ) );
   QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "expression" ) ).toString(), QStringLiteral( "'abc' || \"def\"" ) );
   QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "alias" ) ).toString(), QStringLiteral( "my alias" ) );
   QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "comment" ) ).toString(), QStringLiteral( "my comment" ) );
@@ -8383,12 +8401,12 @@ void TestProcessingGui::testFieldMapWrapper()
 
     QVariantMap map;
     map.insert( QStringLiteral( "name" ), QStringLiteral( "n" ) );
-    map.insert( QStringLiteral( "type" ), static_cast< int >( QVariant::Double ) );
+    map.insert( QStringLiteral( "type" ), static_cast< int >( QMetaType::Type::Double ) );
     map.insert( QStringLiteral( "length" ), 8 );
     map.insert( QStringLiteral( "precision" ), 5 );
     QVariantMap map2;
     map2.insert( QStringLiteral( "name" ), QStringLiteral( "n2" ) );
-    map2.insert( QStringLiteral( "type" ), static_cast< int >( QVariant::String ) );
+    map2.insert( QStringLiteral( "type" ), static_cast< int >( QMetaType::Type::QString ) );
     map2.insert( QStringLiteral( "expression" ), QStringLiteral( "'abc' || \"def\"" ) );
     map2.insert( QStringLiteral( "alias" ), QStringLiteral( "my alias" ) );
     map2.insert( QStringLiteral( "comment" ), QStringLiteral( "my comment" ) );
@@ -8397,12 +8415,12 @@ void TestProcessingGui::testFieldMapWrapper()
     wrapper.setWidgetValue( QVariantList() << map << map2, context );
     QCOMPARE( spy.count(), 1 );
     QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "name" ) ).toString(), QStringLiteral( "n" ) );
-    QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QVariant::Double ) );
+    QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QMetaType::Type::Double ) );
     QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "length" ) ).toInt(), 8 );
     QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "precision" ) ).toInt(), 5 );
     QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "expression" ) ).toString(), QString() );
     QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "name" ) ).toString(), QStringLiteral( "n2" ) );
-    QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QVariant::String ) );
+    QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QMetaType::Type::QString ) );
     QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "expression" ) ).toString(), QStringLiteral( "'abc' || \"def\"" ) );
     QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "alias" ) ).toString(), QStringLiteral( "my alias" ) );
     QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "comment" ) ).toString(), QStringLiteral( "my comment" ) );
@@ -8540,12 +8558,12 @@ void TestProcessingGui::testAggregateWidget()
 
   QVariantMap map;
   map.insert( QStringLiteral( "name" ), QStringLiteral( "n" ) );
-  map.insert( QStringLiteral( "type" ), static_cast< int >( QVariant::Double ) );
+  map.insert( QStringLiteral( "type" ), static_cast< int >( QMetaType::Type::Double ) );
   map.insert( QStringLiteral( "length" ), 8 );
   map.insert( QStringLiteral( "precision" ), 5 );
   QVariantMap map2;
   map2.insert( QStringLiteral( "name" ), QStringLiteral( "n2" ) );
-  map2.insert( QStringLiteral( "type" ), static_cast< int >( QVariant::String ) );
+  map2.insert( QStringLiteral( "type" ), static_cast< int >( QMetaType::Type::QString ) );
   map2.insert( QStringLiteral( "input" ), QStringLiteral( "'abc' || \"def\"" ) );
   map2.insert( QStringLiteral( "aggregate" ), QStringLiteral( "concatenate" ) );
   map2.insert( QStringLiteral( "delimiter" ), QStringLiteral( "|" ) );
@@ -8556,14 +8574,14 @@ void TestProcessingGui::testAggregateWidget()
 
   QCOMPARE( widget.value().toList().size(), 2 );
   QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "name" ) ).toString(), QStringLiteral( "n" ) );
-  QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QVariant::Double ) );
+  QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QMetaType::Type::Double ) );
   QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "length" ) ).toInt(), 8 );
   QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "precision" ) ).toInt(), 5 );
   QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "input" ) ).toString(), QString() );
   QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "aggregate" ) ).toString(), QString() );
   QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "delimiter" ) ).toString(), QString() );
   QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "name" ) ).toString(), QStringLiteral( "n2" ) );
-  QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QVariant::String ) );
+  QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QMetaType::Type::QString ) );
   QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "input" ) ).toString(), QStringLiteral( "'abc' || \"def\"" ) );
   QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "aggregate" ) ).toString(), QStringLiteral( "concatenate" ) );
   QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "delimiter" ) ).toString(), QStringLiteral( "|" ) );
@@ -8585,12 +8603,12 @@ void TestProcessingGui::testAggregateWrapper()
 
     QVariantMap map;
     map.insert( QStringLiteral( "name" ), QStringLiteral( "n" ) );
-    map.insert( QStringLiteral( "type" ), static_cast< int >( QVariant::Double ) );
+    map.insert( QStringLiteral( "type" ), static_cast< int >( QMetaType::Type::Double ) );
     map.insert( QStringLiteral( "length" ), 8 );
     map.insert( QStringLiteral( "precision" ), 5 );
     QVariantMap map2;
     map2.insert( QStringLiteral( "name" ), QStringLiteral( "n2" ) );
-    map2.insert( QStringLiteral( "type" ), static_cast< int >( QVariant::String ) );
+    map2.insert( QStringLiteral( "type" ), static_cast< int >( QMetaType::Type::QString ) );
     map2.insert( QStringLiteral( "input" ), QStringLiteral( "'abc' || \"def\"" ) );
     map2.insert( QStringLiteral( "aggregate" ), QStringLiteral( "concatenate" ) );
     map2.insert( QStringLiteral( "delimiter" ), QStringLiteral( "|" ) );
@@ -8599,14 +8617,14 @@ void TestProcessingGui::testAggregateWrapper()
     wrapper.setWidgetValue( QVariantList() << map << map2, context );
     QCOMPARE( spy.count(), 1 );
     QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "name" ) ).toString(), QStringLiteral( "n" ) );
-    QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QVariant::Double ) );
+    QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QMetaType::Type::Double ) );
     QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "length" ) ).toInt(), 8 );
     QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "precision" ) ).toInt(), 5 );
     QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "input" ) ).toString(), QString() );
     QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "aggregate" ) ).toString(), QString() );
     QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "delimiter" ) ).toString(), QString() );
     QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "name" ) ).toString(), QStringLiteral( "n2" ) );
-    QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QVariant::String ) );
+    QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QMetaType::Type::QString ) );
     QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "input" ) ).toString(), QStringLiteral( "'abc' || \"def\"" ) );
     QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "aggregate" ) ).toString(), QStringLiteral( "concatenate" ) );
     QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "delimiter" ) ).toString(), QStringLiteral( "|" ) );
@@ -9988,6 +10006,9 @@ void TestProcessingGui::testDxfLayersWrapper()
   QVariantMap layerMap;
   layerMap["layer"] = "PointLayer";
   layerMap["attributeIndex"] = -1;
+  layerMap["overriddenLayerName"] = QString();
+  layerMap["buildDataDefinedBlocks"] = DEFAULT_DXF_DATA_DEFINED_BLOCKS;
+  layerMap["dataDefinedBlocksMaximumNumberOfClasses"] = -1;
   layerList.append( layerMap );
 
   QVERIFY( definition.checkValueIsAcceptable( layerList, &context ) );
@@ -9998,7 +10019,7 @@ void TestProcessingGui::testDxfLayersWrapper()
 
   QVERIFY( definition.checkValueIsAcceptable( value, &context ) );
   QString valueAsPythonString = definition.valueAsPythonString( value, context );
-  QCOMPARE( valueAsPythonString, QStringLiteral( "[{'layer': '%1','attributeIndex': -1}]" ).arg( vectorLayer->source() ) );
+  QCOMPARE( valueAsPythonString, QStringLiteral( "[{'layer': '%1','attributeIndex': -1,'overriddenLayerName': '','buildDataDefinedBlocks': True,'dataDefinedBlocksMaximumNumberOfClasses': -1}]" ).arg( vectorLayer->source() ) );
 }
 
 void TestProcessingGui::testAlignRasterLayersWrapper()
@@ -10034,6 +10055,32 @@ void TestProcessingGui::testAlignRasterLayersWrapper()
   QVERIFY( definition.checkValueIsAcceptable( value, &context ) );
   QString valueAsPythonString = definition.valueAsPythonString( value, context );
   QCOMPARE( valueAsPythonString, QStringLiteral( "[{'inputFile': '%1','outputFile': '%2','resampleMethod': 1,'rescale': False}]" ).arg( rasterLayer->source() ).arg( layerMap["outputFile"].toString() ) );
+}
+
+void TestProcessingGui::testRasterOptionsWrapper()
+{
+  QgsProcessingParameterString param( QStringLiteral( "string" ), QStringLiteral( "string" ) );
+  param.setMetadata( {{
+      QStringLiteral( "widget_wrapper" ), QVariantMap(
+      {{QStringLiteral( "widget_type" ), QStringLiteral( "rasteroptions" ) }}
+      )
+    }
+  } );
+
+  QgsProcessingContext context;
+  QgsProcessingRasterOptionsWidgetWrapper wrapper( &param );
+
+  std::unique_ptr<QWidget> w( wrapper.createWidget() );
+  QVERIFY( w );
+
+  QSignalSpy spy( &wrapper, &QgsProcessingRasterOptionsWidgetWrapper::widgetValueHasChanged );
+  wrapper.setWidgetValue( QStringLiteral( "TFW=YES" ), context );
+  QCOMPARE( spy.count(), 1 );
+  QCOMPARE( wrapper.widgetValue().toString(), QStringLiteral( "TFW=YES" ) );
+  wrapper.setWidgetValue( QStringLiteral( "TFW=YES TILED=YES" ), context );
+  QCOMPARE( wrapper.widgetValue().toString(), QStringLiteral( "TFW=YES|TILED=YES" ) );
+  wrapper.setWidgetValue( QStringLiteral( "TFW=YES|TILED=NO" ), context );
+  QCOMPARE( wrapper.widgetValue().toString(), QStringLiteral( "TFW=YES|TILED=NO" ) );
 }
 
 void TestProcessingGui::testMeshDatasetWrapperLayerInProject()
@@ -10152,7 +10199,7 @@ void TestProcessingGui::testMeshDatasetWrapperLayerInProject()
   QCOMPARE( timeSpy.count(), 3 );
 
   QVariant groupsValue = groupsWrapper.widgetValue();
-  QVERIFY( groupsValue.type() == QVariant::List );
+  QVERIFY( groupsValue.userType() == QMetaType::Type::QVariantList );
   QVariantList groupsList = groupsValue.toList();
   QCOMPARE( groupsList.count(), 1 );
   QCOMPARE( groupsList.at( 0 ).toInt(), 1 );
@@ -10182,7 +10229,7 @@ void TestProcessingGui::testMeshDatasetWrapperLayerInProject()
   QCOMPARE( timeSpy.count(), 4 ); //radioButtonDatasetGroupTimeStep already checked
 
   QVariant timeValue = timeWrapper.widgetValue();
-  QVERIFY( timeValue.type() == QVariant::Map );
+  QVERIFY( timeValue.userType() == QMetaType::Type::QVariantMap );
   QVariantMap timeValueMap = timeValue.toMap();
   QCOMPARE( timeValueMap[QStringLiteral( "type" )].toString(), QStringLiteral( "dataset-time-step" ) );
   pythonString = timeDefinition.valueAsPythonString( timeWrapper.widgetValue(), context );

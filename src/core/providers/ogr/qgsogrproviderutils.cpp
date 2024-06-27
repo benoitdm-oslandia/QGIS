@@ -73,7 +73,7 @@ QString QgsOgrProviderUtils::analyzeURI( QString const &uri,
     QString &layerName,
     QString &subsetString,
     OGRwkbGeometryType &ogrGeometryTypeFilter,
-    QStringList &openOptions )
+    QStringList &openOptions, QVariantMap &credentialOptions )
 {
   isSubLayer = false;
   layerIndex = 0;
@@ -117,6 +117,8 @@ QString QgsOgrProviderUtils::analyzeURI( QString const &uri,
   {
     openOptions = parts.value( QStringLiteral( "openOptions" ) ).toStringList();
   }
+
+  credentialOptions = parts.value( QStringLiteral( "credentialOptions" ) ).toMap();
 
   const QString fullPath = parts.value( QStringLiteral( "vsiPrefix" ) ).toString()
                            + parts.value( QStringLiteral( "path" ) ).toString()
@@ -1326,19 +1328,19 @@ QString QgsOgrProviderUtils::quotedValue( const QVariant &value )
   if ( QgsVariantUtils::isNull( value ) )
     return QStringLiteral( "NULL" );
 
-  switch ( value.type() )
+  switch ( value.userType() )
   {
-    case QVariant::Int:
-    case QVariant::LongLong:
-    case QVariant::Double:
+    case QMetaType::Type::Int:
+    case QMetaType::Type::LongLong:
+    case QMetaType::Type::Double:
       return value.toString();
 
-    case QVariant::Bool:
+    case QMetaType::Type::Bool:
       //OGR does not support boolean literals
       return value.toBool() ? "1" : "0";
 
     default:
-    case QVariant::String:
+    case QMetaType::Type::QString:
       QString v = value.toString();
       v.replace( '\'', QLatin1String( "''" ) );
       if ( v.contains( '\\' ) )
@@ -1449,6 +1451,7 @@ static GDALDatasetH OpenHelper( const QString &dsName,
     papszOpenOptions = CSLAddString( papszOpenOptions,
                                      option.toUtf8().constData() );
   }
+
   GDALDatasetH hDS = QgsOgrProviderUtils::GDALOpenWrapper(
                        QgsOgrProviderUtils::expandAuthConfig( dsName ).toUtf8().constData(), updateMode, papszOpenOptions, nullptr );
   CSLDestroy( papszOpenOptions );
@@ -3300,6 +3303,14 @@ OGRErr QgsOgrLayer::SetFeature( OGRFeatureH hFeature )
   return OGR_L_SetFeature( hLayer, hFeature );
 }
 
+#if GDAL_VERSION_NUM >= GDAL_COMPUTE_VERSION(3,7,0)
+OGRErr QgsOgrLayer::UpdateFeature( OGRFeatureH hFeature, int nUpdatedFieldsCount, const int *panUpdatedFieldsIdx, int nUpdatedGeomFieldsCount, const int *panUpdatedGeomFieldsIdx, bool bUpdateStyleString )
+{
+  QMutexLocker locker( &ds->mutex );
+  return OGR_L_UpdateFeature( hLayer, hFeature, nUpdatedFieldsCount, panUpdatedFieldsIdx, nUpdatedGeomFieldsCount, panUpdatedGeomFieldsIdx, bUpdateStyleString );
+}
+#endif
+
 OGRErr QgsOgrLayer::DeleteFeature( GIntBig fid )
 {
   QMutexLocker locker( &ds->mutex );
@@ -3453,14 +3464,15 @@ bool QgsOgrProviderUtils::deleteLayer( const QString &uri, QString &errCause )
   QString subsetString;
   OGRwkbGeometryType ogrGeometryType;
   QStringList openOptions;
+  QVariantMap credentialOptions;
   QString filePath = analyzeURI( uri,
                                  isSubLayer,
                                  layerIndex,
                                  layerName,
                                  subsetString,
                                  ogrGeometryType,
-                                 openOptions );
-
+                                 openOptions,
+                                 credentialOptions );
 
   gdal::dataset_unique_ptr hDS( GDALOpenEx( filePath.toUtf8().constData(), GDAL_OF_RASTER | GDAL_OF_VECTOR | GDAL_OF_UPDATE, nullptr, nullptr, nullptr ) );
   if ( hDS  && ( ! layerName.isEmpty() || layerIndex != -1 ) )

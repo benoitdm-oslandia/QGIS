@@ -42,7 +42,7 @@ QgsMapSettings::QgsMapSettings()
   , mSegmentationTolerance( M_PI_2 / 90 )
 {
   mScaleCalculator.setMapUnits( Qgis::DistanceUnit::Unknown );
-  mSimplifyMethod.setSimplifyHints( QgsVectorSimplifyMethod::NoSimplification );
+  mSimplifyMethod.setSimplifyHints( Qgis::VectorRenderingSimplificationFlag::NoSimplification );
 
   updateDerived();
 }
@@ -834,6 +834,11 @@ void QgsMapSettings::setClippingRegions( const QList<QgsMapClippingRegion> &regi
 QList<QgsMapClippingRegion> QgsMapSettings::clippingRegions() const
 {
   return mClippingRegions;
+}
+
+void QgsMapSettings::setMaskSettings( const QgsMaskRenderSettings &settings )
+{
+  mMaskRenderSettings = settings;
 }
 
 void QgsMapSettings::addRenderedFeatureHandler( QgsRenderedFeatureHandlerInterface *handler )

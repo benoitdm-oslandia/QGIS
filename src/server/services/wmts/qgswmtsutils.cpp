@@ -529,12 +529,12 @@ namespace QgsWmts
 
       layerDef pLayer;
       pLayer.id = l->name();
-      if ( !l->shortName().isEmpty() )
-        pLayer.id = l->shortName();
+      if ( !l->serverProperties()->shortName().isEmpty() )
+        pLayer.id = l->serverProperties()->shortName();
       pLayer.id = pLayer.id.replace( ' ', '_' );
 
-      pLayer.title = l->title();
-      pLayer.abstract = l->abstract();
+      pLayer.title = l->serverProperties()->title();
+      pLayer.abstract = l->serverProperties()->abstract();
 
       //transform the layer native CRS into WGS84
       const QgsCoordinateReferenceSystem layerCrs = l->crs();
@@ -693,7 +693,7 @@ namespace QgsWmts
           continue;
         }
 #endif
-        QString layerLayerId = l->shortName();
+        QString layerLayerId = l->serverProperties()->shortName();
         if ( layerLayerId.isEmpty() )
         {
           layerLayerId = l->name();
@@ -708,11 +708,33 @@ namespace QgsWmts
     }
 
     //defining Format
-    const QString format = params.formatAsString();
-    //read Format
+    QString format;
+
+    const bool isFeatureInfo { request.compare( QStringLiteral( "getfeatureinfo" ), Qt::CaseInsensitive ) == 0 };
+
+    // If this is a getfeatureinfo request, we must check INFOFORMAT instead of format
+    if ( isFeatureInfo )
+    {
+      format = params.infoFormatAsString();
+    }
+
+    // but we are good and savy and also accept FORMAT for getfeatureinfo requests
     if ( format.isEmpty() )
     {
-      throw QgsRequestNotWellFormedException( QStringLiteral( "Format is mandatory" ) );
+      format = params.formatAsString();
+    }
+
+    // no format? no party!
+    if ( format.isEmpty() )
+    {
+      if ( isFeatureInfo )
+      {
+        throw QgsRequestNotWellFormedException( QStringLiteral( "InfoFormat is mandatory" ) );
+      }
+      else
+      {
+        throw QgsRequestNotWellFormedException( QStringLiteral( "Format is mandatory" ) );
+      }
     }
 
     //defining TileMatrixSet ref
@@ -795,7 +817,14 @@ namespace QgsWmts
     query.addQueryItem( QgsWmsParameterForWmts::name( QgsWmsParameterForWmts::BBOX ), bbox );
     query.addQueryItem( QgsWmsParameterForWmts::name( QgsWmsParameterForWmts::WIDTH ), QStringLiteral( "256" ) );
     query.addQueryItem( QgsWmsParameterForWmts::name( QgsWmsParameterForWmts::HEIGHT ), QStringLiteral( "256" ) );
-    query.addQueryItem( QgsWmsParameterForWmts::name( QgsWmsParameterForWmts::FORMAT ), format );
+    if ( isFeatureInfo )
+    {
+      query.addQueryItem( QgsWmsParameterForWmts::name( QgsWmsParameterForWmts::INFO_FORMAT ), format );
+    }
+    else
+    {
+      query.addQueryItem( QgsWmsParameterForWmts::name( QgsWmsParameterForWmts::FORMAT ), format );
+    }
     if ( params.format() == QgsWmtsParameters::Format::PNG )
     {
       query.addQueryItem( QgsWmsParameterForWmts::name( QgsWmsParameterForWmts::TRANSPARENT ), QStringLiteral( "true" ) );

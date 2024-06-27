@@ -28,7 +28,6 @@
 #include <Qt3DRender/QCameraSelector>
 #include <Qt3DRender/QClearBuffers>
 #include <Qt3DRender/QRenderAspect>
-#include <Qt3DRender/QRenderCapture>
 #include <Qt3DRender/QRenderSettings>
 #include <Qt3DRender/QRenderTarget>
 #include <Qt3DRender/QRenderTargetOutput>
@@ -36,6 +35,7 @@
 #include <Qt3DRender/QRenderSurfaceSelector>
 #include <Qt3DRender/QTexture>
 #include <Qt3DRender/QViewport>
+#include "qgsabstractrenderview.h"
 
 QgsOffscreen3DEngine::QgsOffscreen3DEngine()
 {
@@ -103,14 +103,51 @@ QgsOffscreen3DEngine::QgsOffscreen3DEngine()
 
   mFrameGraph = new QgsFrameGraph( mOffscreenSurface, mSize, mCamera, mRoot );
   mFrameGraph->setRenderCaptureEnabled( true );
-  mFrameGraph->setShadowRenderingEnabled( false );
+  mFrameGraph->setEnableRenderView( QgsFrameGraph::SHADOW_RENDERVIEW, false );
+
+  auto targetSelector = new Qt3DRender::QRenderTargetSelector( );
+  Qt3DRender::QRenderTarget *renderTarget = new Qt3DRender::QRenderTarget( targetSelector );
+
+  // Create a render target output for rendering color.
+  Qt3DRender::QRenderTargetOutput *colorOutput = new Qt3DRender::QRenderTargetOutput( renderTarget );
+  colorOutput->setAttachmentPoint( Qt3DRender::QRenderTargetOutput::Color0 );
+
+  // Create a texture to render into.
+  mOffscreenColorTexture = new Qt3DRender::QTexture2D( colorOutput );
+  mOffscreenColorTexture->setSize( mSize.width(), mSize.height() );
+  mOffscreenColorTexture->setFormat( Qt3DRender::QAbstractTexture::RGB8_UNorm );
+  mOffscreenColorTexture->setMinificationFilter( Qt3DRender::QAbstractTexture::Linear );
+  mOffscreenColorTexture->setMagnificationFilter( Qt3DRender::QAbstractTexture::Linear );
+  mOffscreenColorTexture->setObjectName( "PostProcessingPass::ColorTarget" );
+
+  // Hook the texture up to our output, and the output up to this object.
+  colorOutput->setTexture( mOffscreenColorTexture );
+  renderTarget->addOutput( colorOutput );
+
+  Qt3DRender::QRenderTargetOutput *depthOutput = new Qt3DRender::QRenderTargetOutput( renderTarget );
+
+  depthOutput->setAttachmentPoint( Qt3DRender::QRenderTargetOutput::Depth );
+  mOffscreenDepthTexture = new Qt3DRender::QTexture2D( depthOutput );
+  mOffscreenDepthTexture->setSize( mSize.width(), mSize.height() );
+  mOffscreenDepthTexture->setFormat( Qt3DRender::QAbstractTexture::DepthFormat );
+  mOffscreenDepthTexture->setMinificationFilter( Qt3DRender::QAbstractTexture::Linear );
+  mOffscreenDepthTexture->setMagnificationFilter( Qt3DRender::QAbstractTexture::Linear );
+  mOffscreenDepthTexture->setComparisonFunction( Qt3DRender::QAbstractTexture::CompareLessEqual );
+  mOffscreenDepthTexture->setComparisonMode( Qt3DRender::QAbstractTexture::CompareRefToTexture );
+  mOffscreenDepthTexture->setObjectName( "PostProcessingPass::DepthTarget" );
+
+  depthOutput->setTexture( mOffscreenDepthTexture );
+  renderTarget->addOutput( depthOutput );
+
+  targetSelector->setTarget( renderTarget );
+  mFrameGraph->frameGraphRoot()->setParent( targetSelector );
+
   // Set this frame graph to be in use.
   // the render settings also sets itself as the parent of mSurfaceSelector
-  mRenderSettings->setActiveFrameGraph( mFrameGraph->frameGraphRoot() );
+  mRenderSettings->setActiveFrameGraph( targetSelector );
 
   // Set the root entity of the engine. This causes the engine to begin running.
   mAspectEngine->setRootEntity( Qt3DCore::QEntityPtr( mRoot ) );
-
 }
 
 QgsOffscreen3DEngine::~QgsOffscreen3DEngine()
@@ -125,6 +162,9 @@ void QgsOffscreen3DEngine::setSize( QSize s )
 
   mFrameGraph->setSize( mSize );
   mCamera->setAspectRatio( float( mSize.width() ) / float( mSize.height() ) );
+  mOffscreenColorTexture->setSize( s.width(), s.height() );
+  mOffscreenDepthTexture->setSize( s.width(), s.height() );
+
   emit sizeChanged();
 }
 
@@ -149,8 +189,7 @@ void QgsOffscreen3DEngine::setRootEntity( Qt3DCore::QEntity *root )
   // Parent the incoming scene root to our current root entity.
   mSceneRoot = root;
   mSceneRoot->setParent( mRoot );
-  root->addComponent( mFrameGraph->forwardRenderLayer() );
-  root->addComponent( mFrameGraph->castShadowsLayer() );
+  root->addComponent( mFrameGraph->filterLayer( QgsFrameGraph::FORWARD_RENDERVIEW ) );
 }
 
 Qt3DRender::QRenderSettings *QgsOffscreen3DEngine::renderSettings()

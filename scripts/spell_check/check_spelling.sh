@@ -65,9 +65,6 @@ shift $((OPTIND - 1))
 if [ -p /dev/stdin ]; then
   # with pipe input
   read SCRIPT_INPUT
-  if [ -z "$SCRIPT_INPUT" ]; then
-    exit 0
-  fi
 else
   # no pipe input
   SCRIPT_INPUT="$@"
@@ -81,6 +78,9 @@ if [ -n "$SCRIPT_INPUT" ]; then
   fi
   echo "Running spell check on files: $INPUTFILES"
 else
+  if [ -p /dev/stdin ]; then
+    exit 0
+  fi
   INPUTFILES="."
 fi
 

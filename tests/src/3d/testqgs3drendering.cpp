@@ -56,8 +56,6 @@
 #include <QDir>
 #include <QSignalSpy>
 
-class QgsCameraController4Test;
-
 class TestQgs3DRendering : public QgsTest
 {
     Q_OBJECT
@@ -77,7 +75,8 @@ class TestQgs3DRendering : public QgsTest
     void testEpsg4978LineRendering();
     void testExtrudedPolygons();
     void testPhongShading();
-    void testExtrudedPolygonsDataDefined();
+    void testExtrudedPolygonsDataDefinedPhong();
+    void testExtrudedPolygonsDataDefinedGooch();
     void testExtrudedPolygonsGoochShading();
     void testExtrudedPolygonsMetalRoughShading();
     void testPolygonsEdges();
@@ -88,6 +87,7 @@ class TestQgs3DRendering : public QgsTest
     void testBufferedLineRenderingWidth();
     void testMapTheme();
     void testRuleBasedRenderer();
+    void testFilteredRuleBasedRenderer();
     void testAnimationExport();
     void testBillboardRendering();
     void testInstancedRendering();
@@ -95,7 +95,8 @@ class TestQgs3DRendering : public QgsTest
     void testFilteredDemTerrain();
     void testFilteredExtrudedPolygons();
     void testDepthBuffer();
-    void testAmbientOcclusion();
+    void testAmbientOcclusionOff();
+    void testAmbientOcclusionOn();
     void testDebugMap();
     void test3DSceneExporter();
 
@@ -109,30 +110,6 @@ class TestQgs3DRendering : public QgsTest
     QgsRasterLayer *mLayerDtm = nullptr;
     QgsRasterLayer *mLayerRgb = nullptr;
     QgsVectorLayer *mLayerBuildings = nullptr;
-};
-
-/**
- * \ingroup UnitTests
- * Helper class to access QgsCameraController properties
- */
-class QgsCameraController4Test : public QgsCameraController
-{
-    Q_OBJECT
-  public:
-    QgsCameraController4Test( Qgs3DMapScene *parent = nullptr )
-      : QgsCameraController( parent )
-    { }
-
-    // wraps protected methods
-    void superOnWheel( Qt3DInput::QWheelEvent *wheel ) { onWheel( wheel ); }
-    void superOnMousePressed( Qt3DInput::QMouseEvent *mouse ) { onMousePressed( mouse ); }
-    double superSampleDepthBuffer( const QImage &buffer, int px, int py ) { return sampleDepthBuffer( buffer, px, py ); }
-
-    // wraps protected member vars
-    QVector3D zoomPoint() { return mZoomPoint; }
-    double cumulatedWheelY() { return mCumulatedWheelY; }
-    Qt3DRender::QCamera *cameraBefore() { return mCameraBefore.get(); }
-    QgsCameraPose *cameraPose() { return &mCameraPose; }
 };
 
 QImage TestQgs3DRendering::convertDepthImageToGrayscaleImage( const QImage &depthImage )
@@ -509,7 +486,7 @@ void TestQgs3DRendering::testPhongShading()
   QGSVERIFYIMAGECHECK( "phong_shading", "phong_shading", img, QString(), 40, QSize( 0, 0 ), 2 );
 }
 
-void TestQgs3DRendering::testExtrudedPolygonsDataDefined()
+void TestQgs3DRendering::testExtrudedPolygonsDataDefinedPhong()
 {
   QgsPropertyCollection propertyColection;
   QgsProperty diffuseColor;
@@ -560,7 +537,63 @@ void TestQgs3DRendering::testExtrudedPolygonsDataDefined()
 
   delete scene;
   delete map;
-  QGSVERIFYIMAGECHECK( "polygon3d_extrusion_data_defined", "polygon3d_extrusion_data_defined", img, QString(), 40, QSize( 0, 0 ), 2 );
+  QGSVERIFYIMAGECHECK( "polygon3d_extrusion_data_defined_phong", "polygon3d_extrusion_data_defined_phong", img, QString(), 40, QSize( 0, 0 ), 2 );
+}
+
+void TestQgs3DRendering::testExtrudedPolygonsDataDefinedGooch()
+{
+  const QgsRectangle fullExtent = mLayerDtm->extent();
+
+  QgsPropertyCollection propertyColection;
+  QgsProperty diffuseColor;
+  QgsProperty warmColor;
+  QgsProperty coolColor;
+  diffuseColor.setExpressionString( QStringLiteral( "color_rgb( 120*(\"ogc_fid\"%3),125,0)" ) );
+  warmColor.setExpressionString( QStringLiteral( "color_rgb( 120,(\"ogc_fid\"%2)*255,0)" ) );
+  coolColor.setExpressionString( QStringLiteral( "'yellow'" ) );
+  propertyColection.setProperty( QgsAbstractMaterialSettings::Property::Diffuse, diffuseColor );
+  propertyColection.setProperty( QgsAbstractMaterialSettings::Property::Warm, warmColor );
+  propertyColection.setProperty( QgsAbstractMaterialSettings::Property::Cool, coolColor );
+  QgsGoochMaterialSettings materialSettings;
+  materialSettings.setDataDefinedProperties( propertyColection );
+  materialSettings.setAlpha( 0.2f );
+  materialSettings.setBeta( 0.6f );
+  materialSettings.setShininess( 2 );
+
+  QgsPolygon3DSymbol *symbol3d = new QgsPolygon3DSymbol;
+  symbol3d->setMaterialSettings( materialSettings.clone() );
+  symbol3d->setExtrusionHeight( 10.f );
+  QgsVectorLayer3DRenderer *renderer3d = new QgsVectorLayer3DRenderer( symbol3d );
+  mLayerBuildings->setRenderer3D( renderer3d );
+
+  Qgs3DMapSettings *mapSettings = new Qgs3DMapSettings;
+  mapSettings->setCrs( mProject->crs() );
+  mapSettings->setExtent( fullExtent );
+  mapSettings->setLayers( QList<QgsMapLayer *>() << mLayerBuildings << mLayerRgb );
+  QgsPointLightSettings defaultLight;
+  defaultLight.setIntensity( 0.5 );
+  defaultLight.setPosition( QgsVector3D( 0, 1000, 0 ) );
+  mapSettings->setLightSources( { defaultLight.clone() } );
+
+  QgsFlatTerrainGenerator *flatTerrain = new QgsFlatTerrainGenerator;
+  flatTerrain->setCrs( mapSettings->crs() );
+  mapSettings->setTerrainGenerator( flatTerrain );
+
+  QgsOffscreen3DEngine engine;
+  Qgs3DMapScene *scene = new Qgs3DMapScene( *mapSettings, &engine );
+  engine.setRootEntity( scene );
+
+  scene->cameraController()->setLookingAtPoint( QgsVector3D( 0, 0, 250 ), 500, 45, 0 );
+
+  // When running the test on Travis, it would initially return empty rendered image.
+  // Capturing the initial image and throwing it away fixes that. Hopefully we will
+  // find a better fix in the future.
+  Qgs3DUtils::captureSceneImage( engine, scene );
+  QImage img = Qgs3DUtils::captureSceneImage( engine, scene );
+
+  delete scene;
+  delete mapSettings;
+  QGSVERIFYIMAGECHECK( "polygon3d_extrusion_data_defined_gooch", "polygon3d_extrusion_data_defined_gooch", img, QString(), 40, QSize( 0, 0 ), 2 );
 }
 
 void TestQgs3DRendering::testExtrudedPolygonsGoochShading()
@@ -1067,6 +1100,66 @@ void TestQgs3DRendering::testRuleBasedRenderer()
   QGSVERIFYIMAGECHECK( "rulebased", "rulebased", img, QString(), 40, QSize( 0, 0 ), 2 );
 }
 
+void TestQgs3DRendering::testFilteredRuleBasedRenderer()
+{
+  QgsPhongMaterialSettings materialSettings;
+  materialSettings.setAmbient( Qt::lightGray );
+  QgsPolygon3DSymbol *symbol3d = new QgsPolygon3DSymbol;
+  symbol3d->setMaterialSettings( materialSettings.clone() );
+  symbol3d->setExtrusionHeight( 10.f );
+
+  QgsPhongMaterialSettings materialSettings2;
+  materialSettings2.setAmbient( Qt::red );
+  QgsPolygon3DSymbol *symbol3d2 = new QgsPolygon3DSymbol;
+  symbol3d2->setMaterialSettings( materialSettings2.clone() );
+  symbol3d2->setExtrusionHeight( 10.f );
+
+  QgsRuleBased3DRenderer::Rule *root = new QgsRuleBased3DRenderer::Rule( nullptr );
+  QgsRuleBased3DRenderer::Rule *rule1 = new QgsRuleBased3DRenderer::Rule( symbol3d, "ogc_fid < 29069", "rule 1" );
+  QgsRuleBased3DRenderer::Rule *rule2 = new QgsRuleBased3DRenderer::Rule( symbol3d2, "ogc_fid >= 29069", "rule 2" );
+  root->appendChild( rule1 );
+  root->appendChild( rule2 );
+  QgsRuleBased3DRenderer *renderer3d = new QgsRuleBased3DRenderer( root );
+  mLayerBuildings->setRenderer3D( renderer3d );
+
+  QgsRectangle fullExtent = mLayerBuildings->extent();
+  const QgsRectangle filteredExtent = QgsRectangle( fullExtent.xMinimum(), fullExtent.yMinimum(),
+                                      fullExtent.xMinimum() + 0.8 * fullExtent.width(), fullExtent.yMinimum() + 0.7 * fullExtent.height() );
+
+  Qgs3DMapSettings *map = new Qgs3DMapSettings;
+  map->setCrs( mProject->crs() );
+  map->setExtent( filteredExtent );
+  map->setLayers( QList<QgsMapLayer *>() << mLayerBuildings );
+
+  QgsPointLightSettings defaultLight;
+  defaultLight.setIntensity( 0.5 );
+  defaultLight.setPosition( QgsVector3D( 0, 1000, 0 ) );
+  map->setLightSources( { defaultLight.clone() } );
+
+  QgsFlatTerrainGenerator *flatTerrain = new QgsFlatTerrainGenerator;
+  flatTerrain->setCrs( map->crs() );
+  map->setTerrainGenerator( flatTerrain );
+
+  QgsOffscreen3DEngine engine;
+  Qgs3DMapScene *scene = new Qgs3DMapScene( *map, &engine );
+  engine.setRootEntity( scene );
+
+  scene->cameraController()->setLookingAtPoint( QgsVector3D( 0, 0, 250 ), 500, 45, 0 );
+
+  // When running the test, it would sometimes return partially rendered image.
+  // It is probably based on how fast qt3d manages to upload the data to GPU...
+  // Capturing the initial image and throwing it away fixes that. Hopefully we will
+  // find a better fix in the future.
+  Qgs3DUtils::captureSceneImage( engine, scene );
+
+  QImage img = Qgs3DUtils::captureSceneImage( engine, scene );
+
+  delete scene;
+  delete map;
+
+  QGSVERIFYIMAGECHECK( "rulebased_filtered", "rulebased_filtered", img, QString(), 40, QSize( 0, 0 ), 2 );
+}
+
 void TestQgs3DRendering::testAnimationExport()
 {
   const QgsRectangle fullExtent = mLayerDtm->extent();
@@ -1433,7 +1526,7 @@ void TestQgs3DRendering::testFilteredExtrudedPolygons()
   QGSVERIFYIMAGECHECK( "polygon3d_extrusion_filtered", "polygon3d_extrusion_filtered", img, QString(), 40, QSize( 0, 0 ), 2 );
 }
 
-void TestQgs3DRendering::testAmbientOcclusion()
+void TestQgs3DRendering::testAmbientOcclusionOff()
 {
   // =============================================
   // =========== creating Qgs3DMapSettings
@@ -1481,12 +1574,63 @@ void TestQgs3DRendering::testAmbientOcclusion()
   mapSettings.setAmbientOcclusionSettings( aoSettings );
 
   QImage img = Qgs3DUtils::captureSceneImage( engine, scene );
+  engine.dumpFrameGraph();
   QGSVERIFYIMAGECHECK( "ambient_occlusion_1", "ambient_occlusion_1", img, QString(), 40, QSize( 0, 0 ), 15 );
 
+  delete scene;
+  mapSettings.setLayers( {} );
+  demTerrain->deleteLater();
+}
+
+void TestQgs3DRendering::testAmbientOcclusionOn()
+{
+  // =============================================
+  // =========== creating Qgs3DMapSettings
+  QgsRasterLayer *layerDtm = new QgsRasterLayer( testDataPath( "/3d/dtm.tif" ), "dtm", "gdal" );
+  QVERIFY( layerDtm->isValid() );
+
+  const QgsRectangle fullExtent = layerDtm->extent();
+
+  QgsProject project;
+  project.addMapLayer( layerDtm );
+
+  Qgs3DMapSettings mapSettings;
+  mapSettings.setCrs( project.crs() );
+  mapSettings.setExtent( fullExtent );
+  mapSettings.setLayers( {layerDtm, mLayerBuildings} );
+
+  mapSettings.setTransformContext( project.transformContext() );
+  mapSettings.setPathResolver( project.pathResolver() );
+  mapSettings.setMapThemeCollection( project.mapThemeCollection() );
+
+  QgsDemTerrainGenerator *demTerrain = new QgsDemTerrainGenerator;
+  demTerrain->setLayer( layerDtm );
+  mapSettings.setTerrainGenerator( demTerrain );
+  mapSettings.setTerrainVerticalScale( 3 );
+
+  QgsPointLightSettings defaultPointLight;
+  defaultPointLight.setPosition( QgsVector3D( 0, 400, 0 ) );
+  defaultPointLight.setConstantAttenuation( 0 );
+  mapSettings.setLightSources( {defaultPointLight.clone() } );
+  mapSettings.setOutputDpi( 92 );
+
+  // =========== creating Qgs3DMapScene
+  QPoint winSize = QPoint( 640, 480 ); // default window size
+
+  QgsOffscreen3DEngine engine;
+  engine.setSize( QSize( winSize.x(), winSize.y() ) );
+  Qgs3DMapScene *scene = new Qgs3DMapScene( mapSettings, &engine );
+  engine.setRootEntity( scene );
+
+  // =========== set camera position
+  scene->cameraController()->setLookingAtPoint( QVector3D( 0, 0, 0 ), 400, 50, 10 );
+
+  QgsAmbientOcclusionSettings aoSettings = mapSettings.ambientOcclusionSettings();
   aoSettings.setEnabled( true );
   mapSettings.setAmbientOcclusionSettings( aoSettings );
 
-  img = Qgs3DUtils::captureSceneImage( engine, scene );
+  QImage img = Qgs3DUtils::captureSceneImage( engine, scene );
+  engine.dumpFrameGraph();
   QGSVERIFYIMAGECHECK( "ambient_occlusion_2", "ambient_occlusion_2", img, QString(), 40, QSize( 0, 0 ), 15 );
 
   delete scene;
@@ -1496,8 +1640,8 @@ void TestQgs3DRendering::testAmbientOcclusion()
 
 void TestQgs3DRendering::testDepthBuffer()
 {
-  // =============================================
-  // =========== creating Qgs3DMapSettings
+// =============================================
+// =========== creating Qgs3DMapSettings
   QgsRasterLayer *layerDtm = new QgsRasterLayer( testDataPath( "/3d/dtm.tif" ), "dtm", "gdal" );
   QVERIFY( layerDtm->isValid() );
   QgsProject project;
@@ -1525,7 +1669,7 @@ void TestQgs3DRendering::testDepthBuffer()
   mapSettings.setLightSources( {defaultPointLight.clone() } );
   mapSettings.setOutputDpi( 92 );
 
-  // =========== creating Qgs3DMapScene
+// =========== creating Qgs3DMapScene
   QPoint winSize = QPoint( 640, 480 ); // default window size
   QPoint midPos = winSize / 2;
 
@@ -1534,32 +1678,31 @@ void TestQgs3DRendering::testDepthBuffer()
   Qgs3DMapScene *scene = new Qgs3DMapScene( mapSettings, &engine );
   engine.setRootEntity( scene );
 
-  // =========== set camera position
+// =========== set camera position
   scene->cameraController()->setLookingAtPoint( QVector3D( 0, 0, 0 ), 1500, 40.0, -10.0 );
 
-  // =============================================
-  // =========== TEST DEPTH
-  QgsCameraController4Test *testCam = static_cast<QgsCameraController4Test *>( scene->cameraController() );
+// =============================================
+// =========== TEST DEPTH
 
-  // retrieve 3D depth image
+// retrieve 3D depth image
   QImage depthImage = Qgs3DUtils::captureSceneDepthBuffer( engine, scene );
   QImage grayImage = convertDepthImageToGrayscaleImage( depthImage );
   QGSVERIFYIMAGECHECK( "depth_retrieve_image", "depth_retrieve_image", grayImage, QString(), 5, QSize( 0, 0 ), 2 );
 
-  // =========== TEST WHEEL ZOOM
+// =========== TEST WHEEL ZOOM
   QVector3D startPos = scene->cameraController()->camera()->position();
-  // set cameraController mouse pos to middle screen
+// set cameraController mouse pos to middle screen
   QMouseEvent mouseEvent( QEvent::MouseButtonPress, QPointF( midPos.x(), midPos.y() ),
                           Qt::MiddleButton, Qt::MiddleButton, Qt::NoModifier );
-  testCam->superOnMousePressed( new Qt3DInput::QMouseEvent( mouseEvent ) );
+  scene->cameraController()->onMousePressed( new Qt3DInput::QMouseEvent( mouseEvent ) );
 
-  // Check first wheel action
+// Check first wheel action
   QWheelEvent wheelEvent( midPos, midPos, QPoint(), QPoint( 0, 120 ),
                           Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase,
                           false, Qt::MouseEventSynthesizedByApplication );
-  testCam->superOnWheel( new Qt3DInput::QWheelEvent( wheelEvent ) );
-  QCOMPARE( testCam->cumulatedWheelY(), wheelEvent.angleDelta().y() * 5 );
-  QCOMPARE( testCam->cameraBefore()->viewCenter(), testCam->cameraPose()->centerPoint().toVector3D() );
+  scene->cameraController()->onWheel( new Qt3DInput::QWheelEvent( wheelEvent ) );
+  QCOMPARE( scene->cameraController()->mCumulatedWheelY, wheelEvent.angleDelta().y() * 5 );
+  QCOMPARE( scene->cameraController()->mCameraBefore->viewCenter(), scene->cameraController()->cameraPose().centerPoint().toVector3D() );
 
   depthImage = Qgs3DUtils::captureSceneDepthBuffer( engine, scene );
   grayImage = convertDepthImageToGrayscaleImage( depthImage );
@@ -1567,18 +1710,18 @@ void TestQgs3DRendering::testDepthBuffer()
 
   scene->cameraController()->depthBufferCaptured( depthImage );
 
-  QGSCOMPARENEARVECTOR3D( testCam->zoomPoint(), QVector3D( -32.7, 224.6, 185.5 ), 1.0 );
-  QGSCOMPARENEARVECTOR3D( testCam->cameraPose()->centerPoint(), QVector3D( -32.7, 224.6, 185.5 ), 1.0 );
-  QGSCOMPARENEAR( testCam->cameraPose()->distanceFromCenterPoint(), 955.4, 1.0 );
-  QCOMPARE( testCam->cumulatedWheelY(), 0 );
+  QGSCOMPARENEARVECTOR3D( scene->cameraController()->mZoomPoint, QVector3D( -32.7, 224.6, 185.5 ), 1.0 );
+  QGSCOMPARENEARVECTOR3D( scene->cameraController()->cameraPose().centerPoint(), QVector3D( -32.7, 224.6, 185.5 ), 1.0 );
+  QGSCOMPARENEAR( scene->cameraController()->cameraPose().distanceFromCenterPoint(), 955.4, 1.0 );
+  QCOMPARE( scene->cameraController()->mCumulatedWheelY, 0 );
 
-  // Checking second wheel action
+// Checking second wheel action
   QWheelEvent wheelEvent2( midPos, midPos, QPoint(), QPoint( 0, 120 ),
                            Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase,
                            false, Qt::MouseEventSynthesizedByApplication );
-  testCam->superOnWheel( new Qt3DInput::QWheelEvent( wheelEvent2 ) );
-  QCOMPARE( testCam->cumulatedWheelY(), wheelEvent2.angleDelta().y() * 5 );
-  QCOMPARE( testCam->cameraBefore()->viewCenter(), testCam->cameraPose()->centerPoint().toVector3D() );
+  scene->cameraController()->onWheel( new Qt3DInput::QWheelEvent( wheelEvent2 ) );
+  QCOMPARE( scene->cameraController()->mCumulatedWheelY, wheelEvent2.angleDelta().y() * 5 );
+  QCOMPARE( scene->cameraController()->mCameraBefore->viewCenter(), scene->cameraController()->cameraPose().centerPoint().toVector3D() );
 
   depthImage = Qgs3DUtils::captureSceneDepthBuffer( engine, scene );
   grayImage = convertDepthImageToGrayscaleImage( depthImage );
@@ -1586,18 +1729,18 @@ void TestQgs3DRendering::testDepthBuffer()
 
   scene->cameraController()->depthBufferCaptured( depthImage );
 
-  QGSCOMPARENEARVECTOR3D( testCam->zoomPoint(), QVector3D( -32.5, 223.5, 184.7 ), 1.0 );
-  QGSCOMPARENEARVECTOR3D( testCam->cameraPose()->centerPoint(), QVector3D( -32.5, 223.5, 184.7 ), 1.0 );
-  QGSCOMPARENEAR( testCam->cameraPose()->distanceFromCenterPoint(), 757.4, 1.0 );
-  QCOMPARE( testCam->cumulatedWheelY(), 0 );
+  QGSCOMPARENEARVECTOR3D( scene->cameraController()->mZoomPoint, QVector3D( -32.5, 223.5, 184.7 ), 1.0 );
+  QGSCOMPARENEARVECTOR3D( scene->cameraController()->cameraPose().centerPoint(), QVector3D( -32.5, 223.5, 184.7 ), 1.0 );
+  QGSCOMPARENEAR( scene->cameraController()->cameraPose().distanceFromCenterPoint(), 757.4, 1.0 );
+  QCOMPARE( scene->cameraController()->mCumulatedWheelY, 0 );
 
-  // Checking third wheel action
+// Checking third wheel action
   QWheelEvent wheelEvent3( midPos, midPos, QPoint( ), QPoint( 0, 480 ),
                            Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase,
                            false, Qt::MouseEventSynthesizedByApplication );
-  testCam->superOnWheel( new Qt3DInput::QWheelEvent( wheelEvent3 ) );
-  QCOMPARE( testCam->cumulatedWheelY(), wheelEvent3.angleDelta().y() * 5 );
-  QCOMPARE( testCam->cameraBefore()->viewCenter(), testCam->cameraPose()->centerPoint().toVector3D() );
+  scene->cameraController()->onWheel( new Qt3DInput::QWheelEvent( wheelEvent3 ) );
+  QCOMPARE( scene->cameraController()->mCumulatedWheelY, wheelEvent3.angleDelta().y() * 5 );
+  QCOMPARE( scene->cameraController()->mCameraBefore->viewCenter(), scene->cameraController()->cameraPose().centerPoint().toVector3D() );
 
   depthImage = Qgs3DUtils::captureSceneDepthBuffer( engine, scene );
   grayImage = convertDepthImageToGrayscaleImage( depthImage );
@@ -1605,18 +1748,18 @@ void TestQgs3DRendering::testDepthBuffer()
 
   scene->cameraController()->depthBufferCaptured( depthImage );
 
-  QGSCOMPARENEARVECTOR3D( testCam->zoomPoint(), QVector3D( -32.4, 222.8, 184.1 ), 1.0 );
-  QGSCOMPARENEARVECTOR3D( testCam->cameraPose()->centerPoint(), QVector3D( -32.4, 222.8, 184.1 ), 1.0 );
-  QGSCOMPARENEAR( testCam->cameraPose()->distanceFromCenterPoint(), 126.4, 0.1 );
-  QCOMPARE( testCam->cumulatedWheelY(), 0 );
+  QGSCOMPARENEARVECTOR3D( scene->cameraController()->mZoomPoint, QVector3D( -32.4, 222.8, 184.1 ), 1.0 );
+  QGSCOMPARENEARVECTOR3D( scene->cameraController()->cameraPose().centerPoint(), QVector3D( -32.4, 222.8, 184.1 ), 1.0 );
+  QGSCOMPARENEAR( scene->cameraController()->cameraPose().distanceFromCenterPoint(), 126.4, 0.1 );
+  QCOMPARE( scene->cameraController()->mCumulatedWheelY, 0 );
 
-  // Checking fourth wheel action
+// Checking fourth wheel action
   QWheelEvent wheelEvent4( midPos, midPos, QPoint(), QPoint( 0, 120 ),
                            Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase,
                            false, Qt::MouseEventSynthesizedByApplication );
-  testCam->superOnWheel( new Qt3DInput::QWheelEvent( wheelEvent4 ) );
-  QCOMPARE( testCam->cumulatedWheelY(), wheelEvent4.angleDelta().y() * 5 );
-  QCOMPARE( testCam->cameraBefore()->viewCenter(), testCam->cameraPose()->centerPoint().toVector3D() );
+  scene->cameraController()->onWheel( new Qt3DInput::QWheelEvent( wheelEvent4 ) );
+  QCOMPARE( scene->cameraController()->mCumulatedWheelY, wheelEvent4.angleDelta().y() * 5 );
+  QCOMPARE( scene->cameraController()->mCameraBefore->viewCenter(), scene->cameraController()->cameraPose().centerPoint().toVector3D() );
 
   depthImage = Qgs3DUtils::captureSceneDepthBuffer( engine, scene );
   grayImage = convertDepthImageToGrayscaleImage( depthImage );
@@ -1624,12 +1767,12 @@ void TestQgs3DRendering::testDepthBuffer()
 
   scene->cameraController()->depthBufferCaptured( depthImage );
 
-  QGSCOMPARENEARVECTOR3D( testCam->zoomPoint(), QVector3D( -32.3, 221.7, 183.2 ), 1.0 );
-  QGSCOMPARENEARVECTOR3D( testCam->cameraPose()->centerPoint(), QVector3D( -32.3, 221.7, 183.2 ), 1.0 );
-  QGSCOMPARENEAR( testCam->cameraPose()->distanceFromCenterPoint(), 101.1, 0.1 );
-  QCOMPARE( testCam->cumulatedWheelY(), 0 );
+  QGSCOMPARENEARVECTOR3D( scene->cameraController()->mZoomPoint, QVector3D( -32.3, 221.7, 183.2 ), 1.0 );
+  QGSCOMPARENEARVECTOR3D( scene->cameraController()->cameraPose().centerPoint(), QVector3D( -32.3, 221.7, 183.2 ), 1.0 );
+  QGSCOMPARENEAR( scene->cameraController()->cameraPose().distanceFromCenterPoint(), 101.1, 0.1 );
+  QCOMPARE( scene->cameraController()->mCumulatedWheelY, 0 );
 
-  // Checking camera position
+// Checking camera position
   QVector3D diff = scene->cameraController()->camera()->position() - startPos;
   QGSCOMPARENEARVECTOR3D( diff, QVector3D( 125, -850, -700 ), 3.0 );
 

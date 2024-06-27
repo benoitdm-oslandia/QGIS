@@ -931,6 +931,11 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
                                        const QString &baseName,
                                        const QString &provider );
 
+    /**
+     * Returns the html formatted string with current versions of the libraries and the active plugins
+     */
+    QString getVersionString();
+
   public slots:
     //! save current vector layer
     QString saveAsFile( QgsMapLayer *layer = nullptr, bool onlySelected = false, bool defaultToAddToMap = true );
@@ -2116,6 +2121,11 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
 #endif
 
     void annotationItemTypeAdded( int id );
+
+    /**
+     * Open a qlr file
+    */
+    void addLayerDefinition();
 
   signals:
 

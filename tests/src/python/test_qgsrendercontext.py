@@ -10,7 +10,7 @@ __date__ = '16/01/2017'
 __copyright__ = 'Copyright 2017, The QGIS Project'
 
 from qgis.PyQt.QtCore import QDateTime, QSize
-from qgis.PyQt.QtGui import QImage, QPainter
+from qgis.PyQt.QtGui import QImage, QPainter, QPainterPath
 from qgis.core import (
     Qgis,
     QgsCoordinateReferenceSystem,
@@ -248,6 +248,22 @@ class TestQgsRenderContext(QgisTestCase):
 
         rc2 = QgsRenderContext(rc)
         self.assertEqual(rc2.vectorSimplifyMethod().simplifyHints(), QgsVectorSimplifyMethod.SimplifyHint.GeometrySimplification)
+
+    def test_mask_settings(self):
+        """
+        Test mask settings handling
+        """
+        rc = QgsRenderContext()
+        self.assertEqual(rc.maskSettings().simplifyTolerance(), 0)
+
+        ms = QgsMapSettings()
+        ms.maskSettings().setSimplificationTolerance(11)
+
+        rc = QgsRenderContext.fromMapSettings(ms)
+        self.assertEqual(rc.maskSettings().simplifyTolerance(), 11)
+
+        rc2 = QgsRenderContext(rc)
+        self.assertEqual(rc2.maskSettings().simplifyTolerance(), 11)
 
     def testRenderedFeatureHandlers(self):
         rc = QgsRenderContext()
@@ -795,6 +811,21 @@ class TestQgsRenderContext(QgisTestCase):
         rc2 = QgsRenderContext(rc)
         self.assertEqual(rc2.featureClipGeometry().asWkt(), 'Polygon ((0 0, 1 0, 1 1, 0 1, 0 0))')
 
+    def test_deprecated_mask_methods(self):
+        rc = QgsRenderContext()
+        self.assertFalse(rc.symbolLayerClipPaths('x'))
+        path = QPainterPath()
+        path.moveTo(1, 1)
+        path.lineTo(1, 10)
+        path.lineTo(10, 10)
+        path.lineTo(10, 1)
+        path.lineTo(1, 1)
+        rc.addSymbolLayerClipPath('x', path)
+        self.assertEqual([g.asWkt() for g in rc.symbolLayerClipGeometries('x')],
+                         ['Polygon ((1 1, 1 10, 10 10, 10 1, 1 1))'])
+        self.assertEqual([p.elementCount() for p in rc.symbolLayerClipPaths('x')],
+                         [5])
+
     def testSetPainterFlags(self):
         rc = QgsRenderContext()
         p = QPainter()
@@ -818,6 +849,61 @@ class TestQgsRenderContext(QgisTestCase):
             pass
 
         p.end()
+
+    def test_symbol_layer_clip_geometries(self):
+        """
+        Test logic relating to symbol layer clip geometries.
+        """
+        rc = QgsRenderContext()
+        self.assertFalse(rc.symbolLayerHasClipGeometries('x'))
+
+        rc.addSymbolLayerClipGeometry('x', QgsGeometry.fromWkt('Polygon(( 0 0, 1 0 , 1 1 , 0 1, 0 0 ))'))
+        self.assertTrue(rc.symbolLayerHasClipGeometries('x'))
+        self.assertFalse(rc.symbolLayerHasClipGeometries('y'))
+
+        self.assertEqual([g.asWkt() for g in rc.symbolLayerClipGeometries('x')],
+                         ['Polygon ((0 0, 1 0, 1 1, 0 1, 0 0))'])
+        self.assertFalse(rc.symbolLayerClipGeometries('y'))
+        rc.addSymbolLayerClipGeometry('x', QgsGeometry.fromWkt(
+            'Polygon(( 20 0, 21 0 , 21 1 , 20 1, 20 0 ))'))
+        self.assertEqual([g.asWkt() for g in rc.symbolLayerClipGeometries('x')],
+                         ['Polygon ((0 0, 1 0, 1 1, 0 1, 0 0))',
+                          'Polygon ((20 0, 21 0, 21 1, 20 1, 20 0))'])
+        self.assertFalse(rc.symbolLayerClipGeometries('y'))
+        rc.addSymbolLayerClipGeometry('y', QgsGeometry.fromWkt(
+            'Polygon(( 30 0, 31 0 , 31 1 , 30 1, 30 0 ))'))
+        self.assertEqual([g.asWkt() for g in rc.symbolLayerClipGeometries('x')],
+                         ['Polygon ((0 0, 1 0, 1 1, 0 1, 0 0))',
+                          'Polygon ((20 0, 21 0, 21 1, 20 1, 20 0))'])
+        self.assertEqual([g.asWkt() for g in rc.symbolLayerClipGeometries('y')],
+                         ['Polygon ((30 0, 31 0, 31 1, 30 1, 30 0))'])
+
+        rc2 = QgsRenderContext(rc)
+        self.assertTrue(rc2.symbolLayerHasClipGeometries('x'))
+        self.assertTrue(rc2.symbolLayerHasClipGeometries('y'))
+        self.assertFalse(rc2.symbolLayerHasClipGeometries('z'))
+        self.assertEqual([g.asWkt() for g in rc2.symbolLayerClipGeometries('x')],
+                         ['Polygon ((0 0, 1 0, 1 1, 0 1, 0 0))',
+                          'Polygon ((20 0, 21 0, 21 1, 20 1, 20 0))'])
+        self.assertEqual(
+            [g.asWkt() for g in rc2.symbolLayerClipGeometries('y')],
+            ['Polygon ((30 0, 31 0, 31 1, 30 1, 30 0))'])
+        self.assertFalse(rc2.symbolLayerClipGeometries('z'))
+
+        # adding multipart geometries to the render context should
+        # split these to multiple separate geometries
+        rc = QgsRenderContext()
+        rc.addSymbolLayerClipGeometry('x', QgsGeometry.fromWkt(
+            'MultiPolygon((( 0 0, 1 0 , 1 1 , 0 1, 0 0 )),((20 0, 21 0, 21 1, 20 1, 20 0)))'))
+        self.assertEqual([g.asWkt() for g in rc.symbolLayerClipGeometries('x')],
+                         ['Polygon ((0 0, 1 0, 1 1, 0 1, 0 0))',
+                          'Polygon ((20 0, 21 0, 21 1, 20 1, 20 0))'])
+        rc.addSymbolLayerClipGeometry('x', QgsGeometry.fromWkt(
+            'Polygon(( 30 0, 31 0 , 31 1 , 30 1, 30 0 ))'))
+        self.assertEqual([g.asWkt() for g in rc.symbolLayerClipGeometries('x')],
+                         ['Polygon ((0 0, 1 0, 1 1, 0 1, 0 0))',
+                          'Polygon ((20 0, 21 0, 21 1, 20 1, 20 0))',
+                          'Polygon ((30 0, 31 0, 31 1, 30 1, 30 0))'])
 
 
 if __name__ == '__main__':

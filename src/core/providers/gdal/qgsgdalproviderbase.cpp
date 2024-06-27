@@ -26,7 +26,6 @@
 #include "qgslogger.h"
 #include "qgsgdalproviderbase.h"
 #include "qgsgdalutils.h"
-#include "qgssettings.h"
 
 #include <mutex>
 #include <QRegularExpression>
@@ -290,6 +289,21 @@ GDALDatasetH QgsGdalProviderBase::gdalOpen( const QString &uri, unsigned int nOp
                                      option.toUtf8().constData() );
   }
 
+  const QString vsiPrefix = parts.value( QStringLiteral( "vsiPrefix" ) ).toString();
+  const QString vsiSuffix = parts.value( QStringLiteral( "vsiSuffix" ) ).toString();
+
+  const QVariantMap credentialOptions = parts.value( QStringLiteral( "credentialOptions" ) ).toMap();
+  parts.remove( QStringLiteral( "credentialOptions" ) );
+  if ( !credentialOptions.isEmpty() && !vsiPrefix.isEmpty() )
+  {
+    const thread_local QRegularExpression bucketRx( QStringLiteral( "^(.*)/" ) );
+    const QRegularExpressionMatch bucketMatch = bucketRx.match( parts.value( QStringLiteral( "path" ) ).toString() );
+    if ( bucketMatch.hasMatch() )
+    {
+      QgsGdalUtils::applyVsiCredentialOptions( vsiPrefix, bucketMatch.captured( 1 ), credentialOptions );
+    }
+  }
+
   const bool modify_OGR_GPKG_FOREIGN_KEY_CHECK = !CPLGetConfigOption( "OGR_GPKG_FOREIGN_KEY_CHECK", nullptr );
   if ( modify_OGR_GPKG_FOREIGN_KEY_CHECK )
   {
@@ -301,8 +315,6 @@ GDALDatasetH QgsGdalProviderBase::gdalOpen( const QString &uri, unsigned int nOp
 
   if ( !hDS )
   {
-    const QString vsiPrefix = parts.value( QStringLiteral( "vsiPrefix" ) ).toString();
-    const QString vsiSuffix = parts.value( QStringLiteral( "vsiSuffix" ) ).toString();
     if ( vsiSuffix.isEmpty() && QgsGdalUtils::isVsiArchivePrefix( vsiPrefix ) )
     {
       // in the case that a direct path to a vsi supported archive was specified BUT
@@ -391,6 +403,7 @@ QVariantMap QgsGdalProviderBase::decodeGdalUri( const QString &uri )
   QString layerName;
   QString authcfg;
   QStringList openOptions;
+  QVariantMap credentialOptions;
 
   const thread_local QRegularExpression authcfgRegex( " authcfg='([^']+)'" );
   QRegularExpressionMatch match;
@@ -451,6 +464,26 @@ QVariantMap QgsGdalProviderBase::decodeGdalUri( const QString &uri )
         break;
       }
     }
+
+    const thread_local QRegularExpression credentialOptionRegex( QStringLiteral( "\\|credential:([^|]*)" ) );
+    const thread_local QRegularExpression credentialOptionKeyValueRegex( QStringLiteral( "(.*?)=(.*)" ) );
+    while ( true )
+    {
+      const QRegularExpressionMatch match = credentialOptionRegex.match( path );
+      if ( match.hasMatch() )
+      {
+        const QRegularExpressionMatch keyValueMatch = credentialOptionKeyValueRegex.match( match.captured( 1 ) );
+        if ( keyValueMatch.hasMatch() )
+        {
+          credentialOptions.insert( keyValueMatch.captured( 1 ), keyValueMatch.captured( 2 ) );
+        }
+        path = path.remove( match.capturedStart( 0 ), match.capturedLength( 0 ) );
+      }
+      else
+      {
+        break;
+      }
+    }
   }
 
   QVariantMap uriComponents;
@@ -458,6 +491,8 @@ QVariantMap QgsGdalProviderBase::decodeGdalUri( const QString &uri )
   uriComponents.insert( QStringLiteral( "layerName" ), layerName );
   if ( !openOptions.isEmpty() )
     uriComponents.insert( QStringLiteral( "openOptions" ), openOptions );
+  if ( !credentialOptions.isEmpty() )
+    uriComponents.insert( QStringLiteral( "credentialOptions" ), credentialOptions );
   if ( !vsiPrefix.isEmpty() )
     uriComponents.insert( QStringLiteral( "vsiPrefix" ), vsiPrefix );
   if ( !vsiSuffix.isEmpty() )
@@ -492,6 +527,15 @@ QString QgsGdalProviderBase::encodeGdalUri( const QVariantMap &parts )
   {
     uri += QLatin1String( "|option:" );
     uri += openOption;
+  }
+
+  const QVariantMap credentialOptions = parts.value( QStringLiteral( "credentialOptions" ) ).toMap();
+  for ( auto it = credentialOptions.constBegin(); it != credentialOptions.constEnd(); ++it )
+  {
+    if ( !it.value().toString().isEmpty() )
+    {
+      uri += QStringLiteral( "|credential:%1=%2" ).arg( it.key(), it.value().toString() );
+    }
   }
 
   if ( !authcfg.isEmpty() )

@@ -255,6 +255,8 @@ class QgsOgrProvider final: public QgsVectorDataProvider
     //! open options
     QStringList mOpenOptions;
 
+    QVariantMap mCredentialOptions;
+
     //! was a sub layer requested?
     bool mIsSubLayer = false;
 
@@ -354,6 +356,9 @@ class QgsOgrProvider final: public QgsVectorDataProvider
     void invalidateNetworkCache();
 
     bool mShapefileHadSpatialIndex = false;
+
+    //! Whether to convert Qt DateTime with local time to UTC
+    bool mConvertLocalTimeToUTC = false;
 };
 
 ///@endcond

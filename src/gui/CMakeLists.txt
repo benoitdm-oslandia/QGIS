@@ -24,6 +24,7 @@ set(QGIS_GUI_SRCS
   raster/qgsrasterrendererwidget.cpp
   raster/qgssinglebandgrayrendererwidget.cpp
   raster/qgssinglebandpseudocolorrendererwidget.cpp
+  raster/qgsrastersinglecolorrendererwidget.cpp
   raster/qgsrendererrasterpropertieswidget.cpp
   raster/qgsrastertransparencywidget.cpp
   raster/qgshillshaderendererwidget.cpp
@@ -150,6 +151,7 @@ set(QGIS_GUI_SRCS
   codeeditors/qgscodeeditorshell.cpp
   codeeditors/qgscodeeditorsql.cpp
   codeeditors/qgscodeeditorexpression.cpp
+  codeeditors/qgscodeeditorwidget.cpp
 
   devtools/qgsdevtoolwidget.cpp
   devtools/qgsdevtoolwidgetfactory.cpp
@@ -347,7 +349,7 @@ set(QGIS_GUI_SRCS
   numericformats/qgsnumericformatwidget.cpp
   numericformats/qgsnumericformatguiregistry.cpp
 
-  ogr/qgsogrhelperfunctions.cpp
+  ogr/qgsgdalguiutils.cpp
   ogr/qgsnewogrconnection.cpp
   ogr/qgsvectorlayersaveasdialog.cpp
 
@@ -395,6 +397,7 @@ set(QGIS_GUI_SRCS
   processing/qgsprocessingparameterswidget.cpp
   processing/qgsprocessingpointcloudexpressionlineedit.cpp
   processing/qgsprocessingrastercalculatorexpressionlineedit.cpp
+  processing/qgsprocessingrasteroptionswidgetwrapper.cpp
   processing/qgsprocessingrecentalgorithmlog.cpp
   processing/qgsprocessingtininputlayerswidget.cpp
   processing/qgsprocessingtoolboxmodel.cpp
@@ -441,6 +444,7 @@ set(QGIS_GUI_SRCS
   providers/qgspointcloudproviderguimetadata.cpp
   providers/qgspointcloudsourceselect.cpp
 
+  providers/gdal/qgsgdalcredentialoptionswidget.cpp
   providers/gdal/qgsgdalfilesourcewidget.cpp
   providers/gdal/qgsgdalsourceselect.cpp
   providers/gdal/qgsgdalguiprovider.cpp
@@ -549,9 +553,11 @@ set(QGIS_GUI_SRCS
   qgsdatabasetablecombobox.cpp
   qgsdataitemguiprovider.cpp
   qgsdataitemguiproviderregistry.cpp
+  qgsdataitemguiproviderutils.cpp
   qgsdatasourceselectdialog.cpp
   qgsdbqueryhistoryprovider.cpp
   qgsdbrelationshipwidget.cpp
+  qgsdecoratedscrollbar.cpp
   qgsdetaileditemdata.cpp
   qgsdetaileditemdelegate.cpp
   qgsdetaileditemwidget.cpp
@@ -819,10 +825,12 @@ set(QGIS_GUI_HDRS
   qgsdatabasetablecombobox.h
   qgsdataitemguiprovider.h
   qgsdataitemguiproviderregistry.h
+  qgsdataitemguiproviderutils.h
   qgsdatasourcemanagerdialog.h
   qgsdatasourceselectdialog.h
   qgsdbqueryhistoryprovider.h
   qgsdbrelationshipwidget.h
+  qgsdecoratedscrollbar.h
   qgsnewdatabasetablenamewidget.h
   qgsdetaileditemdata.h
   qgsdetaileditemdelegate.h
@@ -1111,6 +1119,7 @@ set(QGIS_GUI_HDRS
   codeeditors/qgscodeeditorr.h
   codeeditors/qgscodeeditorshell.h
   codeeditors/qgscodeeditorsql.h
+  codeeditors/qgscodeeditorwidget.h
 
   devtools/qgsdevtoolwidget.h
   devtools/qgsdevtoolwidgetfactory.h
@@ -1313,8 +1322,8 @@ set(QGIS_GUI_HDRS
   numericformats/qgsnumericformatwidget.h
   numericformats/qgsnumericformatguiregistry.h
 
+  ogr/qgsgdalguiutils.h
   ogr/qgsnewogrconnection.h
-  ogr/qgsogrhelperfunctions.h
   ogr/qgsvectorlayersaveasdialog.h
 
   plot/qgsplotcanvas.h
@@ -1361,6 +1370,7 @@ set(QGIS_GUI_HDRS
   processing/qgsprocessingparameterswidget.h
   processing/qgsprocessingpointcloudexpressionlineedit.h
   processing/qgsprocessingrastercalculatorexpressionlineedit.h
+  processing/qgsprocessingrasteroptionswidgetwrapper.h
   processing/qgsprocessingrecentalgorithmlog.h
   processing/qgsprocessingtininputlayerswidget.h
   processing/qgsprocessingtoolboxmodel.h
@@ -1407,6 +1417,7 @@ set(QGIS_GUI_HDRS
   providers/qgspointcloudsourceselect.h
   providers/qgspointcloudproviderguimetadata.h
 
+  providers/gdal/qgsgdalcredentialoptionswidget.h
   providers/gdal/qgsgdalfilesourcewidget.h
   providers/gdal/qgsgdalguiprovider.h
   providers/gdal/qgsgdalsourceselect.h
@@ -1456,6 +1467,7 @@ set(QGIS_GUI_HDRS
   raster/qgsrendererrasterpropertieswidget.h
   raster/qgssinglebandgrayrendererwidget.h
   raster/qgssinglebandpseudocolorrendererwidget.h
+  raster/qgsrastersinglecolorrendererwidget.h
   raster/qgsrasterlayerproperties.h
   raster/qgsrasterlayertemporalpropertieswidget.h
   raster/qgsresamplingutils.h

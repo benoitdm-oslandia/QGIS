@@ -76,6 +76,8 @@ class TestQgsGdalProvider : public QgsTest
     void testGdalProviderQuerySublayersFastScan();
     void testGdalProviderQuerySublayersFastScan_NetCDF();
     void testGdalProviderAbsoluteRelativeUri();
+    void testVsiCredentialOptions();
+    void testVsiCredentialOptionsQuerySublayers();
 
   private:
     QString mTestDataDir;
@@ -138,8 +140,15 @@ void TestQgsGdalProvider::decodeUri()
   // test authcfg with vsicurl URI
   uri = QStringLiteral( "/vsicurl/https://www.qgis.org/dataset.tif authcfg='1234567'" );
   components = QgsProviderRegistry::instance()->decodeUri( QStringLiteral( "gdal" ), uri );
-  QCOMPARE( components.value( QStringLiteral( "path" ) ).toString(), QString( "/vsicurl/https://www.qgis.org/dataset.tif" ) );
+  QCOMPARE( components.value( QStringLiteral( "path" ) ).toString(), QString( "https://www.qgis.org/dataset.tif" ) );
+  QCOMPARE( components.value( QStringLiteral( "vsiPrefix" ) ).toString(), QString( "/vsicurl/" ) );
   QCOMPARE( components.value( QStringLiteral( "authcfg" ) ).toString(), QString( "1234567" ) );
+
+  // vsis3
+  uri = QStringLiteral( "/vsis3/nz-elevation/auckland/auckland-north_2016-2018/dem_1m/2193/AY30_10000_0405.tiff" );
+  components = QgsProviderRegistry::instance()->decodeUri( QStringLiteral( "gdal" ), uri );
+  QCOMPARE( components.value( QStringLiteral( "path" ) ).toString(), QString( "nz-elevation/auckland/auckland-north_2016-2018/dem_1m/2193/AY30_10000_0405.tiff" ) );
+  QCOMPARE( components.value( QStringLiteral( "vsiPrefix" ) ).toString(), QString( "/vsis3/" ) );
 }
 
 void TestQgsGdalProvider::encodeUri()
@@ -162,6 +171,17 @@ void TestQgsGdalProvider::encodeUri()
   parts.insert( QStringLiteral( "path" ), QStringLiteral( "/vsicurl/https://www.qgis.org/dataset.tif" ) );
   parts.insert( QStringLiteral( "authcfg" ), QStringLiteral( "1234567" ) );
   QCOMPARE( QgsProviderRegistry::instance()->encodeUri( QStringLiteral( "gdal" ), parts ), QStringLiteral( "/vsicurl/https://www.qgis.org/dataset.tif authcfg='1234567'" ) );
+  parts.clear();
+  parts.insert( QStringLiteral( "path" ), QStringLiteral( "https://www.qgis.org/dataset.tif" ) );
+  parts.insert( QStringLiteral( "vsiPrefix" ), QStringLiteral( "/vsicurl/" ) );
+  parts.insert( QStringLiteral( "authcfg" ), QStringLiteral( "1234567" ) );
+  QCOMPARE( QgsProviderRegistry::instance()->encodeUri( QStringLiteral( "gdal" ), parts ), QStringLiteral( "/vsicurl/https://www.qgis.org/dataset.tif authcfg='1234567'" ) );
+
+  // vsis3
+  parts.clear();
+  parts.insert( QStringLiteral( "vsiPrefix" ), QStringLiteral( "/vsis3/" ) );
+  parts.insert( QStringLiteral( "path" ), QStringLiteral( "nz-elevation/auckland/auckland-north_2016-2018/dem_1m/2193/AY30_10000_0405.tiff" ) );
+  QCOMPARE( QgsProviderRegistry::instance()->encodeUri( QStringLiteral( "gdal" ), parts ), QStringLiteral( "/vsis3/nz-elevation/auckland/auckland-north_2016-2018/dem_1m/2193/AY30_10000_0405.tiff" ) );
 }
 
 void TestQgsGdalProvider::scaleDataType()
@@ -667,6 +687,28 @@ void TestQgsGdalProvider::testGdalProviderQuerySublayers()
   QCOMPARE( res.at( 0 ).driverName(), QStringLiteral( "SENTINEL2" ) );
   rl.reset( qgis::down_cast< QgsRasterLayer * >( res.at( 0 ).toLayer( options ) ) );
   QVERIFY( rl->isValid() );
+
+  // tiff with two raster layers and TIFF Tags describing sublayers
+  res = mGdalMetadata->querySublayers( QStringLiteral( TEST_DATA_DIR ) + "/raster/gtiff_subdataset_tags.tif" );
+  QCOMPARE( res.count(), 2 );
+  QCOMPARE( res.at( 0 ).layerNumber(), 1 );
+  QCOMPARE( res.at( 0 ).name(), QStringLiteral( "Test Document Name 1" ) );
+  QCOMPARE( res.at( 0 ).description(), QStringLiteral( "Test Image Description 1" ) );
+  QCOMPARE( res.at( 0 ).uri(), QStringLiteral( "GTIFF_DIR:1:%1/raster/gtiff_subdataset_tags.tif" ).arg( QStringLiteral( TEST_DATA_DIR ) ) );
+  QCOMPARE( res.at( 0 ).providerKey(), QStringLiteral( "gdal" ) );
+  QCOMPARE( res.at( 0 ).type(), Qgis::LayerType::Raster );
+  QCOMPARE( res.at( 0 ).driverName(), QStringLiteral( "GTiff" ) );
+  rl.reset( qgis::down_cast< QgsRasterLayer * >( res.at( 0 ).toLayer( options ) ) );
+  QVERIFY( rl->isValid() );
+  QCOMPARE( res.at( 1 ).layerNumber(), 2 );
+  QCOMPARE( res.at( 1 ).name(), QStringLiteral( "Test Document Name 2" ) );
+  QCOMPARE( res.at( 1 ).description(), QStringLiteral( "Test Image Description 2" ) );
+  QCOMPARE( res.at( 1 ).uri(), QStringLiteral( "GTIFF_DIR:2:%1/raster/gtiff_subdataset_tags.tif" ).arg( QStringLiteral( TEST_DATA_DIR ) ) );
+  QCOMPARE( res.at( 1 ).providerKey(), QStringLiteral( "gdal" ) );
+  QCOMPARE( res.at( 1 ).type(), Qgis::LayerType::Raster );
+  QCOMPARE( res.at( 1 ).driverName(), QStringLiteral( "GTiff" ) );
+  rl.reset( qgis::down_cast< QgsRasterLayer * >( res.at( 1 ).toLayer( options ) ) );
+  QVERIFY( rl->isValid() );
 }
 
 void TestQgsGdalProvider::testGdalProviderQuerySublayers_NetCDF()
@@ -864,6 +906,86 @@ void TestQgsGdalProvider::testGdalProviderAbsoluteRelativeUri()
   relativeUri = QStringLiteral( "NETCDF:\"./landsat.nc\":Band1" );
   QCOMPARE( mGdalMetadata->absoluteToRelativeUri( absoluteUri, context ), relativeUri );
   QCOMPARE( mGdalMetadata->relativeToAbsoluteUri( relativeUri, context ), absoluteUri );
+}
+
+void TestQgsGdalProvider::testVsiCredentialOptions()
+{
+#if GDAL_VERSION_NUM >= GDAL_COMPUTE_VERSION(3, 6, 0)
+  // test that credential options are correctly set when layer URI specifies them
+
+  // if actual aws dataset proves flaky, use this instead:
+  // std::unique_ptr< QgsRasterLayer > rl = std::make_unique< QgsRasterLayer >( QStringLiteral( "/vsis3/testbucket/test|credential:AWS_NO_SIGN_REQUEST=YES|credential:AWS_REGION=eu-central-1|credential:AWS_S3_ENDPOINT=localhost" ), QStringLiteral( "test" ), QStringLiteral( "gdal" ) );
+  std::unique_ptr< QgsRasterLayer > rl = std::make_unique< QgsRasterLayer >( QStringLiteral( "/vsis3/cdn.proj.org/us_nga_egm96_15.tif|credential:AWS_NO_SIGN_REQUEST=YES" ), QStringLiteral( "test" ), QStringLiteral( "gdal" ) );
+
+  // confirm that GDAL VSI configuration options are set
+  QString noSign( VSIGetPathSpecificOption( "/vsis3/cdn.proj.org", "AWS_NO_SIGN_REQUEST", nullptr ) );
+  QCOMPARE( noSign, QStringLiteral( "YES" ) );
+  QString region( VSIGetPathSpecificOption( "/vsis3/cdn.proj.org", "AWS_REGION", nullptr ) );
+  QCOMPARE( region, QString() );
+
+  QCOMPARE( rl->dataProvider()->dataSourceUri(), QStringLiteral( "/vsis3/cdn.proj.org/us_nga_egm96_15.tif|credential:AWS_NO_SIGN_REQUEST=YES" ) );
+
+  // different bucket
+  noSign = QString( VSIGetPathSpecificOption( "/vsis3/another", "AWS_NO_SIGN_REQUEST", nullptr ) );
+  QCOMPARE( noSign, QString() );
+  region = QString( VSIGetPathSpecificOption( "/vsis3/another", "AWS_REGION", nullptr ) );
+  QCOMPARE( region, QString() );
+
+  // credentials should be bucket specific
+  std::unique_ptr< QgsRasterLayer > rl2 = std::make_unique< QgsRasterLayer >( QStringLiteral( "/vsis3/another/subfolder/subfolder2/test|credential:AWS_NO_SIGN_REQUEST=NO|credential:AWS_REGION=eu-central-2|credential:AWS_S3_ENDPOINT=localhost" ), QStringLiteral( "test" ), QStringLiteral( "gdal" ) );
+  noSign = QString( VSIGetPathSpecificOption( "/vsis3/cdn.proj.org", "AWS_NO_SIGN_REQUEST", nullptr ) );
+  QCOMPARE( noSign, QStringLiteral( "YES" ) );
+  region = QString( VSIGetPathSpecificOption( "/vsis3/cdn.proj.org", "AWS_REGION", nullptr ) );
+  QCOMPARE( region, QString() );
+  noSign = QString( VSIGetPathSpecificOption( "/vsis3/another/subfolder/subfolder2", "AWS_NO_SIGN_REQUEST", nullptr ) );
+  QCOMPARE( noSign, QStringLiteral( "NO" ) );
+  region = QString( VSIGetPathSpecificOption( "/vsis3/another/subfolder/subfolder2", "AWS_REGION", nullptr ) );
+  QCOMPARE( region, QStringLiteral( "eu-central-2" ) );
+  noSign = QString( VSIGetPathSpecificOption( "/vsis3/another", "AWS_NO_SIGN_REQUEST", nullptr ) );
+  QCOMPARE( noSign, QString() );
+  region = QString( VSIGetPathSpecificOption( "/vsis3/another", "AWS_REGION", nullptr ) );
+  QCOMPARE( region, QString() );
+
+  QCOMPARE( rl2->dataProvider()->dataSourceUri(), QStringLiteral( "/vsis3/another/subfolder/subfolder2/test|credential:AWS_NO_SIGN_REQUEST=NO|credential:AWS_REGION=eu-central-2|credential:AWS_S3_ENDPOINT=localhost" ) );
+
+  // cleanup
+  VSIClearPathSpecificOptions( "/vsis3/cdn.proj.org" );
+  VSIClearPathSpecificOptions( "/vsis3/another/subfolder/subfolder2" );
+#endif
+}
+
+void TestQgsGdalProvider::testVsiCredentialOptionsQuerySublayers()
+{
+#if GDAL_VERSION_NUM >= GDAL_COMPUTE_VERSION(3, 6, 0)
+  QgsProviderMetadata *gdalMetadata = QgsProviderRegistry::instance()->providerMetadata( "gdal" );
+  QVERIFY( gdalMetadata );
+
+  // test that credential options are correctly handled when querying sublayers
+
+  // if actual aws dataset proves flaky, use this instead:
+  //QList< QgsProviderSublayerDetails> subLayers = gdalMetadata->querySublayers( QStringLiteral( "/vsis3/gdalsublayerstestbucket/test.tif|credential:AWS_NO_SIGN_REQUEST=YES|credential:AWS_REGION=eu-central-3|credential:AWS_S3_ENDPOINT=localhost" ) );
+  QList< QgsProviderSublayerDetails> subLayers = gdalMetadata->querySublayers( QStringLiteral( "/vsis3/cdn.proj.org/us_nga_egm96_15.tif|credential:AWS_NO_SIGN_REQUEST=YES" ) );
+  QCOMPARE( subLayers.size(), 1 );
+  QCOMPARE( subLayers.at( 0 ).name(), QStringLiteral( "us_nga_egm96_15" ) );
+  QCOMPARE( subLayers.at( 0 ).uri(), QStringLiteral( "/vsis3/cdn.proj.org/us_nga_egm96_15.tif|credential:AWS_NO_SIGN_REQUEST=YES" ) );
+  QCOMPARE( subLayers.at( 0 ).providerKey(), QStringLiteral( "gdal" ) );
+  QCOMPARE( subLayers.at( 0 ).type(), Qgis::LayerType::Raster );
+
+  // confirm that GDAL VSI configuration options are set
+  QString noSign( VSIGetPathSpecificOption( "/vsis3/cdn.proj.org", "AWS_NO_SIGN_REQUEST", nullptr ) );
+  QCOMPARE( noSign, QStringLiteral( "YES" ) );
+
+  // subLayers = gdalMetadata->querySublayers( QStringLiteral( "/vsis3/gdalsublayerstestbucket/test.tif|credential:AWS_NO_SIGN_REQUEST=YES|credential:AWS_REGION=eu-central-3|credential:AWS_S3_ENDPOINT=localhost" ), Qgis::SublayerQueryFlag::FastScan );
+  subLayers = gdalMetadata->querySublayers( QStringLiteral( "/vsis3/cdn.proj.org/us_nga_egm96_15.tif|credential:AWS_NO_SIGN_REQUEST=YES" ), Qgis::SublayerQueryFlag::FastScan );
+  QCOMPARE( subLayers.size(), 1 );
+  QCOMPARE( subLayers.at( 0 ).name(), QStringLiteral( "us_nga_egm96_15" ) );
+  QCOMPARE( subLayers.at( 0 ).uri(), QStringLiteral( "/vsis3/cdn.proj.org/us_nga_egm96_15.tif|credential:AWS_NO_SIGN_REQUEST=YES" ) );
+  QCOMPARE( subLayers.at( 0 ).providerKey(), QStringLiteral( "gdal" ) );
+  QCOMPARE( subLayers.at( 0 ).type(), Qgis::LayerType::Raster );
+
+  // cleanup
+  VSIClearPathSpecificOptions( "/vsis3/cdn.proj.org" );
+#endif
 }
 
 QGSTEST_MAIN( TestQgsGdalProvider )

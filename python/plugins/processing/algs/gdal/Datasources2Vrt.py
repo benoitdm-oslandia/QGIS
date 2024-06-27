@@ -93,7 +93,7 @@ class Datasources2Vrt(GdalAlgorithm):
                 return ['vrt']
 
             def isSupportedOutputValue(self, value, context):
-                output_path = QgsProcessingParameters.parameterAsOutputLayer(self, value, context)
+                output_path = QgsProcessingParameters.parameterAsOutputLayer(self, value, context, testOnly=True)
                 if pathlib.Path(output_path).suffix.lower() != '.vrt':
                     return False, QCoreApplication.translate("GdalAlgorithm", 'Output filename must use a .vrt extension')
                 return True, ''
@@ -117,7 +117,8 @@ class Datasources2Vrt(GdalAlgorithm):
             if feedback.isCanceled():
                 break
 
-            basePath = GdalUtils.ogrConnectionStringFromLayer(layer)
+            connection_details = GdalUtils.gdal_connection_details_from_layer(layer)
+            basePath = connection_details.connection_string
             layerName = GdalUtils.ogrLayerName(layer.source())
 
             vrt += f'<OGRVRTLayer name="{html.escape(layerName, True)}">'

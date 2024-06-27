@@ -949,7 +949,7 @@ sub fix_annotations {
     # combine multiple annotations
     # https://regex101.com/r/uvCt4M/5
     do {no warnings 'uninitialized';
-        $line =~ s/\/([\w,]+(=\"?\w+\"?)?)\/\s*\/([\w,]+(=\"?\w+\"?)?)\//\/$1,$3\//;
+        $line =~ s/\/([\w,]+(=\"?[\w, [\]]+\"?)?)\/\s*\/([\w,]+(=\"?[\w, [\]]+\"?)?)\//\/$1,$3\//;
         (! $3) or dbg_info("combine multiple annotations -- works only for 2");
     };
 
@@ -1111,6 +1111,13 @@ while ($LINE_IDX < $LINE_COUNT){
     # do not PYQT5 code if we are in qt6
     if ( $is_qt6 && $LINE =~ m/^\s*#ifdef SIP_PYQT5_RUN/){
         dbg_info("do not process PYQT5 code");
+        while ( $LINE !~ m/^#endif/ ){
+            $LINE = read_line();
+        }
+    }
+    # skip PYQT6 code if we are in qt5
+    if ( !$is_qt6 && $LINE =~ m/^\s*#ifdef SIP_PYQT6_RUN/){
+        dbg_info("do not process PYQT6 code");
         while ( $LINE !~ m/^#endif/ ){
             $LINE = read_line();
         }
@@ -1706,7 +1713,8 @@ while ($LINE_IDX < $LINE_COUNT){
                                 push @OUTPUT_PYTHON, "$ACTUAL_CLASS.$compat_name.is_monkey_patched = True\n";
                             }
                             if ( $ACTUAL_CLASS ne "" ){
-                                push @OUTPUT_PYTHON, "$ACTUAL_CLASS.$enum_qualname.$compat_name.__doc__ = \"$comment\"\n";
+                                my $complete_class_path = join('.', @CLASSNAME);
+                                push @OUTPUT_PYTHON, "$complete_class_path.$enum_qualname.$compat_name.__doc__ = \"$comment\"\n";
                                 push @enum_members_doc, "'* ``$compat_name``: ' + $ACTUAL_CLASS.$enum_qualname.$enum_member.__doc__";
                             } else {
                                 push @OUTPUT_PYTHON, "$enum_qualname.$compat_name.__doc__ = \"$comment\"\n";
@@ -1754,6 +1762,9 @@ while ($LINE_IDX < $LINE_COUNT){
     $IS_OVERRIDE_OR_MAKE_PRIVATE = PREPEND_CODE_VIRTUAL if ( $LINE =~ m/\boverride\b/);
     $IS_OVERRIDE_OR_MAKE_PRIVATE = PREPEND_CODE_VIRTUAL if ( $LINE =~ m/\bFINAL\b/);
     $IS_OVERRIDE_OR_MAKE_PRIVATE = PREPEND_CODE_MAKE_PRIVATE if ( $LINE =~ m/\bSIP_MAKE_PRIVATE\b/);
+
+    # remove Q_INVOKABLE
+    $LINE =~ s/^(\s*)Q_INVOKABLE /$1/;
 
     # keyword fixes
     do {no warnings 'uninitialized';
@@ -1860,9 +1871,6 @@ while ($LINE_IDX < $LINE_COUNT){
            }
         }
     }
-
-    # remove Q_INVOKABLE
-    $LINE =~ s/^(\s*)Q_INVOKABLE /$1/;
 
     do {no warnings 'uninitialized';
         # remove keywords

@@ -951,18 +951,74 @@ rendering using QBrush objects.
 .. versionadded:: 3.16
 %End
 
-    void addSymbolLayerClipPath( const QString &symbolLayerId, QPainterPath path );
+
+    QgsMaskRenderSettings &maskSettings();
+%Docstring
+Returns a reference to the mask render settings, which control how masks
+are drawn and behave during render operations.
+
+.. seealso:: :py:func:`setMaskSettings`
+
+.. versionadded:: 3.38
+%End
+
+    void setMaskSettings( const QgsMaskRenderSettings &settings );
+%Docstring
+Sets the mask render ``settings``, which control how masks
+are drawn and behave during render operations.
+
+.. seealso:: :py:func:`maskSettings`
+
+.. versionadded:: 3.38
+%End
+
+ void addSymbolLayerClipPath( const QString &symbolLayerId, QPainterPath path ) /Deprecated/;
 %Docstring
 Add a clip ``path`` to be applied to the ``symbolLayer`` before rendering
 
-.. versionadded:: 3.26
+.. seealso:: :py:func:`addSymbolLayerClipGeometry`
+
+.. deprecated::
+   QGIS 3.38, use :py:func:`~QgsRenderContext.addSymbolLayerClipGeometry` instead.
 %End
 
-    QList<QPainterPath> symbolLayerClipPaths( const QString &symbolLayerId ) const;
+ QList<QPainterPath> symbolLayerClipPaths( const QString &symbolLayerId ) const /Deprecated/;
 %Docstring
 Returns clip paths to be applied to the ``symbolLayer`` before rendering
 
-.. versionadded:: 3.26
+.. seealso:: :py:func:`symbolLayerClipGeometries`
+
+.. deprecated::
+   QGIS 3.38, use :py:func:`~QgsRenderContext.symbolLayerClipGeometries` instead.
+%End
+
+    void addSymbolLayerClipGeometry( const QString &symbolLayerId, const QgsGeometry &geometry );
+%Docstring
+Add a clip ``geometry`` to be applied to the ``symbolLayer`` before rendering.
+
+.. seealso:: :py:func:`symbolLayerClipGeometries`
+
+.. versionadded:: 3.38
+%End
+
+    bool symbolLayerHasClipGeometries( const QString &symbolLayerId ) const;
+%Docstring
+Returns ``True`` if the symbol layer with matching ID has any associated clip geometries.
+
+.. seealso:: :py:func:`symbolLayerClipGeometries`
+
+.. versionadded:: 3.38
+%End
+
+    QVector<QgsGeometry> symbolLayerClipGeometries( const QString &symbolLayerId ) const;
+%Docstring
+Returns clipping geometries to be applied to the ``symbolLayer`` before rendering
+
+.. seealso:: :py:func:`symbolLayerHasClipGeometries`
+
+.. seealso:: :py:func:`addSymbolLayerClipGeometry`
+
+.. versionadded:: 3.38
 %End
 
     QgsDoubleRange zRange() const;

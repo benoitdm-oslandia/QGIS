@@ -327,7 +327,6 @@ class GUI_EXPORT QgsAttributesFormProperties : public QWidget, public QgsExpress
       FieldConfig( QgsVectorLayer *layer, int idx );
 
       bool mEditable = true;
-      bool mEditableEnabled = true;
       bool mLabelOnTop = false;
       bool mReuseLastValues = false;
       QgsFieldConstraints mFieldConstraints;
@@ -338,6 +337,7 @@ class GUI_EXPORT QgsAttributesFormProperties : public QWidget, public QgsExpress
       QgsPropertyCollection mDataDefinedProperties;
       QString mComment;
       Qgis::FieldDomainSplitPolicy mSplitPolicy = Qgis::FieldDomainSplitPolicy::Duplicate;
+      Qgis::FieldDuplicatePolicy mDuplicatePolicy = Qgis::FieldDuplicatePolicy::Duplicate;
 
       operator QVariant();
     };

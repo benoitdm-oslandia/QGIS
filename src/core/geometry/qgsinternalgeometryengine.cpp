@@ -664,7 +664,7 @@ QgsGeometry QgsInternalGeometryEngine::orthogonalize( double tolerance, int maxI
     QgsGeometry first = QgsGeometry( geometryList.takeAt( 0 ) );
     for ( QgsAbstractGeometry *g : std::as_const( geometryList ) )
     {
-      first.addPart( g );
+      first.addPartV2( g );
     }
     return first;
   }
@@ -823,7 +823,7 @@ QgsGeometry QgsInternalGeometryEngine::densifyByCount( int extraNodesPerSegment 
     QgsGeometry first = QgsGeometry( geometryList.takeAt( 0 ) );
     for ( QgsAbstractGeometry *g : std::as_const( geometryList ) )
     {
-      first.addPart( g );
+      first.addPartV2( g );
     }
     return first;
   }
@@ -859,7 +859,7 @@ QgsGeometry QgsInternalGeometryEngine::densifyByDistance( double distance ) cons
     QgsGeometry first = QgsGeometry( geometryList.takeAt( 0 ) );
     for ( QgsAbstractGeometry *g : std::as_const( geometryList ) )
     {
-      first.addPart( g );
+      first.addPartV2( g );
     }
     return first;
   }
@@ -1051,25 +1051,48 @@ QgsGeometry QgsInternalGeometryEngine::variableWidthBuffer( int segments, const 
     return QgsGeometry();
   }
 
-  std::vector< std::unique_ptr<QgsLineString > > linesToProcess;
+  std::vector< std::unique_ptr<QgsLineString > > temporarySegmentizedLines;
+  std::vector< const QgsLineString * > linesToProcess;
+  const QgsAbstractGeometry *simplifiedGeom = mGeometry->simplifiedTypeRef();
 
-  const QgsMultiCurve *multiCurve = qgsgeometry_cast< const QgsMultiCurve * >( mGeometry );
-  if ( multiCurve )
+  if ( const QgsMultiCurve *multiCurve = qgsgeometry_cast< const QgsMultiCurve * >( simplifiedGeom ) )
   {
     for ( int i = 0; i < multiCurve->partCount(); ++i )
     {
-      if ( static_cast< const QgsCurve * >( multiCurve->geometryN( i ) )->nCoordinates() == 0 )
-        continue; // skip 0 length lines
+      if ( const QgsCurve *curvePart = qgsgeometry_cast< const QgsCurve * >( multiCurve->geometryN( i ) ) )
+      {
+        const QgsAbstractGeometry *part = curvePart->simplifiedTypeRef();
+        if ( part->nCoordinates() == 0 )
+          continue; // skip 0 length lines
 
-      linesToProcess.emplace_back( static_cast<QgsLineString *>( multiCurve->geometryN( i )->clone() ) );
+        if ( const QgsLineString *lineString = qgsgeometry_cast< const QgsLineString * >( part ) )
+        {
+          linesToProcess.emplace_back( lineString );
+        }
+        else
+        {
+          std::unique_ptr< QgsLineString > segmentizedCurve( qgis::down_cast<QgsLineString *>( part->segmentize() ) );
+          linesToProcess.emplace_back( segmentizedCurve.get() );
+          temporarySegmentizedLines.emplace_back( std::move( segmentizedCurve ) );
+        }
+      }
     }
   }
-
-  const QgsCurve *curve = qgsgeometry_cast< const QgsCurve * >( mGeometry );
-  if ( curve )
+  else if ( const QgsCurve *curve = qgsgeometry_cast< const QgsCurve * >( simplifiedGeom ) )
   {
     if ( curve->nCoordinates() > 0 )
-      linesToProcess.emplace_back( static_cast<QgsLineString *>( curve->segmentize() ) );
+    {
+      if ( const QgsLineString *lineString = qgsgeometry_cast< const QgsLineString * >( curve ) )
+      {
+        linesToProcess.emplace_back( lineString );
+      }
+      else
+      {
+        std::unique_ptr< QgsLineString > segmentizedCurve( qgis::down_cast<QgsLineString *>( curve->segmentize() ) );
+        linesToProcess.emplace_back( segmentizedCurve.get() );
+        temporarySegmentizedLines.emplace_back( std::move( segmentizedCurve ) );
+      }
+    }
   }
 
   if ( linesToProcess.empty() )
@@ -1082,14 +1105,14 @@ QgsGeometry QgsInternalGeometryEngine::variableWidthBuffer( int segments, const 
   QVector<QgsGeometry> bufferedLines;
   bufferedLines.reserve( linesToProcess.size() );
 
-  for ( std::unique_ptr< QgsLineString > &line : linesToProcess )
+  for ( const QgsLineString *line : linesToProcess )
   {
     QVector<QgsGeometry> parts;
     QgsPoint prevPoint;
     double prevRadius = 0;
     QgsGeometry prevCircle;
 
-    std::unique_ptr< double[] > widths = widthFunction( line.get() ) ;
+    std::unique_ptr< double[] > widths = widthFunction( line ) ;
     for ( int i = 0; i < line->nCoordinates(); ++i )
     {
       QgsPoint thisPoint = line->pointN( i );
@@ -1763,7 +1786,7 @@ QgsGeometry QgsInternalGeometryEngine::convertToCurves( double distanceTolerance
     QgsGeometry first = QgsGeometry( geometryList.takeAt( 0 ) );
     for ( QgsAbstractGeometry *g : std::as_const( geometryList ) )
     {
-      first.addPart( g );
+      first.addPartV2( g );
     }
     return first;
   }
@@ -2067,7 +2090,7 @@ QgsGeometry QgsInternalGeometryEngine::triangularWaves( double wavelength, doubl
     QgsGeometry first = QgsGeometry( geometryList.takeAt( 0 ) );
     for ( QgsAbstractGeometry *g : std::as_const( geometryList ) )
     {
-      first.addPart( g );
+      first.addPartV2( g );
     }
     return first;
   }
@@ -2110,7 +2133,7 @@ QgsGeometry QgsInternalGeometryEngine::triangularWavesRandomized( double minimum
     QgsGeometry first = QgsGeometry( geometryList.takeAt( 0 ) );
     for ( QgsAbstractGeometry *g : std::as_const( geometryList ) )
     {
-      first.addPart( g );
+      first.addPartV2( g );
     }
     return first;
   }
@@ -2363,7 +2386,7 @@ QgsGeometry QgsInternalGeometryEngine::squareWaves( double wavelength, double am
     QgsGeometry first = QgsGeometry( geometryList.takeAt( 0 ) );
     for ( QgsAbstractGeometry *g : std::as_const( geometryList ) )
     {
-      first.addPart( g );
+      first.addPartV2( g );
     }
     return first;
   }
@@ -2406,7 +2429,7 @@ QgsGeometry QgsInternalGeometryEngine::squareWavesRandomized( double minimumWave
     QgsGeometry first = QgsGeometry( geometryList.takeAt( 0 ) );
     for ( QgsAbstractGeometry *g : std::as_const( geometryList ) )
     {
-      first.addPart( g );
+      first.addPartV2( g );
     }
     return first;
   }
@@ -2779,7 +2802,7 @@ QgsGeometry QgsInternalGeometryEngine::roundWaves( double wavelength, double amp
     QgsGeometry first = QgsGeometry( geometryList.takeAt( 0 ) );
     for ( QgsAbstractGeometry *g : std::as_const( geometryList ) )
     {
-      first.addPart( g );
+      first.addPartV2( g );
     }
     return first;
   }
@@ -2822,7 +2845,7 @@ QgsGeometry QgsInternalGeometryEngine::roundWavesRandomized( double minimumWavel
     QgsGeometry first = QgsGeometry( geometryList.takeAt( 0 ) );
     for ( QgsAbstractGeometry *g : std::as_const( geometryList ) )
     {
-      first.addPart( g );
+      first.addPartV2( g );
     }
     return first;
   }
@@ -3138,13 +3161,13 @@ QgsGeometry QgsInternalGeometryEngine::applyDashPattern( const QVector<double> &
       {
         for ( int j = 0; j < collection->numGeometries(); ++j )
         {
-          first.addPart( collection->geometryN( j )->clone() );
+          first.addPartV2( collection->geometryN( j )->clone() );
         }
         delete collection;
       }
       else
       {
-        first.addPart( g );
+        first.addPartV2( g );
       }
     }
     return first;

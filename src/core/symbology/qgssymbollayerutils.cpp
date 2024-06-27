@@ -557,7 +557,7 @@ QPointF QgsSymbolLayerUtils::toPoint( const QVariant &value, bool *ok )
   if ( QgsVariantUtils::isNull( value ) )
     return QPoint();
 
-  if ( value.type() == QVariant::List )
+  if ( value.userType() == QMetaType::Type::QVariantList )
   {
     const QVariantList list = value.toList();
     if ( list.size() != 2 )
@@ -621,7 +621,7 @@ QSizeF QgsSymbolLayerUtils::toSize( const QVariant &value, bool *ok )
   if ( QgsVariantUtils::isNull( value ) )
     return QSizeF();
 
-  if ( value.type() == QVariant::List )
+  if ( value.userType() == QMetaType::Type::QVariantList )
   {
     const QVariantList list = value.toList();
     if ( list.size() != 2 )
@@ -3215,7 +3215,7 @@ QgsStringMap QgsSymbolLayerUtils::getVendorOptionList( QDomElement &element )
 QVariantMap QgsSymbolLayerUtils::parseProperties( const QDomElement &element )
 {
   const QVariant newSymbols = QgsXmlUtils::readVariant( element.firstChildElement( QStringLiteral( "Option" ) ) );
-  if ( newSymbols.type() == QVariant::Map )
+  if ( newSymbols.userType() == QMetaType::Type::QVariantMap )
   {
     return newSymbols.toMap();
   }
@@ -4934,6 +4934,7 @@ double QgsSymbolLayerUtils::sizeInPixelsFromSldUom( const QString &uom, double s
 
 QSet<const QgsSymbolLayer *> QgsSymbolLayerUtils::toSymbolLayerPointers( const QgsFeatureRenderer *renderer, const QSet<QgsSymbolLayerId> &symbolLayerIds )
 {
+  Q_NOWARN_DEPRECATED_PUSH
   class SymbolLayerVisitor : public QgsStyleEntityVisitorInterface
   {
     public:
@@ -4958,10 +4959,12 @@ QSet<const QgsSymbolLayer *> QgsSymbolLayerUtils::toSymbolLayerPointers( const Q
           QVector<int> indexPath = rootPath;
           indexPath.append( idx );
           const QgsSymbolLayer *sl = symbol->symbolLayer( idx );
+          Q_NOWARN_DEPRECATED_PUSH
           if ( mSymbolLayerIds.contains( QgsSymbolLayerId( mCurrentRuleKey + identifier, indexPath ) ) )
           {
             mSymbolLayers.insert( sl );
           }
+          Q_NOWARN_DEPRECATED_POP
 
           const QgsSymbol *subSymbol = const_cast<QgsSymbolLayer *>( sl )->subSymbol();
           if ( subSymbol )
@@ -4986,6 +4989,7 @@ QSet<const QgsSymbolLayer *> QgsSymbolLayerUtils::toSymbolLayerPointers( const Q
       const QSet<QgsSymbolLayerId> &mSymbolLayerIds;
       QSet<const QgsSymbolLayer *> mSymbolLayers;
   };
+  Q_NOWARN_DEPRECATED_POP
 
   SymbolLayerVisitor visitor( symbolLayerIds );
   renderer->accept( &visitor );
@@ -5412,6 +5416,26 @@ void QgsSymbolLayerUtils::clearSymbolLayerIds( QgsSymbolLayer *symbolLayer )
 void QgsSymbolLayerUtils::resetSymbolLayerIds( QgsSymbolLayer *symbolLayer )
 {
   changeSymbolLayerIds( symbolLayer, []() { return QUuid::createUuid().toString(); } );
+}
+
+QVector<QgsGeometry> QgsSymbolLayerUtils::collectSymbolLayerClipGeometries( const QgsRenderContext &context, const QString &symbolLayerId, const QRectF &bounds )
+{
+  QVector<QgsGeometry> clipGeometries = context.symbolLayerClipGeometries( symbolLayerId );
+  if ( clipGeometries.empty() )
+    return {};
+
+  if ( bounds.isNull() )
+    return clipGeometries;
+
+  const QgsRectangle boundsRect = QgsRectangle( bounds );
+
+  clipGeometries.erase(
+    std::remove_if( clipGeometries.begin(), clipGeometries.end(), [&boundsRect]( const QgsGeometry & geometry )
+  {
+    return !geometry.boundingBoxIntersects( boundsRect );
+  } ), clipGeometries.end() );
+
+  return clipGeometries;
 }
 
 void QgsSymbolLayerUtils::resetSymbolLayerIds( QgsSymbol *symbol )

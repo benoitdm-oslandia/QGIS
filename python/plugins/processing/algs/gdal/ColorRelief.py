@@ -73,9 +73,7 @@ class ColorRelief(GdalAlgorithm):
                                                      defaultValue='',
                                                      optional=True)
         options_param.setFlags(options_param.flags() | QgsProcessingParameterDefinition.Flag.FlagAdvanced)
-        options_param.setMetadata({
-            'widget_wrapper': {
-                'class': 'processing.algs.gdal.ui.RasterOptionsWidget.RasterOptionsWidgetWrapper'}})
+        options_param.setMetadata({'widget_wrapper': {'widget_type': 'rasteroptions'}})
         self.addParameter(options_param)
 
         extra_param = QgsProcessingParameterString(self.EXTRA,
@@ -107,8 +105,9 @@ class ColorRelief(GdalAlgorithm):
         inLayer = self.parameterAsRasterLayer(parameters, self.INPUT, context)
         if inLayer is None:
             raise QgsProcessingException(self.invalidRasterError(parameters, self.INPUT))
+        input_details = GdalUtils.gdal_connection_details_from_layer(inLayer)
 
-        arguments.append(inLayer.source())
+        arguments.append(input_details.connection_string)
         arguments.append(self.parameterAsFile(parameters, self.COLOR_TABLE, context))
 
         out = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
@@ -135,6 +134,9 @@ class ColorRelief(GdalAlgorithm):
         options = self.parameterAsString(parameters, self.OPTIONS, context)
         if options:
             arguments.extend(GdalUtils.parseCreationOptions(options))
+
+        if input_details.credential_options:
+            arguments.extend(input_details.credential_options_as_arguments())
 
         if self.EXTRA in parameters and parameters[self.EXTRA] not in (None, ''):
             extra = self.parameterAsString(parameters, self.EXTRA, context)

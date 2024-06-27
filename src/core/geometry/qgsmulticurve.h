@@ -83,7 +83,9 @@ class CORE_EXPORT QgsMultiCurve: public QgsGeometryCollection
     QDomElement asGml3( QDomDocument &doc, int precision = 17, const QString &ns = "gml", QgsAbstractGeometry::AxisOrder axisOrder = QgsAbstractGeometry::AxisOrder::XY ) const override;
     json asJsonObject( int precision = 17 ) const override SIP_SKIP;
     bool addGeometry( QgsAbstractGeometry *g SIP_TRANSFER ) override;
+    bool addGeometries( const QVector< QgsAbstractGeometry * > &geometries SIP_TRANSFER ) override;
     bool insertGeometry( QgsAbstractGeometry *g SIP_TRANSFER, int index ) override;
+    QgsMultiCurve *simplifyByDistance( double tolerance ) const override SIP_FACTORY;
 
     /**
      * Returns a copy of the multi curve, where each component curve has had its line direction reversed.

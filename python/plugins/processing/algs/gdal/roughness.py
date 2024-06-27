@@ -61,9 +61,7 @@ class roughness(GdalAlgorithm):
                                                      defaultValue='',
                                                      optional=True)
         options_param.setFlags(options_param.flags() | QgsProcessingParameterDefinition.Flag.FlagAdvanced)
-        options_param.setMetadata({
-            'widget_wrapper': {
-                'class': 'processing.algs.gdal.ui.RasterOptionsWidget.RasterOptionsWidgetWrapper'}})
+        options_param.setMetadata({'widget_wrapper': {'widget_type': 'rasteroptions'}})
         self.addParameter(options_param)
 
         self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT, self.tr('Roughness')))
@@ -87,6 +85,8 @@ class roughness(GdalAlgorithm):
         inLayer = self.parameterAsRasterLayer(parameters, self.INPUT, context)
         if inLayer is None:
             raise QgsProcessingException(self.invalidRasterError(parameters, self.INPUT))
+        input_details = GdalUtils.gdal_connection_details_from_layer(
+            inLayer)
 
         out = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
         self.setOutputValue(self.OUTPUT, out)
@@ -97,7 +97,7 @@ class roughness(GdalAlgorithm):
 
         arguments = [
             'roughness',
-            inLayer.source(),
+            input_details.connection_string,
             out,
             '-of',
             output_format,
@@ -107,6 +107,9 @@ class roughness(GdalAlgorithm):
 
         if self.parameterAsBoolean(parameters, self.COMPUTE_EDGES, context):
             arguments.append('-compute_edges')
+
+        if input_details.credential_options:
+            arguments.extend(input_details.credential_options_as_arguments())
 
         options = self.parameterAsString(parameters, self.OPTIONS, context)
         if options:

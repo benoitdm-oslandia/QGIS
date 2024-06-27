@@ -24,6 +24,7 @@
 #include "qgselevationmap.h"
 #include "qgsunittypes.h"
 #include "qgssymbollayer.h"
+#include "qgsgeometrypaintdevice.h"
 
 #define POINTS_TO_MM 2.83464567
 #define INCH_TO_MM 25.4
@@ -31,7 +32,7 @@
 QgsRenderContext::QgsRenderContext()
   : mFlags( Qgis::RenderContextFlag::DrawEditingInfo | Qgis::RenderContextFlag::UseAdvancedEffects | Qgis::RenderContextFlag::DrawSelection | Qgis::RenderContextFlag::UseRenderingOptimization )
 {
-  mVectorSimplifyMethod.setSimplifyHints( QgsVectorSimplifyMethod::NoSimplification );
+  mVectorSimplifyMethod.setSimplifyHints( Qgis::VectorRenderingSimplificationFlag::NoSimplification );
   // For RenderMetersInMapUnits support, when rendering in Degrees, the Ellipsoid must be set
   // - for Previews/Icons the default Extent can be used
   mDistanceArea.setEllipsoid( mDistanceArea.sourceCrs().ellipsoidAcronym() );
@@ -82,7 +83,8 @@ QgsRenderContext::QgsRenderContext( const QgsRenderContext &rh )
   , mRendererUsage( rh.mRendererUsage )
   , mFrameRate( rh.mFrameRate )
   , mCurrentFrame( rh.mCurrentFrame )
-  , mSymbolLayerClipPaths( rh.mSymbolLayerClipPaths )
+  , mSymbolLayerClippingGeometries( rh.mSymbolLayerClippingGeometries )
+  , mMaskRenderSettings( rh.mMaskRenderSettings )
 #ifdef QGISDEBUG
   , mHasTransformContext( rh.mHasTransformContext )
 #endif
@@ -133,7 +135,8 @@ QgsRenderContext &QgsRenderContext::operator=( const QgsRenderContext &rh )
   mRendererUsage = rh.mRendererUsage;
   mFrameRate = rh.mFrameRate;
   mCurrentFrame = rh.mCurrentFrame;
-  mSymbolLayerClipPaths = rh.mSymbolLayerClipPaths;
+  mSymbolLayerClippingGeometries = rh.mSymbolLayerClippingGeometries;
+  mMaskRenderSettings = rh.mMaskRenderSettings;
   if ( isTemporal() )
     setTemporalRange( rh.temporalRange() );
 #ifdef QGISDEBUG
@@ -256,6 +259,7 @@ QgsRenderContext QgsRenderContext::fromMapSettings( const QgsMapSettings &mapSet
   ctx.setFlag( Qgis::RenderContextFlag::HighQualityImageTransforms, mapSettings.testFlag( Qgis::MapSettingsFlag::HighQualityImageTransforms ) );
   ctx.setFlag( Qgis::RenderContextFlag::SkipSymbolRendering, mapSettings.testFlag( Qgis::MapSettingsFlag::SkipSymbolRendering ) );
   ctx.setFlag( Qgis::RenderContextFlag::RecordProfile, mapSettings.testFlag( Qgis::MapSettingsFlag::RecordProfile ) );
+  ctx.setFlag( Qgis::RenderContextFlag::AlwaysUseGlobalMasks, mapSettings.testFlag( Qgis::MapSettingsFlag::AlwaysUseGlobalMasks ) );
   ctx.setScaleFactor( mapSettings.outputDpi() / 25.4 ); // = pixels per mm
   ctx.setDpiTarget( mapSettings.dpiTarget() >= 0.0 ? mapSettings.dpiTarget() : -1.0 );
   ctx.setRendererScale( mapSettings.scale() );
@@ -284,6 +288,8 @@ QgsRenderContext QgsRenderContext::fromMapSettings( const QgsMapSettings &mapSet
   ctx.setImageFormat( mapSettings.outputImageFormat() );
 
   ctx.mClippingRegions = mapSettings.clippingRegions();
+
+  ctx.setMaskSettings( mapSettings.maskSettings() );
 
   ctx.mRendererUsage = mapSettings.rendererUsage();
   ctx.mFrameRate = mapSettings.frameRate();
@@ -657,6 +663,11 @@ void QgsRenderContext::setTextureOrigin( const QPointF &origin )
   mTextureOrigin = origin;
 }
 
+void QgsRenderContext::setMaskSettings( const QgsMaskRenderSettings &settings )
+{
+  mMaskRenderSettings = settings;
+}
+
 QgsDoubleRange QgsRenderContext::zRange() const
 {
   return mZRange;
@@ -724,12 +735,46 @@ void QgsRenderContext::setElevationMap( QgsElevationMap *map )
 
 void QgsRenderContext::addSymbolLayerClipPath( const QString &symbolLayerId, QPainterPath path )
 {
-  mSymbolLayerClipPaths[ symbolLayerId ].append( path );
+  const QgsGeometry geometry = QgsGeometryPaintDevice::painterPathToGeometry( path );
+  if ( !geometry.isEmpty() )
+    addSymbolLayerClipGeometry( symbolLayerId, geometry );
 }
 
 QList<QPainterPath> QgsRenderContext::symbolLayerClipPaths( const QString &symbolLayerId ) const
 {
-  return mSymbolLayerClipPaths[ symbolLayerId ];
+  const QVector<QgsGeometry> geometries = symbolLayerClipGeometries( symbolLayerId );
+  QList<QPainterPath> res;
+  res.reserve( geometries.size() );
+  for ( const QgsGeometry &geometry : geometries )
+  {
+    res << geometry.constGet()->asQPainterPath();
+  }
+  return res;
+}
+
+void QgsRenderContext::addSymbolLayerClipGeometry( const QString &symbolLayerId, const QgsGeometry &geometry )
+{
+  if ( geometry.isMultipart() )
+  {
+    mSymbolLayerClippingGeometries[ symbolLayerId ].append( geometry.asGeometryCollection() );
+  }
+  else
+  {
+    mSymbolLayerClippingGeometries[ symbolLayerId ].append( geometry );
+  }
+}
+
+bool QgsRenderContext::symbolLayerHasClipGeometries( const QString &symbolLayerId ) const
+{
+  auto it = mSymbolLayerClippingGeometries.constFind( symbolLayerId );
+  if ( it == mSymbolLayerClippingGeometries.constEnd() )
+    return false;
+  return !it.value().isEmpty();
+}
+
+QVector<QgsGeometry> QgsRenderContext::symbolLayerClipGeometries( const QString &symbolLayerId ) const
+{
+  return mSymbolLayerClippingGeometries[ symbolLayerId ];
 }
 
 void QgsRenderContext::setDisabledSymbolLayers( const QSet<const QgsSymbolLayer *> &symbolLayers )

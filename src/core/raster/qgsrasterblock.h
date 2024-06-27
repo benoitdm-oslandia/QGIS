@@ -552,31 +552,57 @@ class CORE_EXPORT QgsRasterBlock
      * Returns a pointer to block data.
      * \param index data matrix index (long type in Python)
      * \note not available in Python bindings
+     *
+     * \see constBits()
      */
     char *bits( qgssize index ) SIP_SKIP;
 
     /**
      * Returns a pointer to block data.
      * \note not available in Python bindings
+     *
+     * \see constBits()
      */
     char *bits() SIP_SKIP;
 
     /**
+     * Returns a const pointer to block data.
+     *
+     * \param index data matrix index (long type in Python)
+     * \note not available in Python bindings
+     *
+     * \see bits()
+     * \since QGIS 3.38
+     */
+    const char *constBits( qgssize index ) const SIP_SKIP;
+
+    /**
+     * Returns a const pointer to block data.
+     * \note not available in Python bindings
+     *
+     * \see bits()
+     * \since QGIS 3.38
+     */
+    const char *constBits() const SIP_SKIP;
+
+    /**
      * \brief Print double value with all necessary significant digits.
      *         It is ensured that conversion back to double gives the same number.
-     *  \param value the value to be printed
-     *  \returns string representing the value
+     * \param value the value to be printed
+     * \param localized if TRUE, use localized number format
+     * \returns string representing the value
      */
-    static QString printValue( double value );
+    static QString printValue( double value, bool localized = false );
 
     /**
      * \brief Print float value with all necessary significant digits.
      *         It is ensured that conversion back to float gives the same number.
-     *  \param value the value to be printed
-     *  \returns string representing the value
+     * \param value the value to be printed
+     * \param localized if TRUE, use localized number format
+     * \returns string representing the value
      * \note not available in Python bindings
      */
-    static QString printValue( float value ) SIP_SKIP;
+    static QString printValue( float value, bool localized = false ) SIP_SKIP;
 
     /**
      * \brief Convert data to different type.

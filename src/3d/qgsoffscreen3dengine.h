@@ -33,8 +33,6 @@ namespace Qt3DRender
   class QCameraSelector;
   class QClearBuffers;
   class QRenderAspect;
-  class QRenderCapture;
-  class QRenderCaptureReply;
   class QRenderTarget;
   class QRenderTargetSelector;
   class QRenderTargetOutput;
@@ -85,6 +83,9 @@ class _3D_EXPORT QgsOffscreen3DEngine : public QgsAbstract3DEngine
     QSize mSize = QSize( 640, 480 );
     Qt3DRender::QCamera *mCamera = nullptr;
     QOffscreenSurface *mOffscreenSurface = nullptr;
+
+    Qt3DRender::QTexture2D *mOffscreenColorTexture = nullptr;
+    Qt3DRender::QTexture2D *mOffscreenDepthTexture = nullptr;
 
     // basic Qt3D stuff
     Qt3DCore::QAspectEngine *mAspectEngine = nullptr;              // The aspect engine, which holds the scene and related aspects.

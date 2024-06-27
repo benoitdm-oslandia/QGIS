@@ -258,6 +258,11 @@ QString QgsSimpleFillSymbolLayer::layerType() const
   return QStringLiteral( "SimpleFill" );
 }
 
+Qgis::SymbolLayerFlags QgsSimpleFillSymbolLayer::flags() const
+{
+  return QgsFillSymbolLayer::flags() | Qgis::SymbolLayerFlag::CanCalculateMaskGeometryPerFeature;
+}
+
 void QgsSimpleFillSymbolLayer::startRender( QgsSymbolRenderContext &context )
 {
   QColor fillColor = mColor;
@@ -689,6 +694,11 @@ QgsSymbolLayer *QgsGradientFillSymbolLayer::create( const QVariantMap &props )
   sl->restoreOldDataDefinedProperties( props );
 
   return sl.release();
+}
+
+Qgis::SymbolLayerFlags QgsGradientFillSymbolLayer::flags() const
+{
+  return QgsFillSymbolLayer::flags() | Qgis::SymbolLayerFlag::CanCalculateMaskGeometryPerFeature;
 }
 
 void QgsGradientFillSymbolLayer::setColorRamp( QgsColorRamp *ramp )
@@ -1206,6 +1216,11 @@ QgsSymbolLayer *QgsShapeburstFillSymbolLayer::create( const QVariantMap &props )
 QString QgsShapeburstFillSymbolLayer::layerType() const
 {
   return QStringLiteral( "ShapeburstFill" );
+}
+
+Qgis::SymbolLayerFlags QgsShapeburstFillSymbolLayer::flags() const
+{
+  return QgsFillSymbolLayer::flags() | Qgis::SymbolLayerFlag::CanCalculateMaskGeometryPerFeature;
 }
 
 void QgsShapeburstFillSymbolLayer::setColorRamp( QgsColorRamp *ramp )
@@ -2148,6 +2163,7 @@ void QgsSVGFillSymbolLayer::startRender( QgsSymbolRenderContext &context )
 
   if ( mStroke )
   {
+    mStroke->setRenderHints( mStroke->renderHints() | Qgis::SymbolRenderHint::IsSymbolLayerSubSymbol );
     mStroke->startRender( context.renderContext(), context.fields() );
   }
 }
@@ -3118,6 +3134,7 @@ bool QgsLinePatternFillSymbolLayer::applyPattern( const QgsSymbolRenderContext &
   lineRenderContext.setFlag( Qgis::RenderContextFlag::RenderingSubSymbol );
   lineRenderContext.setDisabledSymbolLayersV2( context.renderContext().disabledSymbolLayersV2() );
 
+  fillLineSymbol->setRenderHints( fillLineSymbol->renderHints() | Qgis::SymbolRenderHint::IsSymbolLayerSubSymbol );
   fillLineSymbol->startRender( lineRenderContext, context.fields() );
 
   QVector<QPolygonF> polygons;
@@ -3176,6 +3193,7 @@ void QgsLinePatternFillSymbolLayer::startRender( QgsSymbolRenderContext &context
 
   if ( mRenderUsingLines && mFillLineSymbol )
   {
+    mFillLineSymbol->setRenderHints( mFillLineSymbol->renderHints() | Qgis::SymbolRenderHint::IsSymbolLayerSubSymbol );
     mFillLineSymbol->startRender( context.renderContext(), context.fields() );
     mFillLineSymbolRenderStarted = true;
   }
@@ -3202,6 +3220,7 @@ void QgsLinePatternFillSymbolLayer::renderPolygon( const QPolygonF &points, cons
 
   if ( !mFillLineSymbolRenderStarted && mFillLineSymbol )
   {
+    mFillLineSymbol->setRenderHints( mFillLineSymbol->renderHints() | Qgis::SymbolRenderHint::IsSymbolLayerSubSymbol );
     mFillLineSymbol->startRender( context.renderContext(), context.fields() );
     mFillLineSymbolRenderStarted = true;
   }
@@ -3880,6 +3899,7 @@ bool QgsPointPatternFillSymbolLayer::applyPattern( const QgsSymbolRenderContext 
     pointRenderContext.setExpressionContext( context.renderContext().expressionContext() );
     pointRenderContext.setFlag( Qgis::RenderContextFlag::RenderingSubSymbol );
 
+    mMarkerSymbol->setRenderHints( mMarkerSymbol->renderHints() | Qgis::SymbolRenderHint::IsSymbolLayerSubSymbol );
     mMarkerSymbol->startRender( pointRenderContext, context.fields() );
 
     //render points on distance grid
@@ -3957,7 +3977,8 @@ void QgsPointPatternFillSymbolLayer::startRender( QgsSymbolRenderContext &contex
 
   if ( mRenderUsingMarkers && mMarkerSymbol )
   {
-    mMarkerSymbol->startRender( context.renderContext() );
+    mMarkerSymbol->setRenderHints( mMarkerSymbol->renderHints() | Qgis::SymbolRenderHint::IsSymbolLayerSubSymbol );
+    mMarkerSymbol->startRender( context.renderContext(), context.fields() );
     mMarkerSymbolRenderStarted = true;
   }
 }
@@ -4001,7 +4022,8 @@ void QgsPointPatternFillSymbolLayer::renderPolygon( const QPolygonF &points, con
 
   if ( !mMarkerSymbolRenderStarted && mMarkerSymbol )
   {
-    mMarkerSymbol->startRender( context.renderContext() );
+    mMarkerSymbol->setRenderHints( mMarkerSymbol->renderHints() | Qgis::SymbolRenderHint::IsSymbolLayerSubSymbol );
+    mMarkerSymbol->startRender( context.renderContext(), context.fields() );
     mMarkerSymbolRenderStarted = true;
   }
 
@@ -4793,6 +4815,7 @@ QColor QgsCentroidFillSymbolLayer::color() const
 
 void QgsCentroidFillSymbolLayer::startRender( QgsSymbolRenderContext &context )
 {
+  mMarker->setRenderHints( mMarker->renderHints() | Qgis::SymbolRenderHint::IsSymbolLayerSubSymbol );
   mMarker->startRender( context.renderContext(), context.fields() );
 }
 
@@ -5208,6 +5231,11 @@ QString QgsRasterFillSymbolLayer::layerType() const
   return QStringLiteral( "RasterFill" );
 }
 
+Qgis::SymbolLayerFlags QgsRasterFillSymbolLayer::flags() const
+{
+  return QgsImageFillSymbolLayer::flags() | Qgis::SymbolLayerFlag::CanCalculateMaskGeometryPerFeature;
+}
+
 void QgsRasterFillSymbolLayer::renderPolygon( const QPolygonF &points, const QVector<QPolygonF> *rings, QgsSymbolRenderContext &context )
 {
   QPainter *p = context.renderContext().painter();
@@ -5544,6 +5572,7 @@ QColor QgsRandomMarkerFillSymbolLayer::color() const
 
 void QgsRandomMarkerFillSymbolLayer::startRender( QgsSymbolRenderContext &context )
 {
+  mMarker->setRenderHints( mMarker->renderHints() | Qgis::SymbolRenderHint::IsSymbolLayerSubSymbol );
   mMarker->startRender( context.renderContext(), context.fields() );
 }
 

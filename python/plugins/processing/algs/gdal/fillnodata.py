@@ -87,9 +87,7 @@ class fillnodata(GdalAlgorithm):
                                                      defaultValue='',
                                                      optional=True)
         options_param.setFlags(options_param.flags() | QgsProcessingParameterDefinition.Flag.FlagAdvanced)
-        options_param.setMetadata({
-            'widget_wrapper': {
-                'class': 'processing.algs.gdal.ui.RasterOptionsWidget.RasterOptionsWidgetWrapper'}})
+        options_param.setMetadata({'widget_wrapper': {'widget_type': 'rasteroptions'}})
         self.addParameter(options_param)
 
         extra_param = QgsProcessingParameterString(self.EXTRA,
@@ -123,12 +121,13 @@ class fillnodata(GdalAlgorithm):
         raster = self.parameterAsRasterLayer(parameters, self.INPUT, context)
         if raster is None:
             raise QgsProcessingException(self.invalidRasterError(parameters, self.INPUT))
+        input_details = GdalUtils.gdal_connection_details_from_layer(raster)
 
         out = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
         self.setOutputValue(self.OUTPUT, out)
 
         arguments = [
-            raster.source(),
+            input_details.connection_string,
             out,
             '-md',
             str(self.parameterAsInt(parameters, self.DISTANCE, context)),
@@ -153,6 +152,9 @@ class fillnodata(GdalAlgorithm):
 
         arguments.append('-of')
         arguments.append(output_format)
+
+        if input_details.credential_options:
+            arguments.extend(input_details.credential_options_as_arguments())
 
         if self.EXTRA in parameters and parameters[self.EXTRA] not in (None, ''):
             extra = self.parameterAsString(parameters, self.EXTRA, context)

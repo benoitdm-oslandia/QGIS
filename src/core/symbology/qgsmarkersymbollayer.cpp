@@ -1089,6 +1089,11 @@ QString QgsSimpleMarkerSymbolLayer::layerType() const
   return QStringLiteral( "SimpleMarker" );
 }
 
+Qgis::SymbolLayerFlags QgsSimpleMarkerSymbolLayer::flags() const
+{
+  return QgsSimpleMarkerSymbolLayerBase::flags() | Qgis::SymbolLayerFlag::CanCalculateMaskGeometryPerFeature;
+}
+
 void QgsSimpleMarkerSymbolLayer::startRender( QgsSymbolRenderContext &context )
 {
   QgsSimpleMarkerSymbolLayerBase::startRender( context );
@@ -1931,6 +1936,7 @@ void QgsFilledMarkerSymbolLayer::startRender( QgsSymbolRenderContext &context )
 {
   if ( mFill )
   {
+    mFill->setRenderHints( mFill->renderHints() | Qgis::SymbolRenderHint::IsSymbolLayerSubSymbol );
     mFill->startRender( context.renderContext(), context.fields() );
   }
 
@@ -2311,6 +2317,11 @@ void QgsSvgMarkerSymbolLayer::setParameters( const QMap<QString, QgsProperty> &p
 QString QgsSvgMarkerSymbolLayer::layerType() const
 {
   return QStringLiteral( "SvgMarker" );
+}
+
+Qgis::SymbolLayerFlags QgsSvgMarkerSymbolLayer::flags() const
+{
+  return QgsMarkerSymbolLayer::flags() | Qgis::SymbolLayerFlag::CanCalculateMaskGeometryPerFeature;
 }
 
 void QgsSvgMarkerSymbolLayer::startRender( QgsSymbolRenderContext &context )
@@ -3093,7 +3104,7 @@ void QgsRasterMarkerSymbolLayer::setCommonProperties( const QVariantMap &propert
 void QgsRasterMarkerSymbolLayer::resolvePaths( QVariantMap &properties, const QgsPathResolver &pathResolver, bool saving )
 {
   const QVariantMap::iterator it = properties.find( QStringLiteral( "name" ) );
-  if ( it != properties.end() && it.value().type() == QVariant::String )
+  if ( it != properties.end() && it.value().userType() == QMetaType::Type::QString )
   {
     if ( saving )
       it.value() = QgsSymbolLayerUtils::svgSymbolPathToName( it.value().toString(), pathResolver );
@@ -3135,6 +3146,11 @@ double QgsRasterMarkerSymbolLayer::updateDefaultAspectRatio()
 QString QgsRasterMarkerSymbolLayer::layerType() const
 {
   return QStringLiteral( "RasterMarker" );
+}
+
+Qgis::SymbolLayerFlags QgsRasterMarkerSymbolLayer::flags() const
+{
+  return QgsMarkerSymbolLayer::flags() | Qgis::SymbolLayerFlag::CanCalculateMaskGeometryPerFeature;
 }
 
 void QgsRasterMarkerSymbolLayer::renderPoint( QPointF point, QgsSymbolRenderContext &context )
@@ -3533,6 +3549,11 @@ QgsSymbolLayer *QgsFontMarkerSymbolLayer::create( const QVariantMap &props )
 QString QgsFontMarkerSymbolLayer::layerType() const
 {
   return QStringLiteral( "FontMarker" );
+}
+
+Qgis::SymbolLayerFlags QgsFontMarkerSymbolLayer::flags() const
+{
+  return QgsMarkerSymbolLayer::flags() | Qgis::SymbolLayerFlag::CanCalculateMaskGeometryPerFeature;
 }
 
 void QgsFontMarkerSymbolLayer::startRender( QgsSymbolRenderContext &context )

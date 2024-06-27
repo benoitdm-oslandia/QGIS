@@ -3,7 +3,6 @@
 
 set(QGIS_3D_SRCS
   qgs3d.cpp
-  qgs3daxis.cpp
   qgs3daxissettings.cpp
   qgsaabb.cpp
   qgsabstract3dengine.cpp
@@ -17,15 +16,15 @@ set(QGIS_3D_SRCS
   qgs3dmapcanvas.cpp
   qgs3dsceneexporter.cpp
   qgs3dutils.cpp
+  qgs3dwiredmesh_p.cpp
   qgscameracontroller.cpp
   qgscamerapose.cpp
   qgsfeature3dhandler_p.cpp
-  qgsframegraph.cpp
   qgsgltf3dutils.cpp
   qgsimagetexture.cpp
   qgslayoutitem3dmap.cpp
   qgsoffscreen3dengine.cpp
-  qgsraycastingutils_p.cpp
+  qgsraycastingutils.cpp
   qgsrulebased3drenderer.cpp
   qgsrulebasedchunkloader_p.cpp
   qgstessellatedpolygongeometry.cpp
@@ -38,11 +37,6 @@ set(QGIS_3D_SRCS
   qgswindow3dengine.cpp
   qgsskyboxentity.cpp
   qgsskyboxsettings.cpp
-  qgspostprocessingentity.cpp
-  qgsrenderpassquad.cpp
-  qgsambientocclusionrenderentity.cpp
-  qgsambientocclusionblurentity.cpp
-  qgspreviewquad.cpp
   qgsshadowsettings.cpp
   qgscolorramptexture.cpp
   qgsrubberband3d.cpp
@@ -75,6 +69,22 @@ set(QGIS_3D_SRCS
 
   processing/qgs3dalgorithms.cpp
   processing/qgsalgorithmtessellate.cpp
+
+  framegraph/qgs3daxis.cpp
+  framegraph/qgs3daxisrenderview.cpp
+  framegraph/qgsabstractrenderview.cpp
+  framegraph/qgsambientocclusionrenderentity.cpp
+  framegraph/qgsambientocclusionrenderview.cpp
+  framegraph/qgsambientocclusionblurentity.cpp
+  framegraph/qgsdebugtextureentity.cpp
+  framegraph/qgsdebugtexturerenderview.cpp
+  framegraph/qgsdepthentity.cpp
+  framegraph/qgsdepthrenderview.cpp
+  framegraph/qgsforwardrenderview.cpp
+  framegraph/qgspostprocessingentity.cpp
+  framegraph/qgsrenderpassquad.cpp
+  framegraph/qgsframegraph.cpp
+  framegraph/qgsshadowrenderview.cpp
 
   symbols/qgsbillboardgeometry.cpp
   symbols/qgsline3dsymbol.cpp
@@ -112,7 +122,6 @@ set(QGIS_3D_HDRS
   processing/qgs3dalgorithms.h
   qgs3d.h
   qgs3danimationsettings.h
-  qgs3daxis.h
   qgs3daxissettings.h
   qgs3dmapscene.h
   qgs3dmapsettings.h
@@ -121,16 +130,17 @@ set(QGIS_3D_HDRS
   qgs3dtypes.h
   qgs3dutils.h
   qgs3dmapcanvas.h
+  qgs3dwiredmesh_p.h
   qgsaabb.h
   qgsabstract3dengine.h
   qgsabstractvectorlayer3drenderer.h
   qgscameracontroller.h
   qgscamerapose.h
-  qgsframegraph.h
   qgsgltf3dutils.h
   qgslayoutitem3dmap.h
   qgsmeshlayer3drenderer.h
   qgsoffscreen3dengine.h
+  qgsraycastingutils.h
   qgsrulebased3drenderer.h
   qgstessellatedpolygongeometry.h
   qgstiledscenechunkloader_p.h
@@ -140,13 +150,8 @@ set(QGIS_3D_HDRS
   qgswindow3dengine.h
   qgsskyboxentity.h
   qgsskyboxsettings.h
-  qgspostprocessingentity.h
-  qgspreviewquad.h
   qgsshadowsettings.h
   qgspointcloudlayer3drenderer.h
-  qgsrenderpassquad.h
-  qgsambientocclusionrenderentity.h
-  qgsambientocclusionblurentity.h
   qgsambientocclusionsettings.h
 
   lights/qgsdirectionallightsettings.h
@@ -162,6 +167,22 @@ set(QGIS_3D_HDRS
   materials/qgsphongmaterialsettings.h
   materials/qgsphongtexturedmaterialsettings.h
   materials/qgssimplelinematerialsettings.h
+
+  framegraph/qgs3daxis.h
+  framegraph/qgs3daxisrenderview.h
+  framegraph/qgsambientocclusionrenderentity.h
+  framegraph/qgsambientocclusionrenderview.h
+  framegraph/qgsambientocclusionblurentity.h
+  framegraph/qgsabstractrenderview.h
+  framegraph/qgsdebugtextureentity.h
+  framegraph/qgsdebugtexturerenderview.h
+  framegraph/qgsdepthentity.h
+  framegraph/qgsdepthrenderview.h
+  framegraph/qgsforwardrenderview.h
+  framegraph/qgsframegraph.h
+  framegraph/qgspostprocessingentity.h
+  framegraph/qgsrenderpassquad.h
+  framegraph/qgsshadowrenderview.h
 
   symbols/qgsbillboardgeometry.h
   symbols/qgsline3dsymbol.h
@@ -241,6 +262,7 @@ target_include_directories(qgis_3d PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/materials
   ${CMAKE_CURRENT_SOURCE_DIR}/mesh
   ${CMAKE_CURRENT_SOURCE_DIR}/processing
+  ${CMAKE_CURRENT_SOURCE_DIR}/framegraph
   ${CMAKE_CURRENT_SOURCE_DIR}/shaders
   ${CMAKE_CURRENT_SOURCE_DIR}/symbols
   ${CMAKE_CURRENT_SOURCE_DIR}/terrain

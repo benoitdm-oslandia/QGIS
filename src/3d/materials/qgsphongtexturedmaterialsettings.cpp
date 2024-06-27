@@ -196,15 +196,13 @@ QMap<QString, QString> QgsPhongTexturedMaterialSettings::toExportParameters() co
   return parameters;
 }
 
-void QgsPhongTexturedMaterialSettings::addParametersToEffect( Qt3DRender::QEffect *effect ) const
+void QgsPhongTexturedMaterialSettings::addParametersToEffect( Qt3DRender::QEffect *effect, const QgsMaterialContext &materialContext ) const
 {
-  Qt3DRender::QParameter *ambientParameter = new Qt3DRender::QParameter( QStringLiteral( "ambientColor" ), QColor::fromRgbF( 0.05f, 0.05f, 0.05f, 1.0f ) );
-  Qt3DRender::QParameter *specularParameter = new Qt3DRender::QParameter( QStringLiteral( "specularColor" ), QColor::fromRgbF( 0.01f, 0.01f, 0.01f, 1.0f ) );
-  Qt3DRender::QParameter *shininessParameter = new Qt3DRender::QParameter( QStringLiteral( "shininess" ), 150.0f );
+  const QColor ambientColor = materialContext.isSelected() ? materialContext.selectionColor().darker() : mAmbient;
 
-  ambientParameter->setValue( mAmbient );
-  specularParameter->setValue( mSpecular );
-  shininessParameter->setValue( mShininess );
+  Qt3DRender::QParameter *ambientParameter = new Qt3DRender::QParameter( QStringLiteral( "ambientColor" ), ambientColor );
+  Qt3DRender::QParameter *specularParameter = new Qt3DRender::QParameter( QStringLiteral( "specularColor" ), mSpecular );
+  Qt3DRender::QParameter *shininessParameter = new Qt3DRender::QParameter( QStringLiteral( "shininess" ), mShininess );
 
   effect->addParameter( ambientParameter );
   effect->addParameter( specularParameter );

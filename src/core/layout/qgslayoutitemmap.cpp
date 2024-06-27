@@ -1720,8 +1720,9 @@ QgsMapSettings QgsLayoutItemMap::mapSettings( const QgsRectangle &extent, QSizeF
   if ( !mLayout->renderContext().isPreviewRender() )
   {
     //if outputting layout, we disable optimisations like layer simplification by default, UNLESS the context specifically tells us to use them
-    jobMapSettings.setFlag( Qgis::MapSettingsFlag::UseRenderingOptimization, mLayout->renderContext().simplifyMethod().simplifyHints() != QgsVectorSimplifyMethod::NoSimplification );
+    jobMapSettings.setFlag( Qgis::MapSettingsFlag::UseRenderingOptimization, mLayout->renderContext().simplifyMethod().simplifyHints() != Qgis::VectorRenderingSimplificationFlags( Qgis::VectorRenderingSimplificationFlag::NoSimplification ) );
     jobMapSettings.setSimplifyMethod( mLayout->renderContext().simplifyMethod() );
+    jobMapSettings.setMaskSettings( mLayout->renderContext().maskSettings() );
     jobMapSettings.setRendererUsage( Qgis::RendererUsage::Export );
   }
   else
@@ -1745,6 +1746,7 @@ QgsMapSettings QgsLayoutItemMap::mapSettings( const QgsRectangle &extent, QSizeF
   jobMapSettings.setFlag( Qgis::MapSettingsFlag::DrawSelection, mLayout->renderContext().flags() & QgsLayoutRenderContext::FlagDrawSelection );
   jobMapSettings.setFlag( Qgis::MapSettingsFlag::RenderPartialOutput, mLayout->renderContext().flags() & QgsLayoutRenderContext::FlagDisableTiledRasterLayerRenders );
   jobMapSettings.setFlag( Qgis::MapSettingsFlag::UseAdvancedEffects, mLayout->renderContext().flags() & QgsLayoutRenderContext::FlagUseAdvancedEffects );
+  jobMapSettings.setFlag( Qgis::MapSettingsFlag::AlwaysUseGlobalMasks, mLayout->renderContext().flags() & QgsLayoutRenderContext::FlagAlwaysUseGlobalMasks );
   jobMapSettings.setTransformContext( mLayout->project()->transformContext() );
   jobMapSettings.setPathResolver( mLayout->project()->pathResolver() );
 

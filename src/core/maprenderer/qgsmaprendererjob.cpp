@@ -41,7 +41,7 @@
 #include "qgsmaplayerstyle.h"
 #include "qgsvectorlayerrenderer.h"
 #include "qgsrendereditemresults.h"
-#include "qgsmaskpaintdevice.h"
+#include "qgsgeometrypaintdevice.h"
 #include "qgsrasterrenderer.h"
 #include "qgselevationmap.h"
 #include "qgssettingsentryimpl.h"
@@ -49,8 +49,10 @@
 #include "qgsruntimeprofiler.h"
 #include "qgsmeshlayer.h"
 #include "qgsmeshlayerlabeling.h"
+#include "qgsgeos.h"
 
 const QgsSettingsEntryBool *QgsMapRendererJob::settingsLogCanvasRefreshEvent = new QgsSettingsEntryBool( QStringLiteral( "logCanvasRefreshEvent" ), QgsSettingsTree::sTreeMap, false );
+const QgsSettingsEntryString *QgsMapRendererJob::settingsMaskBackend = new QgsSettingsEntryString( QStringLiteral( "mask-backend" ), QgsSettingsTree::sTreeMap, QString(), QStringLiteral( "Backend engine to use for selective masking" ) );
 
 ///@cond PRIVATE
 
@@ -598,8 +600,8 @@ std::vector<LayerRenderJob> QgsMapRendererJob::prepareJobs( QPainter *painter, Q
     const QgsElevationShadingRenderer shadingRenderer = mSettings.elevationShadingRenderer();
 
     // if we can use the cache, let's do it and avoid rendering!
-    if ( !mSettings.testFlag( Qgis::MapSettingsFlag::ForceVectorOutput )
-         && mCache && mCache->hasCacheImage( ml->id() ) )
+    const bool canUseCache = !mSettings.testFlag( Qgis::MapSettingsFlag::ForceVectorOutput ) && mCache;
+    if ( canUseCache && mCache->hasCacheImage( ml->id() ) )
     {
       job.cached = true;
       job.imageInitialized = true;
@@ -628,7 +630,7 @@ std::vector<LayerRenderJob> QgsMapRendererJob::prepareJobs( QPainter *painter, Q
     // If we are drawing with an alternative blending mode then we need to render to a separate image
     // before compositing this on the map. This effectively flattens the layer and prevents
     // blending occurring between objects on the layer
-    if ( mCache || ( !painter && !deferredPainterSet ) || ( job.renderer && job.renderer->forceRasterRender() ) )
+    if ( canUseCache || ( !painter && !deferredPainterSet ) || ( job.renderer && job.renderer->forceRasterRender() ) )
     {
       // Flattened image for drawing when a blending mode is set
       job.context()->setPainter( allocateImageAndPainter( ml->id(), job.img, job.context() ) );
@@ -651,7 +653,7 @@ std::vector<LayerRenderJob> QgsMapRendererJob::prepareJobs( QPainter *painter, Q
 
     if ( ( job.renderer->flags() & Qgis::MapLayerRendererFlag::RenderPartialOutputs ) && ( mSettings.flags() & Qgis::MapSettingsFlag::RenderPartialOutput ) )
     {
-      if ( mCache && ( job.renderer->flags() & Qgis::MapLayerRendererFlag::RenderPartialOutputOverPreviousCachedImage ) && mCache->hasAnyCacheImage( job.layerId + QStringLiteral( "_preview" ) ) )
+      if ( canUseCache && ( job.renderer->flags() & Qgis::MapLayerRendererFlag::RenderPartialOutputOverPreviousCachedImage ) && mCache->hasAnyCacheImage( job.layerId + QStringLiteral( "_preview" ) ) )
       {
         const QImage cachedImage = mCache->transformedCacheImage( job.layerId + QStringLiteral( "_preview" ), mSettings.mapToPixel() );
         if ( !cachedImage.isNull() )
@@ -812,7 +814,10 @@ std::vector< LayerRenderJob > QgsMapRendererJob::prepareSecondPassJobs( std::vec
     if ( forceVector && !labelHasEffects[ maskId ] )
     {
       // set a painter to get all masking instruction in order to later clip masked symbol layer
-      maskPaintDevice = new QgsMaskPaintDevice( true );
+      std::unique_ptr< QgsGeometryPaintDevice > geomPaintDevice = std::make_unique< QgsGeometryPaintDevice >( true );
+      geomPaintDevice->setStrokedPathSegments( 4 );
+      geomPaintDevice->setSimplificationTolerance( labelJob.context.maskSettings().simplifyTolerance() );
+      maskPaintDevice = geomPaintDevice.release();
       maskPainter = new QPainter( maskPaintDevice );
     }
     else
@@ -887,7 +892,10 @@ std::vector< LayerRenderJob > QgsMapRendererJob::prepareSecondPassJobs( std::vec
       if ( forceVector && !maskLayerHasEffects[ job.layerId ] )
       {
         // set a painter to get all masking instruction in order to later clip masked symbol layer
-        maskPaintDevice = new QgsMaskPaintDevice();
+        std::unique_ptr< QgsGeometryPaintDevice > geomPaintDevice = std::make_unique< QgsGeometryPaintDevice >( );
+        geomPaintDevice->setStrokedPathSegments( 4 );
+        geomPaintDevice->setSimplificationTolerance( job.context()->maskSettings().simplifyTolerance() );
+        maskPaintDevice = geomPaintDevice.release();
         maskPainter = new QPainter( maskPaintDevice );
       }
       else
@@ -990,10 +998,23 @@ void QgsMapRendererJob::initSecondPassJobs( std::vector< LayerRenderJob > &secon
     for ( const QPair<LayerRenderJob *, int> &p : std::as_const( job.maskJobs ) )
     {
       QPainter *maskPainter = p.first ? p.first->maskPainter.get() : labelJob.maskPainters[p.second].get();
-      QPainterPath path = static_cast<QgsMaskPaintDevice *>( maskPainter->device() )->maskPainterPath();
-      for ( const QString &symbolLayerId : job.context()->disabledSymbolLayersV2() )
+
+      const QSet<QString> layers = job.context()->disabledSymbolLayersV2();
+      if ( QgsGeometryPaintDevice *geometryDevice = dynamic_cast<QgsGeometryPaintDevice *>( maskPainter->device() ) )
       {
-        job.context()->addSymbolLayerClipPath( symbolLayerId, path );
+        QgsGeometry geometry( geometryDevice->geometry().clone() );
+
+#if GEOS_VERSION_MAJOR==3 && GEOS_VERSION_MINOR<10
+        // structure would be better, but too old GEOS
+        geometry = geometry.makeValid( Qgis::MakeValidMethod::Linework );
+#else
+        geometry = geometry.makeValid( Qgis::MakeValidMethod::Structure );
+#endif
+
+        for ( const QString &symbolLayerId : layers )
+        {
+          job.context()->addSymbolLayerClipGeometry( symbolLayerId, geometry );
+        }
       }
     }
 

@@ -48,6 +48,7 @@
 #include "qgslinesymbol.h"
 #include "qgsmarkersymbol.h"
 #include "qgsfillsymbol.h"
+#include "qgsheatmaprenderer.h"
 
 static void _setStandardTestFont( QgsLegendSettings &settings, const QString &style = QStringLiteral( "Roman" ) )
 {
@@ -198,6 +199,9 @@ class TestQgsLegendRenderer : public QgsTest
     void testDiagramAttributeLegend();
     void testDiagramSizeLegend();
     void testDataDefinedSizeCollapsed();
+    void testDataDefinedSizeSeparated();
+    void testDataDefinedSizeCollapsedFilterByMap();
+    void testDataDefinedSizeSeparatedFilterByMap();
     void testTextOnSymbol();
     void testColumnsMixedSymbolSize();
 
@@ -206,6 +210,7 @@ class TestQgsLegendRenderer : public QgsTest
     void testBigMarkerJson();
 
     void testLabelLegend();
+    void testHeatmap();
 
   private:
     QgsLayerTree *mRoot = nullptr;
@@ -253,7 +258,7 @@ void TestQgsLegendRenderer::init()
   {
     QgsVectorDataProvider *pr = mVL3->dataProvider();
     QList<QgsField> attrs;
-    attrs << QgsField( QStringLiteral( "test_attr" ), QVariant::Int );
+    attrs << QgsField( QStringLiteral( "test_attr" ), QMetaType::Type::Int );
     pr->addAttributes( attrs );
 
     QgsFields fields;
@@ -973,7 +978,7 @@ void TestQgsLegendRenderer::testFilterByMapSameSymbol()
   {
     QgsVectorDataProvider *pr = vl4->dataProvider();
     QList<QgsField> attrs;
-    attrs << QgsField( QStringLiteral( "test_attr" ), QVariant::Int );
+    attrs << QgsField( QStringLiteral( "test_attr" ), QMetaType::Type::Int );
     pr->addAttributes( attrs );
 
     QgsFields fields;
@@ -1489,7 +1494,7 @@ void TestQgsLegendRenderer::testDataDefinedSizeCollapsed()
   {
     QgsVectorDataProvider *pr = vlDataDefinedSize->dataProvider();
     QList<QgsField> attrs;
-    attrs << QgsField( QStringLiteral( "test_attr" ), QVariant::Int );
+    attrs << QgsField( QStringLiteral( "test_attr" ), QMetaType::Type::Int );
     pr->addAttributes( attrs );
 
     QgsFields fields;
@@ -1533,6 +1538,209 @@ void TestQgsLegendRenderer::testDataDefinedSizeCollapsed()
   root->addLayer( vlDataDefinedSize );
 
   QgsLayerTreeModel legendModel( root );
+
+  QgsLegendSettings settings;
+  _setStandardTestFont( settings, QStringLiteral( "Bold" ) );
+  QImage res = _renderLegend( &legendModel, settings );
+  QVERIFY( _verifyImage( res, testName ) );
+
+  delete root;
+}
+
+void TestQgsLegendRenderer::testDataDefinedSizeSeparated()
+{
+  const QString testName = QStringLiteral( "legend_data_defined_size_separated" );
+
+  QgsVectorLayer *vlDataDefinedSize = new QgsVectorLayer( QStringLiteral( "Point" ), QStringLiteral( "Point Layer" ), QStringLiteral( "memory" ) );
+  {
+    QgsVectorDataProvider *pr = vlDataDefinedSize->dataProvider();
+    QList<QgsField> attrs;
+    attrs << QgsField( QStringLiteral( "test_attr" ), QMetaType::Type::Int );
+    pr->addAttributes( attrs );
+
+    QgsFields fields;
+    fields.append( attrs.back() );
+
+    const QgsGeometry g = QgsGeometry::fromPointXY( QgsPointXY( 1.0, 1.0 ) );
+
+    QList<QgsFeature> features;
+    QgsFeature f1( fields, 1 );
+    f1.setAttribute( 0, 100 );
+    f1.setGeometry( g );
+    QgsFeature f2( fields, 2 );
+    f2.setAttribute( 0, 200 );
+    f2.setGeometry( g );
+    QgsFeature f3( fields, 3 );
+    f3.setAttribute( 0, 300 );
+    f3.setGeometry( g );
+    features << f1 << f2 << f3;
+    pr->addFeatures( features );
+    vlDataDefinedSize->updateFields();
+  }
+
+  QVariantMap props;
+  props[QStringLiteral( "name" )] = QStringLiteral( "circle" );
+  props[QStringLiteral( "color" )] = QStringLiteral( "200,200,200" );
+  props[QStringLiteral( "outline_color" )] = QStringLiteral( "0,0,0" );
+  QgsMarkerSymbol *symbol = QgsMarkerSymbol::createSimple( props );
+  QgsProperty ddsProperty = QgsProperty::fromField( QStringLiteral( "test_attr" ) );
+  ddsProperty.setTransformer( new QgsSizeScaleTransformer( QgsSizeScaleTransformer::Linear, 100, 300, 10, 30 ) );  // takes ownership
+  symbol->setDataDefinedSize( ddsProperty );
+
+  QgsDataDefinedSizeLegend *ddsLegend = new QgsDataDefinedSizeLegend();
+  ddsLegend->setLegendType( QgsDataDefinedSizeLegend::LegendSeparated );
+  ddsLegend->setFont( QgsFontUtils::getStandardTestFont( QStringLiteral( "Bold" ) ) );
+
+  QgsSingleSymbolRenderer *r = new QgsSingleSymbolRenderer( symbol );   // takes ownership
+  r->setDataDefinedSizeLegend( ddsLegend );
+  vlDataDefinedSize->setRenderer( r );
+
+  QgsLayerTree *root = new QgsLayerTree();
+  root->addLayer( vlDataDefinedSize );
+
+  QgsLayerTreeModel legendModel( root );
+
+  QgsLegendSettings settings;
+  _setStandardTestFont( settings, QStringLiteral( "Bold" ) );
+  QImage res = _renderLegend( &legendModel, settings );
+  QVERIFY( _verifyImage( res, testName ) );
+
+  delete root;
+}
+
+void TestQgsLegendRenderer::testDataDefinedSizeCollapsedFilterByMap()
+{
+  const QString testName = QStringLiteral( "legend_data_defined_size_filter_by_map" );
+
+  QgsVectorLayer *vlDataDefinedSize = new QgsVectorLayer( QStringLiteral( "Point" ), QStringLiteral( "Point Layer" ), QStringLiteral( "memory" ) );
+  {
+    QgsVectorDataProvider *pr = vlDataDefinedSize->dataProvider();
+    QList<QgsField> attrs;
+    attrs << QgsField( QStringLiteral( "test_attr" ), QMetaType::Type::Int );
+    pr->addAttributes( attrs );
+
+    QgsFields fields;
+    fields.append( attrs.back() );
+
+    const QgsGeometry g = QgsGeometry::fromPointXY( QgsPointXY( 1.0, 1.0 ) );
+
+    QList<QgsFeature> features;
+    QgsFeature f1( fields, 1 );
+    f1.setAttribute( 0, 100 );
+    f1.setGeometry( g );
+    QgsFeature f2( fields, 2 );
+    f2.setAttribute( 0, 200 );
+    f2.setGeometry( g );
+    QgsFeature f3( fields, 3 );
+    f3.setAttribute( 0, 300 );
+    f3.setGeometry( g );
+    features << f1 << f2 << f3;
+    pr->addFeatures( features );
+    vlDataDefinedSize->updateFields();
+  }
+
+  QVariantMap props;
+  props[QStringLiteral( "name" )] = QStringLiteral( "circle" );
+  props[QStringLiteral( "color" )] = QStringLiteral( "200,200,200" );
+  props[QStringLiteral( "outline_color" )] = QStringLiteral( "0,0,0" );
+  QgsMarkerSymbol *symbol = QgsMarkerSymbol::createSimple( props );
+  QgsProperty ddsProperty = QgsProperty::fromField( QStringLiteral( "test_attr" ) );
+  ddsProperty.setTransformer( new QgsSizeScaleTransformer( QgsSizeScaleTransformer::Linear, 100, 300, 10, 30 ) );  // takes ownership
+  symbol->setDataDefinedSize( ddsProperty );
+
+  QgsDataDefinedSizeLegend *ddsLegend = new QgsDataDefinedSizeLegend();
+  ddsLegend->setLegendType( QgsDataDefinedSizeLegend::LegendCollapsed );
+  ddsLegend->setFont( QgsFontUtils::getStandardTestFont( QStringLiteral( "Bold" ) ) );
+
+  QgsSingleSymbolRenderer *r = new QgsSingleSymbolRenderer( symbol );   // takes ownership
+  r->setDataDefinedSizeLegend( ddsLegend );
+  vlDataDefinedSize->setRenderer( r );
+
+  QgsLayerTree *root = new QgsLayerTree();
+  root->addLayer( vlDataDefinedSize );
+
+  QgsLayerTreeModel legendModel( root );
+
+  QgsMapSettings mapSettings;
+  // extent and size to include only the red and green points
+  mapSettings.setExtent( QgsRectangle( 10, 10, 20, 20 ) );
+  mapSettings.setOutputSize( QSize( 400, 100 ) );
+  mapSettings.setOutputDpi( 96 );
+  mapSettings.setLayers( QgsProject::instance()->mapLayers().values() );
+
+  QgsLayerTreeFilterSettings filterSettings( mapSettings );
+  legendModel.setFilterSettings( &filterSettings );
+
+  QgsLegendSettings settings;
+  _setStandardTestFont( settings, QStringLiteral( "Bold" ) );
+  QImage res = _renderLegend( &legendModel, settings );
+  QVERIFY( _verifyImage( res, testName ) );
+
+  delete root;
+}
+
+void TestQgsLegendRenderer::testDataDefinedSizeSeparatedFilterByMap()
+{
+  const QString testName = QStringLiteral( "legend_data_defined_size_filter_by_map" );
+
+  QgsVectorLayer *vlDataDefinedSize = new QgsVectorLayer( QStringLiteral( "Point" ), QStringLiteral( "Point Layer" ), QStringLiteral( "memory" ) );
+  {
+    QgsVectorDataProvider *pr = vlDataDefinedSize->dataProvider();
+    QList<QgsField> attrs;
+    attrs << QgsField( QStringLiteral( "test_attr" ), QMetaType::Type::Int );
+    pr->addAttributes( attrs );
+
+    QgsFields fields;
+    fields.append( attrs.back() );
+
+    const QgsGeometry g = QgsGeometry::fromPointXY( QgsPointXY( 1.0, 1.0 ) );
+
+    QList<QgsFeature> features;
+    QgsFeature f1( fields, 1 );
+    f1.setAttribute( 0, 100 );
+    f1.setGeometry( g );
+    QgsFeature f2( fields, 2 );
+    f2.setAttribute( 0, 200 );
+    f2.setGeometry( g );
+    QgsFeature f3( fields, 3 );
+    f3.setAttribute( 0, 300 );
+    f3.setGeometry( g );
+    features << f1 << f2 << f3;
+    pr->addFeatures( features );
+    vlDataDefinedSize->updateFields();
+  }
+
+  QVariantMap props;
+  props[QStringLiteral( "name" )] = QStringLiteral( "circle" );
+  props[QStringLiteral( "color" )] = QStringLiteral( "200,200,200" );
+  props[QStringLiteral( "outline_color" )] = QStringLiteral( "0,0,0" );
+  QgsMarkerSymbol *symbol = QgsMarkerSymbol::createSimple( props );
+  QgsProperty ddsProperty = QgsProperty::fromField( QStringLiteral( "test_attr" ) );
+  ddsProperty.setTransformer( new QgsSizeScaleTransformer( QgsSizeScaleTransformer::Linear, 100, 300, 10, 30 ) );  // takes ownership
+  symbol->setDataDefinedSize( ddsProperty );
+
+  QgsDataDefinedSizeLegend *ddsLegend = new QgsDataDefinedSizeLegend();
+  ddsLegend->setLegendType( QgsDataDefinedSizeLegend::LegendSeparated );
+  ddsLegend->setFont( QgsFontUtils::getStandardTestFont( QStringLiteral( "Bold" ) ) );
+
+  QgsSingleSymbolRenderer *r = new QgsSingleSymbolRenderer( symbol );   // takes ownership
+  r->setDataDefinedSizeLegend( ddsLegend );
+  vlDataDefinedSize->setRenderer( r );
+
+  QgsLayerTree *root = new QgsLayerTree();
+  root->addLayer( vlDataDefinedSize );
+
+  QgsLayerTreeModel legendModel( root );
+
+  QgsMapSettings mapSettings;
+  // extent and size to include only the red and green points
+  mapSettings.setExtent( QgsRectangle( 10, 10, 20, 20 ) );
+  mapSettings.setOutputSize( QSize( 400, 100 ) );
+  mapSettings.setOutputDpi( 96 );
+  mapSettings.setLayers( QgsProject::instance()->mapLayers().values() );
+
+  QgsLayerTreeFilterSettings filterSettings( mapSettings );
+  legendModel.setFilterSettings( &filterSettings );
 
   QgsLegendSettings settings;
   _setStandardTestFont( settings, QStringLiteral( "Bold" ) );
@@ -1802,6 +2010,39 @@ void TestQgsLegendRenderer::testLabelLegend()
 
   vLayerLegend->setShowLabelLegend( bkLabelLegendEnabled );
   mVL3->setLabelsEnabled( bkLabelsEnabled );
+}
+
+void TestQgsLegendRenderer::testHeatmap()
+{
+  std::unique_ptr< QgsLayerTree > root( new QgsLayerTree() );
+
+  QgsVectorLayer *vl = new QgsVectorLayer( QStringLiteral( "Points" ), QStringLiteral( "Points" ), QStringLiteral( "memory" ) );
+  QgsProject::instance()->addMapLayer( vl );
+  QgsHeatmapRenderer *renderer = new QgsHeatmapRenderer();
+  renderer->setColorRamp( new QgsGradientColorRamp( QColor( 255, 0, 0 ), QColor( 255, 200, 100 ) ) );
+  QgsColorRampLegendNodeSettings rampSettings;
+
+  QFont font( QgsFontUtils::getStandardTestFont( QStringLiteral( "Bold" ) ) );
+  QgsTextFormat f;
+  f.setSize( 16 );
+  f.setFont( font );
+  rampSettings.setTextFormat( f );
+  rampSettings.setMinimumLabel( "min" );
+  rampSettings.setMaximumLabel( "max" );
+  renderer->setLegendSettings( rampSettings );
+
+  vl->setRenderer( renderer );
+  vl->setLegend( new QgsDefaultVectorLayerLegend( vl ) );
+  root->addLayer( vl );
+
+  QgsLayerTreeModel legendModel( root.get() );
+  QgsLegendSettings settings;
+  settings.rstyle( QgsLegendStyle::Style::Symbol ).setMargin( QgsLegendStyle::Side::Top, 9 );
+  _setStandardTestFont( settings, QStringLiteral( "Bold" ) );
+  const QImage res = _renderLegend( &legendModel, settings );
+
+  QgsProject::instance()->removeMapLayer( vl );
+  QVERIFY( _verifyImage( res, QStringLiteral( "heatmap" ) ) );
 }
 
 

@@ -287,9 +287,9 @@ namespace
       default:
         if ( field.isGeometry() )
         {
-          if ( value.type() == QVariant::String )
+          if ( value.userType() == QMetaType::Type::QString )
             stmt->setString( paramIndex, isNull ? String() : String( value.toString().toStdString() ) );
-          else if ( value.type() == QVariant::ByteArray )
+          else if ( value.userType() == QMetaType::Type::QByteArray )
           {
             QByteArray arr = value.toByteArray();
             stmt->setBinary( paramIndex, isNull ? Binary() :  Binary( vector<char>( arr.begin(), arr.end() ) ) );
@@ -367,6 +367,7 @@ QgsHanaProvider::QgsHanaProvider(
   mSrid = ( !mUri.srid().isEmpty() ) ? mUri.srid().toInt() : -1;
   mSelectAtIdDisabled = mUri.selectAtIdDisabled();
   mHasSrsPlanarEquivalent = false;
+  mUseEstimatedMetadata = mUri.useEstimatedMetadata();
 
   auto appendError = [this]( const QString & message )
   {
@@ -456,7 +457,7 @@ QgsVectorDataProvider::Capabilities QgsHanaProvider::capabilities() const
 QgsRectangle QgsHanaProvider::extent() const
 {
   if ( mLayerExtent.isEmpty() )
-    mLayerExtent = estimateExtent();
+    mLayerExtent = estimateExtent( mUseEstimatedMetadata );
   return mLayerExtent;
 }
 
@@ -673,7 +674,7 @@ bool QgsHanaProvider::addFeatures( QgsFeatureList &flist, Flags flags )
     }
 
     columnNames << QgsHanaUtils::quotedIdentifier( field.name );
-    if ( field.isGeometry() && mFields.at( idx ).type() == QVariant::String )
+    if ( field.isGeometry() && mFields.at( idx ).type() == QMetaType::Type::QString )
       values << QStringLiteral( "ST_GeomFromWKT(?, %1)" ).arg( QString::number( field.srid ) );
     else
       values << QStringLiteral( "?" );
@@ -728,7 +729,7 @@ bool QgsHanaProvider::addFeatures( QgsFeatureList &flist, Flags flags )
       {
         const int fieldIndex = fieldIds[i];
         const AttributeField &field = mAttributeFields.at( fieldIndex );
-        QVariant attrValue = fieldIndex < attrs.length() ? attrs.at( fieldIndex ) : QVariant( QVariant::LongLong );
+        QVariant attrValue = fieldIndex < attrs.length() ? attrs.at( fieldIndex ) : QgsVariantUtils::createNullVariant( QMetaType::Type::LongLong );
         if ( pkFields[i] )
         {
           hasIdValue = hasIdValue || !attrValue.isNull();
@@ -1169,7 +1170,7 @@ bool QgsHanaProvider::changeAttributeValues( const QgsChangedAttributesMap &attr
           continue;
 
         pkChanged = pkChanged || mPrimaryKeyAttrs.contains( fieldIndex );
-        if ( field.isGeometry() && mFields.at( fieldIndex ).type() == QVariant::String )
+        if ( field.isGeometry() && mFields.at( fieldIndex ).type() == QMetaType::Type::QString )
           attrs << QStringLiteral( "%1=ST_GeomFromWKT(?, %2)" ).arg(
                   QgsHanaUtils::quotedIdentifier( field.name ), QString::number( field.srid ) );
         else
@@ -1327,7 +1328,27 @@ bool QgsHanaProvider::checkPermissionsAndSetCapabilities( QgsHanaConnection &con
   return true;
 }
 
-QgsRectangle QgsHanaProvider::estimateExtent() const
+static bool checkHANAVersion( QgsHanaConnection &conn, const QVersionNumber &premise, const QVersionNumber &cloud )
+{
+  try
+  {
+    QVersionNumber version = QgsHanaUtils::toHANAVersion( conn.getDatabaseVersion() );
+    switch ( version.majorVersion() )
+    {
+      case 2: return version >= premise;
+      case 4: return QgsHanaUtils::toHANAVersion( conn.getDatabaseCloudVersion() ) >= cloud;
+      default: return false;
+    }
+  }
+  catch ( const QgsHanaException &ex )
+  {
+    return false;
+  }
+
+  return false;
+}
+
+QgsRectangle QgsHanaProvider::estimateExtent( bool useEstimatedMetadata ) const
 {
   if ( mGeometryColumn.isEmpty() )
     return QgsRectangle();
@@ -1336,9 +1357,23 @@ QgsRectangle QgsHanaProvider::estimateExtent() const
   if ( conn.isNull() )
     return QgsRectangle();
 
-  try
+  if ( useEstimatedMetadata && !checkHANAVersion( *conn, QVersionNumber( 2, 0, 80 ), QVersionNumber( 2024, 2, 0 ) ) )
+    useEstimatedMetadata = false;
+
+  QString sql;
+  if ( useEstimatedMetadata )
   {
-    QString sql;
+    sql = ::buildQuery(
+            "SYS.M_ST_GEOMETRY_COLUMNS",
+            "MIN_X,MIN_Y,MAX_X,MAX_Y",
+            QStringLiteral( "SCHEMA_NAME=%1 AND TABLE_NAME=%2 AND COLUMN_NAME=%3" )
+            .arg(
+              QgsHanaUtils::quotedString( mSchemaName ),
+              QgsHanaUtils::quotedString( mTableName ),
+              QgsHanaUtils::quotedString( mGeometryColumn ) ), QString(), 1 );
+  }
+  else
+  {
     if ( isSrsRoundEarth( *conn, mSrid ) )
     {
       QString geomColumn = !mHasSrsPlanarEquivalent ? QgsHanaUtils::quotedIdentifier( mGeometryColumn ) :
@@ -1350,7 +1385,10 @@ QgsRectangle QgsHanaProvider::estimateExtent() const
       QString subQuery = buildQuery( QStringLiteral( "ST_EnvelopeAggr(%1) AS ext" ).arg( QgsHanaUtils::quotedIdentifier( mGeometryColumn ) ) );
       sql = QStringLiteral( "SELECT ext.ST_XMin(),ext.ST_YMin(),ext.ST_XMax(),ext.ST_YMax() FROM (%1)" ).arg( subQuery );
     }
+  }
 
+  try
+  {
     QgsHanaResultSetRef rsExtent = conn->executeQuery( sql );
     QgsRectangle ret;
     if ( rsExtent->next() )
@@ -1365,6 +1403,11 @@ QgsRectangle QgsHanaProvider::estimateExtent() const
       }
     }
     rsExtent->close();
+
+    if ( useEstimatedMetadata && ret.isEmpty() )
+      // In this case it is very likely that the fast extent is not yet available, try again without using cached data
+      return estimateExtent( false );
+
     return ret;
   }
   catch ( const QgsHanaException &ex )

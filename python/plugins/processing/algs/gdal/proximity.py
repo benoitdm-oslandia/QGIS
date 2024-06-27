@@ -101,9 +101,7 @@ class proximity(GdalAlgorithm):
                                                      defaultValue='',
                                                      optional=True)
         options_param.setFlags(options_param.flags() | QgsProcessingParameterDefinition.Flag.FlagAdvanced)
-        options_param.setMetadata({
-            'widget_wrapper': {
-                'class': 'processing.algs.gdal.ui.RasterOptionsWidget.RasterOptionsWidgetWrapper'}})
+        options_param.setMetadata({'widget_wrapper': {'widget_type': 'rasteroptions'}})
         self.addParameter(options_param)
 
         extra_param = QgsProcessingParameterString(self.EXTRA,
@@ -143,6 +141,8 @@ class proximity(GdalAlgorithm):
         inLayer = self.parameterAsRasterLayer(parameters, self.INPUT, context)
         if inLayer is None:
             raise QgsProcessingException(self.invalidRasterError(parameters, self.INPUT))
+        input_details = GdalUtils.gdal_connection_details_from_layer(
+            inLayer)
 
         distance = self.parameterAsDouble(parameters, self.MAX_DISTANCE, context)
         replaceValue = self.parameterAsDouble(parameters, self.REPLACE, context)
@@ -199,7 +199,10 @@ class proximity(GdalAlgorithm):
             extra = self.parameterAsString(parameters, self.EXTRA, context)
             arguments.append(extra)
 
-        arguments.append(inLayer.source())
+        arguments.append(input_details.connection_string)
         arguments.append(out)
+
+        if input_details.credential_options:
+            arguments.extend(input_details.credential_options_as_arguments())
 
         return [self.commandName() + ('.bat' if isWindows() else '.py'), GdalUtils.escapeAndJoin(arguments)]

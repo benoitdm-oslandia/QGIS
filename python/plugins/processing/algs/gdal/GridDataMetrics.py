@@ -115,9 +115,7 @@ class GridDataMetrics(GdalAlgorithm):
                                                      defaultValue='',
                                                      optional=True)
         options_param.setFlags(options_param.flags() | QgsProcessingParameterDefinition.Flag.FlagAdvanced)
-        options_param.setMetadata({
-            'widget_wrapper': {
-                'class': 'processing.algs.gdal.ui.RasterOptionsWidget.RasterOptionsWidgetWrapper'}})
+        options_param.setMetadata({'widget_wrapper': {'widget_type': 'rasteroptions'}})
         self.addParameter(options_param)
 
         extra_param = QgsProcessingParameterString(self.EXTRA,
@@ -157,11 +155,13 @@ class GridDataMetrics(GdalAlgorithm):
         return 'gdal_grid'
 
     def getConsoleCommands(self, parameters, context, feedback, executing=True):
-        ogrLayer, layerName = self.getOgrCompatibleSource(self.INPUT, parameters, context, feedback, executing)
+        input_details = self.getOgrCompatibleSource(self.INPUT,
+                                                    parameters, context,
+                                                    feedback, executing)
 
         arguments = [
             '-l',
-            layerName
+            input_details.layer_name
         ]
         fieldName = self.parameterAsString(parameters, self.Z_FIELD, context)
         if fieldName:
@@ -194,6 +194,12 @@ class GridDataMetrics(GdalAlgorithm):
         arguments.append('-of')
         arguments.append(output_format)
 
+        if input_details.open_options:
+            if GdalUtils.version() < 3070000:
+                raise QgsProcessingException(self.tr('Open options are not supported by gdal_grid version {} (requires GDAL version 3.7 or later)'.format(GdalUtils.readableVersion())))
+
+            arguments.extend(input_details.open_options_as_arguments())
+
         options = self.parameterAsString(parameters, self.OPTIONS, context)
 
         if options:
@@ -203,7 +209,10 @@ class GridDataMetrics(GdalAlgorithm):
             extra = self.parameterAsString(parameters, self.EXTRA, context)
             arguments.append(extra)
 
-        arguments.append(ogrLayer)
+        arguments.append(input_details.connection_string)
         arguments.append(out)
+
+        if input_details.credential_options:
+            arguments.extend(input_details.credential_options_as_arguments())
 
         return [self.commandName(), GdalUtils.escapeAndJoin(arguments)]

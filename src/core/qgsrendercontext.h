@@ -37,6 +37,7 @@
 #include "qgscoordinatetransformcontext.h"
 #include "qgspathresolver.h"
 #include "qgstemporalrangeobject.h"
+#include "qgsmaskrendersettings.h"
 
 class QPainter;
 class QgsAbstractGeometry;
@@ -930,16 +931,72 @@ class CORE_EXPORT QgsRenderContext : public QgsTemporalRangeObject
     void setTextureOrigin( const QPointF &origin );
 
     /**
-     * Add a clip \a path to be applied to the \a symbolLayer before rendering
-     * \since QGIS 3.26, arguments changed and public API since 3.30
+     * Returns a reference to the mask render settings, which control how masks
+     * are drawn and behave during render operations.
+     *
+     * \see setMaskSettings()
+     * \since QGIS 3.38
      */
-    void addSymbolLayerClipPath( const QString &symbolLayerId, QPainterPath path );
+    const QgsMaskRenderSettings &maskSettings() const SIP_SKIP { return mMaskRenderSettings; }
+
+    /**
+     * Returns a reference to the mask render settings, which control how masks
+     * are drawn and behave during render operations.
+     *
+     * \see setMaskSettings()
+     * \since QGIS 3.38
+     */
+    QgsMaskRenderSettings &maskSettings() { return mMaskRenderSettings; }
+
+    /**
+     * Sets the mask render \a settings, which control how masks
+     * are drawn and behave during render operations.
+     *
+     * \see maskSettings()
+     * \since QGIS 3.38
+     */
+    void setMaskSettings( const QgsMaskRenderSettings &settings );
+
+    /**
+     * Add a clip \a path to be applied to the \a symbolLayer before rendering
+     * \see addSymbolLayerClipGeometry()
+     *
+     * \deprecated QGIS 3.38, use addSymbolLayerClipGeometry() instead.
+     */
+    Q_DECL_DEPRECATED void addSymbolLayerClipPath( const QString &symbolLayerId, QPainterPath path ) SIP_DEPRECATED;
 
     /**
      * Returns clip paths to be applied to the \a symbolLayer before rendering
-     * \since QGIS 3.26, arguments changed and public API since 3.30
+     *
+     *\see symbolLayerClipGeometries()
+     * \deprecated QGIS 3.38, use symbolLayerClipGeometries() instead.
      */
-    QList<QPainterPath> symbolLayerClipPaths( const QString &symbolLayerId ) const;
+    Q_DECL_DEPRECATED QList<QPainterPath> symbolLayerClipPaths( const QString &symbolLayerId ) const SIP_DEPRECATED;
+
+    /**
+     * Add a clip \a geometry to be applied to the \a symbolLayer before rendering.
+     *
+     * \see symbolLayerClipGeometries()
+     * \since QGIS 3.38
+     */
+    void addSymbolLayerClipGeometry( const QString &symbolLayerId, const QgsGeometry &geometry );
+
+    /**
+     * Returns TRUE if the symbol layer with matching ID has any associated clip geometries.
+     *
+     * \see symbolLayerClipGeometries()
+     * \since QGIS 3.38
+     */
+    bool symbolLayerHasClipGeometries( const QString &symbolLayerId ) const;
+
+    /**
+     * Returns clipping geometries to be applied to the \a symbolLayer before rendering
+     *
+     * \see symbolLayerHasClipGeometries()
+     * \see addSymbolLayerClipGeometry()
+     * \since QGIS 3.38
+     */
+    QVector<QgsGeometry> symbolLayerClipGeometries( const QString &symbolLayerId ) const;
 
     /**
      * Returns the range of z-values which should be rendered.
@@ -1224,8 +1281,10 @@ class CORE_EXPORT QgsRenderContext : public QgsTemporalRangeObject
     double mFrameRate = -1;
     long long mCurrentFrame = -1;
 
-    //! clip paths to be applied to the symbol layer before rendering
-    QMap< QString, QList<QPainterPath> > mSymbolLayerClipPaths;
+    //! Clip geometries to be applied to the symbol layer before rendering
+    QMap< QString, QVector<QgsGeometry> > mSymbolLayerClippingGeometries;
+
+    QgsMaskRenderSettings mMaskRenderSettings;
 
 #ifdef QGISDEBUG
     bool mHasTransformContext = false;

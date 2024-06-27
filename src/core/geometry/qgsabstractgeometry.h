@@ -644,8 +644,23 @@ class CORE_EXPORT QgsAbstractGeometry
      * \param vSpacing Vertical spacing of the grid (y axis). 0 to disable.
      * \param dSpacing Depth spacing of the grid (z axis). 0 (default) to disable.
      * \param mSpacing Custom dimension spacing of the grid (m axis). 0 (default) to disable.
+     * \param removeRedundantPoints if TRUE, then points which are redundant (e.g. they represent mid points on a straight line segment) will be skipped (since QGIS 3.38)
      */
-    virtual QgsAbstractGeometry *snappedToGrid( double hSpacing, double vSpacing, double dSpacing = 0, double mSpacing = 0 ) const = 0 SIP_FACTORY;
+    virtual QgsAbstractGeometry *snappedToGrid( double hSpacing, double vSpacing, double dSpacing = 0, double mSpacing = 0, bool removeRedundantPoints = false ) const = 0 SIP_FACTORY;
+
+    /**
+     * Simplifies the geometry by applying the Douglas Peucker simplification by distance
+     * algorithm.
+     *
+     * The caller takes ownership of the returned geometry. Curved geometries will be segmentized prior to simplification.
+     *
+     * If a simplified geometry cannot be calculated NULLPTR will be returned.
+     *
+     * The returned geometry may be invalid and contain self-intersecting rings.
+     *
+     * \since QGIS 3.38
+    */
+    virtual QgsAbstractGeometry *simplifyByDistance( double tolerance ) const = 0 SIP_FACTORY;
 
     /**
      * Removes duplicate nodes from the geometry, wherever removing the nodes does not result in a

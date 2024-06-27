@@ -66,6 +66,7 @@ class TestQgsMapSettings: public QObject
     void testComputeExtentForScale();
     void testComputeScaleForExtent();
     void testLayersWithGroupLayers();
+    void testMaskRenderSettings();
 
   private:
     QString toString( const QPolygonF &p, int decimalPlaces = 2 ) const;
@@ -116,11 +117,11 @@ void TestQgsMapSettings::testGettersSetters()
   QCOMPARE( ms.textRenderFormat(), Qgis::TextRenderFormat::AlwaysOutlines );
 
   // must default to no simplification
-  QCOMPARE( ms.simplifyMethod().simplifyHints(), QgsVectorSimplifyMethod::NoSimplification );
+  QCOMPARE( ms.simplifyMethod().simplifyHints(), Qgis::VectorRenderingSimplificationFlags() );
   QgsVectorSimplifyMethod simplify;
-  simplify.setSimplifyHints( QgsVectorSimplifyMethod::GeometrySimplification );
+  simplify.setSimplifyHints( Qgis::VectorRenderingSimplificationFlag::GeometrySimplification );
   ms.setSimplifyMethod( simplify );
-  QCOMPARE( ms.simplifyMethod().simplifyHints(), QgsVectorSimplifyMethod::GeometrySimplification );
+  QCOMPARE( ms.simplifyMethod().simplifyHints(), Qgis::VectorRenderingSimplificationFlag::GeometrySimplification );
 
   QVERIFY( ms.zRange().isInfinite() );
   ms.setZRange( QgsDoubleRange( 1, 10 ) );
@@ -770,6 +771,24 @@ void TestQgsMapSettings::testLayersWithGroupLayers()
   QCOMPARE( settings.layerIds( true ).at( 0 ), vlA->id() );
   QCOMPARE( settings.layerIds( true ).at( 1 ), vlB->id() );
   QCOMPARE( settings.layerIds( true ).at( 2 ), vlC->id() );
+}
+
+void TestQgsMapSettings::testMaskRenderSettings()
+{
+  QgsMapSettings settings;
+  settings.maskSettings().setSimplificationTolerance( 10 );
+  QCOMPARE( settings.maskSettings().simplifyTolerance(), 10 );
+
+  QgsMaskRenderSettings maskSettings;
+  maskSettings.setSimplificationTolerance( 11 );
+  settings.setMaskSettings( maskSettings );
+  QCOMPARE( settings.maskSettings().simplifyTolerance(), 11 );
+
+  QgsMapSettings settings2 = settings;
+  QCOMPARE( settings2.maskSettings().simplifyTolerance(), 11 );
+
+  QgsMapSettings settings3( settings );
+  QCOMPARE( settings3.maskSettings().simplifyTolerance(), 11 );
 }
 
 QGSTEST_MAIN( TestQgsMapSettings )
