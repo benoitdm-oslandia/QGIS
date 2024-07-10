@@ -342,15 +342,12 @@ void QgsFrameGraph::constructDepthRenderPass()
 
   depthOutput->setTexture( depthTexture );
 
-  QgsDepthRenderView *depthRenderView = new QgsDepthRenderView( this, mMainCamera );
-  depthRenderView->setTargetOutputs( { colorOutput, depthOutput } );
-  registerRenderView( depthRenderView, DEPTH_RENDERVIEW );
-
-  // entity used to draw the depth texture and convert it to rgb image
   QgsAbstractRenderView *forwardRenderView = renderView( QgsFrameGraph::FORWARD_RENDERVIEW );
   Qt3DRender::QTexture2D *forwardDepthTexture = forwardRenderView->outputTexture( Qt3DRender::QRenderTargetOutput::Depth );
-  Qt3DCore::QEntity *quad = new QgsDepthEntity( forwardDepthTexture, depthRenderView->layerToFilter(), mRootEntity );
-  quad->setParent( mRootEntity );
+
+  QgsDepthRenderView *depthRenderView = new QgsDepthRenderView( this, mMainCamera, forwardDepthTexture, mRootEntity );
+  depthRenderView->setTargetOutputs( { colorOutput, depthOutput } );
+  registerRenderView( depthRenderView, DEPTH_RENDERVIEW );
 }
 
 Qt3DRender::QRenderCapture *QgsFrameGraph::depthRenderCapture()

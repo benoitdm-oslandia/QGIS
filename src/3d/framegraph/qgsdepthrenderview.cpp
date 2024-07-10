@@ -27,9 +27,12 @@
 #include <Qt3DRender/QDepthTest>
 #include <Qt3DRender/QCullFace>
 #include <Qt3DRender/QRenderCapture>
+#include "qgsdepthentity.h"
 
-
-QgsDepthRenderView::QgsDepthRenderView( QObject *parent, Qt3DRender::QCamera *mainCamera )
+QgsDepthRenderView::QgsDepthRenderView( QObject *parent
+                                        , Qt3DRender::QCamera *mainCamera
+                                        , Qt3DRender::QTexture2D *forwardDepthTexture
+                                        , Qt3DCore::QEntity *rootSceneEntity )
   : QgsAbstractRenderView( parent, "depth" )
   , mMainCamera( mainCamera )
 {
@@ -38,10 +41,11 @@ QgsDepthRenderView::QgsDepthRenderView( QObject *parent, Qt3DRender::QCamera *ma
   mLayer->setObjectName( mViewName + "::Layer" );
 
   // depth rendering pass
-  constructDepthRenderPass();
+  constructDepthRenderPass( forwardDepthTexture, rootSceneEntity );
 }
 
-Qt3DRender::QFrameGraphNode *QgsDepthRenderView::constructDepthRenderPass()
+Qt3DRender::QFrameGraphNode *QgsDepthRenderView::constructDepthRenderPass( Qt3DRender::QTexture2D *forwardDepthTexture
+    , Qt3DCore::QEntity *rootSceneEntity )
 {
   // depth buffer render to copy pass
 
@@ -66,6 +70,9 @@ Qt3DRender::QFrameGraphNode *QgsDepthRenderView::constructDepthRenderPass()
 
   // Note: We do not a clear buffers node since we are drawing a quad that will override the buffer's content anyway
   mDepthRenderCapture = new Qt3DRender::QRenderCapture( mRenderTargetSelector );
+
+  // entity used to draw the depth texture and convert it to rgb image
+  new QgsDepthEntity( forwardDepthTexture, mLayer, rootSceneEntity );
 
   return cameraSelector;
 }

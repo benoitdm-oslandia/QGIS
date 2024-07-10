@@ -51,7 +51,10 @@ class QgsDepthRenderView : public QgsAbstractRenderView
 {
     Q_OBJECT
   public:
-    QgsDepthRenderView( QObject *parent, Qt3DRender::QCamera *mainCamera );
+    QgsDepthRenderView( QObject *parent
+                        , Qt3DRender::QCamera *mainCamera
+                        , Qt3DRender::QTexture2D *forwardDepthTexture
+                        , Qt3DCore::QEntity *rootSceneEntity );
 
     //! Returns the render capture object used to take an image of the depth buffer of the scene
     Qt3DRender::QRenderCapture *renderCapture() { return mDepthRenderCapture; }
@@ -60,7 +63,8 @@ class QgsDepthRenderView : public QgsAbstractRenderView
     Qt3DRender::QCamera *mMainCamera = nullptr;
     Qt3DRender::QRenderCapture *mDepthRenderCapture = nullptr;
 
-    Qt3DRender::QFrameGraphNode *constructDepthRenderPass();
+    Qt3DRender::QFrameGraphNode *constructDepthRenderPass( Qt3DRender::QTexture2D *forwardDepthTexture
+        , Qt3DCore::QEntity *rootSceneEntity );
 };
 
 #endif // QGSDEPTHRENDERVIEW_H
