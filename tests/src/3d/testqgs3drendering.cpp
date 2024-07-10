@@ -1574,6 +1574,7 @@ void TestQgs3DRendering::testAmbientOcclusion()
 
   QImage img = Qgs3DUtils::captureSceneImage( engine, scene );
   QString actualFG = engine.dumpFrameGraph();
+  qDebug() << "actualFG" << actualFG;
   QGSCOMPARELONGSTR( "ambient_occlusion_1", "framegraph.txt", actualFG.toUtf8() );
   QGSVERIFYIMAGECHECK( "ambient_occlusion_1", "ambient_occlusion_1", img, QString(), 40, QSize( 0, 0 ), 15 );
 
