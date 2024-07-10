@@ -343,13 +343,8 @@ namespace
 
 Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructSubPostPassForTexturesPreview()
 {
-  Qt3DRender::QFrameGraphNode *top = new Qt3DRender::QNoDraw;
-  top->setObjectName( "Sub pass TexturesPreview" );
-  top->setEnabled( true );
-
-  mPreviewLayerFilter = new Qt3DRender::QLayerFilter( top );
-  // mPreviewLayerFilter = new Qt3DRender::QLayerFilter;
-  // mPreviewLayerFilter->setObjectName("Sub pass TexturesPreview");
+  mPreviewLayerFilter = new Qt3DRender::QLayerFilter;
+  mPreviewLayerFilter->setObjectName( "Sub pass TexturesPreview" );
   mPreviewLayerFilter->addLayer( mPreviewLayer );
 
   mPreviewRenderStateSet = new Qt3DRender::QRenderStateSet( mPreviewLayerFilter );
@@ -360,7 +355,7 @@ Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructSubPostPassForTexturesPrevi
   mPreviewCullFace->setMode( Qt3DRender::QCullFace::NoCulling );
   mPreviewRenderStateSet->addRenderState( mPreviewCullFace );
 
-  return top;
+  return mPreviewLayerFilter;
 }
 
 Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructForwardRenderPass()
@@ -599,6 +594,7 @@ Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructSubPostPassForRenderCapture
 
   Qt3DRender::QRenderTargetSelector *localTargetSelector = new Qt3DRender::QRenderTargetSelector( top );
   localTargetSelector->setObjectName( "localTargetSelector" );
+  localTargetSelector->setEnabled( mRenderCaptureEnabled );
   mRenderCaptureTargetSelector = localTargetSelector;
 
   Qt3DRender::QRenderTarget *renderTarget = new Qt3DRender::QRenderTarget( localTargetSelector );
