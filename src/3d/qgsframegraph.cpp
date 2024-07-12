@@ -592,12 +592,19 @@ Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructSubPostPassForRenderCapture
   top->setObjectName( "Sub pass RenderCapture" );
   top->setEnabled( true );
 
-  Qt3DRender::QRenderTargetSelector *localTargetSelector = new Qt3DRender::QRenderTargetSelector( top );
-  localTargetSelector->setObjectName( "localTargetSelector" );
-  localTargetSelector->setEnabled( mRenderCaptureEnabled );
-  mRenderCaptureTargetSelector = localTargetSelector;
+  mRenderCapture = new Qt3DRender::QRenderCapture( top );
 
-  Qt3DRender::QRenderTarget *renderTarget = new Qt3DRender::QRenderTarget( localTargetSelector );
+  return top;
+}
+
+Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructPostprocessingPass()
+{
+  Qt3DRender::QRenderTargetSelector *top = new Qt3DRender::QRenderTargetSelector;
+  top->setObjectName( "Postprocessing render pass" );
+  top->setEnabled( false );
+  mRenderCaptureTargetSelector = top;
+
+  Qt3DRender::QRenderTarget *renderTarget = new Qt3DRender::QRenderTarget( top );
 
   // The lifetime of the objects created here is managed
   // automatically, as they become children of this object.
@@ -633,16 +640,7 @@ Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructSubPostPassForRenderCapture
   depthOutput->setTexture( mRenderCaptureDepthTexture );
   renderTarget->addOutput( depthOutput );
 
-  localTargetSelector->setTarget( renderTarget );
-
-  mRenderCapture = new Qt3DRender::QRenderCapture( localTargetSelector );
-
-  return top;
-}
-
-Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructPostprocessingPass()
-{
-  Qt3DRender::QFrameGraphNode *top = new Qt3DRender::QFrameGraphNode;
+  top->setTarget( renderTarget );
 
   // sub passes:
   constructSubPostPassForProcessing()->setParent( top );
