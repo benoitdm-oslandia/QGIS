@@ -190,7 +190,7 @@ class QgsFrameGraph : public Qt3DCore::QEntity
     QString dumpSceneGraph() const;
 
     //! Registers a new the render view \a renderView with name \a name
-    bool registerRenderView( QgsAbstractRenderView *renderView, const QString &name );
+    bool registerRenderView( QgsAbstractRenderView *renderView, const QString &name, Qt3DRender::QFrameGraphNode *topNode = nullptr );
 
     //! Unregisters the render view named \a name, if any
     void unregisterRenderView( const QString &name );

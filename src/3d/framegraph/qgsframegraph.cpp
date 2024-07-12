@@ -552,13 +552,16 @@ void QgsFrameGraph::unregisterRenderView( const QString &name )
   }
 }
 
-bool QgsFrameGraph::registerRenderView( QgsAbstractRenderView *renderView, const QString &name )
+bool QgsFrameGraph::registerRenderView( QgsAbstractRenderView *renderView, const QString &name, Qt3DRender::QFrameGraphNode *topNode )
 {
   bool out;
   if ( mRenderViewMap [name] == nullptr )
   {
     mRenderViewMap [name] = renderView;
-    renderView->topGraphNode()->setParent( mMainViewPort );
+    if ( topNode )
+      renderView->topGraphNode()->setParent( topNode );
+    else
+      renderView->topGraphNode()->setParent( mMainViewPort );
     out = true;
   }
   else
