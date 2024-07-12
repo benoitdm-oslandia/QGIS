@@ -49,16 +49,6 @@ void QgsAbstract3DEngine::requestDepthBufferCapture()
   } );
 }
 
-void QgsAbstract3DEngine::setRenderCaptureEnabled( bool enabled )
-{
-  mFrameGraph->setRenderCaptureEnabled( enabled );
-}
-
-bool QgsAbstract3DEngine::renderCaptureEnabled() const
-{
-  return mFrameGraph->renderCaptureEnabled();
-}
-
 void QgsAbstract3DEngine::dumpFrameGraphToConsole() const
 {
   if ( mFrameGraph )
