@@ -356,7 +356,7 @@ class QgsFrameGraph : public Qt3DCore::QEntity
 
     Qt3DCore::QEntity *constructDepthRenderQuad();
 
-    bool mRenderCaptureEnabled = true;
+    bool mRenderCaptureEnabled = false;
 
     Q_DISABLE_COPY( QgsFrameGraph )
 };

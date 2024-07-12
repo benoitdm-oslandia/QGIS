@@ -601,7 +601,7 @@ Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructPostprocessingPass()
 {
   Qt3DRender::QRenderTargetSelector *top = new Qt3DRender::QRenderTargetSelector;
   top->setObjectName( "Postprocessing render pass" );
-  top->setEnabled( false );
+  top->setEnabled( mRenderCaptureEnabled );
   mRenderCaptureTargetSelector = top;
 
   Qt3DRender::QRenderTarget *renderTarget = new Qt3DRender::QRenderTarget( top );
