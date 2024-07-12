@@ -65,6 +65,8 @@ class QgsForwardRenderView : public QgsAbstractRenderView
     //! Sets whether debug overlay is enabled
     void enableDebugOverlay( bool enabled );
 
+    Qt3DRender::QCamera *mainCamera() const { return mMainCamera; }
+
     //! Returns current render target selector
     Qt3DRender::QRenderTargetSelector *renderTargetSelector() { return mRenderTargetSelector; }
 

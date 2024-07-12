@@ -102,7 +102,8 @@ QgsOffscreen3DEngine::QgsOffscreen3DEngine()
   mOffscreenSurface->create();
 
   mFrameGraph = new QgsFrameGraph( mOffscreenSurface, mSize, mCamera, mRoot );
-  mFrameGraph->setRenderCaptureEnabled( true );
+  // to activatex image capture for unit tests:
+  mFrameGraph->setOffScreenRenderCaptureEnabled( true );
   mFrameGraph->setEnableRenderView( QgsFrameGraph::SHADOW_RENDERVIEW, false );
   // Set this frame graph to be in use.
   // the render settings also sets itself as the parent of mSurfaceSelector

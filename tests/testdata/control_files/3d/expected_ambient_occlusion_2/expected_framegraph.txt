@@ -42,13 +42,16 @@
           (Qt3DRender::QRenderStateSet{129/<no_name>}) [ (QDepthTest:Always), (QCullFace:NoCulling) ]
             (Qt3DRender::QLayerFilter{132/<no_name>}) [ (AcceptAnyMatchingLayers:[ {96/ambient_occlusion::Layer(Blur)} ]) ]
               (Qt3DRender::QRenderTargetSelector{133/ambient_occlusion::RenderTargetSelector(Blur)}) [ (outputs:[ (Color0:{92[R32F]/ambient_occlusion::ColorTarget) ]) ]
-    (Qt3DRender::QRenderTargetSelector{147/PostProcessingPass}) [ (outputs:[ (Color0:{150[RGB8_UNorm]/PostProcessingPass::ColorTarget), (Depth:{152[DepthFormat]/PostProcessingPass::DepthTarget) ]) ]
-      (Qt3DRender::QCameraSelector{153/Sub pass Postprocessing}) [ (Qt3DRender::QCamera:{50/shadow::LightCamera}) ]
-        (Qt3DRender::QLayerFilter{154/<no_name>}) [ (AcceptAnyMatchingLayers:[ {156/<no_name>} ]) ]
-          (Qt3DRender::QClearBuffers{155/<no_name>})
-      (Qt3DRender::QNoDraw{190/debug_texture::NoDraw})
-        (Qt3DRender::QSubtreeEnabler{191/debug_texture::Enabler}) [D]
-          (Qt3DRender::QLayerFilter{193/<no_name>}) [ (AcceptAnyMatchingLayers:[ {192/debug_texture::Layer} ]) ]
-            (Qt3DRender::QRenderStateSet{194/<no_name>}) [ (QDepthTest:Always), (QCullFace:NoCulling) ]
-      (Qt3DRender::QNoDraw{197/Sub pass RenderCapture})
-        (Qt3DRender::QRenderCapture{198/<no_name>})
+    (Qt3DRender::QNoDraw{147/post_processing::NoDraw}) [D]
+      (Qt3DRender::QSubtreeEnabler{148/post_processing::Enabler})
+        (Qt3DRender::QRenderTargetSelector{150/post_processing::RenderTargetSelector}) [ (outputs:[ (Color0:{153[RGB8_UNorm]/post_processing::ColorTarget), (Depth:{155[DepthFormat]/post_processing::DepthTarget) ]) ]
+          (Qt3DRender::QFrameGraphNode{156/post_processing::Sub passes top node})
+            (Qt3DRender::QCameraSelector{157/post_processing::Sub pass Postprocessing}) [ (Qt3DRender::QCamera:{50/shadow::LightCamera}) ]
+              (Qt3DRender::QLayerFilter{158/<no_name>}) [ (AcceptAnyMatchingLayers:[ {160/<no_name>} ]) ]
+                (Qt3DRender::QClearBuffers{159/<no_name>})
+            (Qt3DRender::QNoDraw{196/debug_texture::NoDraw})
+              (Qt3DRender::QSubtreeEnabler{197/debug_texture::Enabler}) [D]
+                (Qt3DRender::QLayerFilter{199/<no_name>}) [ (AcceptAnyMatchingLayers:[ {198/debug_texture::Layer} ]) ]
+                  (Qt3DRender::QRenderStateSet{200/<no_name>}) [ (QDepthTest:Always), (QCullFace:NoCulling) ]
+            (Qt3DRender::QNoDraw{194/post_processing::Sub pass RenderCapture})
+              (Qt3DRender::QRenderCapture{195/<no_name>})

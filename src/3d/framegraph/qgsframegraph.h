@@ -84,14 +84,11 @@ class QgsFrameGraph : public Qt3DCore::QEntity
     //! Returns the root entity
     Qt3DCore::QEntity *rootEntity() { return mRootEntity; }
 
-    //! Returns the postprocessing entity
-    QgsPostprocessingEntity *postprocessingEntity() { return mPostprocessingEntity; }
-
     //! Returns entity for all rubber bands (to show them always on top)
     Qt3DCore::QEntity *rubberBandsRootEntity() { return mRubberBandsRootEntity; }
 
     //! Returns the render capture object used to take an image of the scene
-    Qt3DRender::QRenderCapture *renderCapture() { return mRenderCapture; }
+    Qt3DRender::QRenderCapture *renderCapture();
 
     //! Returns the render capture object used to take an image of the depth buffer of the scene
     Qt3DRender::QRenderCapture *depthRenderCapture();
@@ -111,13 +108,7 @@ class QgsFrameGraph : public Qt3DCore::QEntity
      * Sets whether it will be possible to render to an image
      * \since QGIS 3.18
      */
-    void setRenderCaptureEnabled( bool enabled );
-
-    /**
-     * Returns whether it will be possible to render to an image
-     * \since QGIS 3.18
-     */
-    bool renderCaptureEnabled() const { return mRenderCaptureEnabled; }
+    void setOffScreenRenderCaptureEnabled( bool enabled );
 
     /**
      * Sets whether debug overlay is enabled
@@ -156,19 +147,14 @@ class QgsFrameGraph : public Qt3DCore::QEntity
     static const QString DEBUG_RENDERVIEW;
     //! Ambient occlusion render view name
     static const QString AO_RENDERVIEW;
+    //! Postprocessing render view name
+    static const QString POSTPROC_RENDERVIEW;
 
   private:
     Qt3DRender::QRenderSurfaceSelector *mRenderSurfaceSelector = nullptr;
     Qt3DRender::QViewport *mMainViewPort = nullptr;
 
     Qt3DRender::QCamera *mMainCamera = nullptr;
-
-    // Post processing pass branch nodes:
-    Qt3DRender::QRenderTargetSelector *mRenderCaptureTargetSelector = nullptr;
-    Qt3DRender::QRenderCapture *mRenderCapture = nullptr;
-    // Post processing pass texture related objects:
-    Qt3DRender::QTexture2D *mRenderCaptureColorTexture = nullptr;
-    Qt3DRender::QTexture2D *mRenderCaptureDepthTexture = nullptr;
 
     // Rubber bands pass
     Qt3DRender::QCameraSelector *mRubberBandsCameraSelector = nullptr;
@@ -186,22 +172,14 @@ class QgsFrameGraph : public Qt3DCore::QEntity
 
     Qt3DRender::QLayer *mRubberBandsLayer = nullptr;
 
-    QgsPostprocessingEntity *mPostprocessingEntity = nullptr;
-
     Qt3DCore::QEntity *mRubberBandsRootEntity = nullptr;
 
     void constructShadowRenderPass();
     void constructForwardRenderPass();
-    void constructDebugTexturePass( Qt3DRender::QFrameGraphNode *topNode = nullptr );
-    Qt3DRender::QFrameGraphNode *constructPostprocessingPass();
+    void constructPostprocessingPass();
     void constructDepthRenderPass();
     void constructAmbientOcclusionRenderPass();
     Qt3DRender::QFrameGraphNode *constructRubberBandsPass();
-
-    Qt3DRender::QFrameGraphNode *constructSubPostPassForProcessing();
-    Qt3DRender::QFrameGraphNode *constructSubPostPassForRenderCapture();
-
-    bool mRenderCaptureEnabled = false;
 
     QMap<QString, QgsAbstractRenderView *> mRenderViewMap;
 

@@ -18,8 +18,9 @@
 
 #include "qgsrenderpassquad.h"
 
-class QgsFrameGraph;
 class QgsShadowRenderView;
+class QgsForwardRenderView;
+class QgsAbstractRenderView;
 
 #define SIP_NO_FILE
 
@@ -37,7 +38,11 @@ class QgsPostprocessingEntity : public QgsRenderPassQuad
 
   public:
     //! Constructor
-    QgsPostprocessingEntity( QgsFrameGraph *frameGraph, Qt3DRender::QLayer *layer, QNode *parent = nullptr );
+    QgsPostprocessingEntity( QgsShadowRenderView *shadowRenderView
+                             , QgsForwardRenderView *forwardRenderView
+                             , QgsAbstractRenderView *aoRenderView
+                             , Qt3DRender::QLayer *layer
+                             , QNode *parent = nullptr );
     //! Sets the parts of the scene where objects cast shadows
     void setupShadowRenderingExtent( float minX, float maxX, float minY, float maxY, float minZ, float maxZ );
     //! Sets up a directional light that is used to render shadows
@@ -60,7 +65,6 @@ class QgsPostprocessingEntity : public QgsRenderPassQuad
     void setAmbientOcclusionEnabled( bool enabled );
 
   private:
-    QgsFrameGraph *mFrameGraph = nullptr;
     Qt3DRender::QCamera *mMainCamera = nullptr;
 
     Qt3DRender::QParameter *mColorTextureParameter = nullptr;

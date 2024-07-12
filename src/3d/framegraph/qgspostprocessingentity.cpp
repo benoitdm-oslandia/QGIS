@@ -42,23 +42,24 @@ typedef Qt3DCore::QGeometry Qt3DQGeometry;
 
 #include "qgsframegraph.h"
 #include "qgsshadowrenderview.h"
+#include "qgsforwardrenderview.h"
 
-QgsPostprocessingEntity::QgsPostprocessingEntity( QgsFrameGraph *frameGraph, Qt3DRender::QLayer *layer, QNode *parent )
+QgsPostprocessingEntity::QgsPostprocessingEntity( QgsShadowRenderView *shadowRenderView
+    , QgsForwardRenderView *forwardRenderView
+    , QgsAbstractRenderView *aoRenderView
+    , Qt3DRender::QLayer *layer
+    , QNode *parent )
   : QgsRenderPassQuad( layer, parent )
-  , mFrameGraph( frameGraph )
 {
-  QgsShadowRenderView *shadowRenderView = dynamic_cast<QgsShadowRenderView *>( frameGraph->renderView( QgsFrameGraph::SHADOW_RENDERVIEW ) );
   connect( shadowRenderView, &QgsShadowRenderView::shadowDirectionLightUpdated, this, &QgsPostprocessingEntity::setupDirectionalLight );
   connect( shadowRenderView, &QgsShadowRenderView::shadowExtentChanged, this, &QgsPostprocessingEntity::setupShadowRenderingExtent );
   connect( shadowRenderView, &QgsShadowRenderView::shadowBiasChanged, this, &QgsPostprocessingEntity::setShadowBias );
   connect( shadowRenderView, &QgsShadowRenderView::shadowRenderingEnabled, this, &QgsPostprocessingEntity::setShadowRenderingEnabled );
 
-  QgsAbstractRenderView *forwardRenderView = frameGraph->renderView( QgsFrameGraph::FORWARD_RENDERVIEW );
   mColorTextureParameter = new Qt3DRender::QParameter( QStringLiteral( "colorTexture" ), forwardRenderView->outputTexture( Qt3DRender::QRenderTargetOutput::Color0 ) );
   mDepthTextureParameter = new Qt3DRender::QParameter( QStringLiteral( "depthTexture" ), forwardRenderView->outputTexture( Qt3DRender::QRenderTargetOutput::Depth ) );
   mShadowMapParameter = new Qt3DRender::QParameter( QStringLiteral( "shadowTexture" ), shadowRenderView->outputTexture( Qt3DRender::QRenderTargetOutput::Depth ) );
 
-  QgsAbstractRenderView *aoRenderView = frameGraph->renderView( QgsFrameGraph::AO_RENDERVIEW );
   mAmbientOcclusionTextureParameter = new Qt3DRender::QParameter( QStringLiteral( "ssaoTexture" ), aoRenderView->outputTexture( Qt3DRender::QRenderTargetOutput::Color0 ) );
 
   mMaterial->addParameter( mColorTextureParameter );
@@ -66,7 +67,7 @@ QgsPostprocessingEntity::QgsPostprocessingEntity( QgsFrameGraph *frameGraph, Qt3
   mMaterial->addParameter( mShadowMapParameter );
   mMaterial->addParameter( mAmbientOcclusionTextureParameter );
 
-  mMainCamera = frameGraph->mainCamera();
+  mMainCamera = forwardRenderView->mainCamera();
   mLightCamera = shadowRenderView->lightCamera();
 
   mFarPlaneParameter = new Qt3DRender::QParameter( QStringLiteral( "farPlane" ), mMainCamera->farPlane() );

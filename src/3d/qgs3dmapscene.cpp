@@ -83,7 +83,7 @@
 #include "qgspointcloudlayer.h"
 #include "framegraph/qgsshadowrenderview.h"
 #include "framegraph/qgsambientocclusionrenderview.h"
-#include "framegraph/qgspostprocessingentity.h"
+#include "framegraph/qgspostprocessingrenderview.h"
 
 std::function< QMap< QString, Qgs3DMapScene * >() > Qgs3DMapScene::sOpenScenesFunction = [] { return QMap< QString, Qgs3DMapScene * >(); };
 
@@ -959,7 +959,9 @@ void Qgs3DMapScene::onAmbientOcclusionSettingsChanged()
     aoRenderView->setThreshold( ambientOcclusionSettings.threshold() );
   }
 
-  mEngine->frameGraph()->postprocessingEntity()->setAmbientOcclusionEnabled( ambientOcclusionSettings.isEnabled() );
+  QgsPostprocessingRenderView *srv = dynamic_cast<QgsPostprocessingRenderView *>( mEngine->frameGraph()->renderView( QgsFrameGraph::POSTPROC_RENDERVIEW ) );
+  srv->setAmbientOcclusionEnabled( ambientOcclusionSettings.isEnabled() );
+
   mEngine->frameGraph()->setEnableRenderView( QgsFrameGraph::AO_RENDERVIEW, ambientOcclusionSettings.isEnabled() );
 }
 
