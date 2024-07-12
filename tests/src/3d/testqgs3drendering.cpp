@@ -1754,6 +1754,7 @@ void TestQgs3DRendering::testDebugMap()
   mapSettings.setPathResolver( project.pathResolver() );
   mapSettings.setMapThemeCollection( project.mapThemeCollection() );
 
+  QgsDirectionalLightSettings defaultPointLight;
   mapSettings.setLightSources( {defaultPointLight.clone() } );
   mapSettings.setOutputDpi( 92 );
 
