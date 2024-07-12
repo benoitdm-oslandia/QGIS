@@ -57,6 +57,7 @@ class QgsPostprocessingEntity;
 class QgsChunkNode;
 class QgsDoubleRange;
 class Qgs3DMapSceneEntity;
+class QgsDebugTextureEntity;
 
 
 /**
@@ -302,5 +303,9 @@ class _3D_EXPORT Qgs3DMapScene : public QObject
     //! 3d axis visualization
     Qgs3DAxis *m3DAxis = nullptr;
 
+    //! shadow texture debugging
+    QgsDebugTextureEntity *mShadowTextureDebugging = nullptr;
+    //! depth texture debugging
+    QgsDebugTextureEntity *mDepthTextureDebugging = nullptr;
 };
 #endif // QGS3DMAPSCENE_H

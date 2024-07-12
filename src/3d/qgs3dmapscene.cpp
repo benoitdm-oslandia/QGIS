@@ -68,6 +68,8 @@
 #include "qgspoint3dbillboardmaterial.h"
 #include "qgsmaplayertemporalproperties.h"
 #include "qgsmaplayerelevationproperties.h"
+#include "framegraph/qgsdebugtextureentity.h"
+
 #include "qgslinematerial_p.h"
 #include "qgs3dsceneexporter.h"
 #include "qgs3dmapexportsettings.h"
@@ -953,12 +955,32 @@ void Qgs3DMapScene::onAmbientOcclusionSettingsChanged()
 
 void Qgs3DMapScene::onDebugShadowMapSettingsChanged()
 {
-  mEngine->frameGraph()->setupShadowMapDebugging( mMap.debugShadowMapEnabled(), mMap.debugShadowMapCorner(), mMap.debugShadowMapSize() );
+  if ( !mShadowTextureDebugging && mMap.debugShadowMapEnabled() )
+  {
+    QgsAbstractRenderView *shadowRenderView = mEngine->frameGraph()->renderView( QgsFrameGraph::SHADOW_RENDERVIEW );
+    Qt3DRender::QTexture2D *shadowDepthTexture = shadowRenderView->outputTexture( Qt3DRender::QRenderTargetOutput::Depth );
+    mShadowTextureDebugging = new QgsDebugTextureEntity( mEngine->frameGraph(), shadowDepthTexture );
+  }
+
+  if ( mShadowTextureDebugging )
+  {
+    mShadowTextureDebugging->onSettingsChanged( mMap.debugShadowMapEnabled(), mMap.debugShadowMapCorner(), mMap.debugShadowMapSize() );
+  }
 }
 
 void Qgs3DMapScene::onDebugDepthMapSettingsChanged()
 {
-  mEngine->frameGraph()->setupDepthMapDebugging( mMap.debugDepthMapEnabled(), mMap.debugDepthMapCorner(), mMap.debugDepthMapSize() );
+  if ( !mDepthTextureDebugging && mMap.debugDepthMapEnabled() )
+  {
+    QgsAbstractRenderView *forwardRenderView = mEngine->frameGraph()->renderView( QgsFrameGraph::FORWARD_RENDERVIEW );
+    Qt3DRender::QTexture2D *forwardDepthTexture = forwardRenderView->outputTexture( Qt3DRender::QRenderTargetOutput::Depth );
+    mDepthTextureDebugging = new QgsDebugTextureEntity( mEngine->frameGraph(), forwardDepthTexture );
+  }
+
+  if ( mDepthTextureDebugging )
+  {
+    mDepthTextureDebugging->onSettingsChanged( mMap.debugDepthMapEnabled(), mMap.debugDepthMapCorner(), mMap.debugDepthMapSize() );
+  }
 }
 
 void Qgs3DMapScene::onDebugOverlayEnabledChanged()
