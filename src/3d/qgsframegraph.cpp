@@ -56,11 +56,7 @@ namespace
 {
   QString formatIdName( quint64 id, const QString &name )
   {
-    QString n;
-    if ( name.isEmpty() )
-      n = QLatin1String( "<no_name>" );
-    else
-      n = name;
+    QString n = name.isEmpty() ? QLatin1String( "<no_name>" ) : name;
     return QLatin1String( "{%1/%2}" ).arg( QString::number( id ) ).arg( n );
   }
 
