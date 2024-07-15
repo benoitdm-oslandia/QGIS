@@ -16,11 +16,13 @@
 #include "qgsabstractrenderview.h"
 #include <Qt3DRender/QNoDraw>
 #include <Qt3DRender/qsubtreeenabler.h>
+#include <Qt3DRender/QRenderTarget>
+#include <Qt3DRender/QRenderTargetSelector>
 
-QgsAbstractRenderView::QgsAbstractRenderView( QObject *parent )
-  : QObject( parent )
+QgsAbstractRenderView::QgsAbstractRenderView( QObject *parent, const QString &viewName )
+  : QObject( parent ), mViewName( viewName )
 {
-
+  std::tie( mRoot, mRendererEnabler ) = createSubtreeEnabler();
 }
 
 void QgsAbstractRenderView::setTargetOutputs( const QList<Qt3DRender::QRenderTargetOutput *> &targetOutputList )
@@ -55,4 +57,51 @@ std::pair<Qt3DRender::QFrameGraphNode *, Qt3DRender::QSubtreeEnabler *> QgsAbstr
   enabler->setEnablement( QSubtreeEnabler::Persistent );
   connect( enabler, &QSubtreeEnabler::enabledChanged, noDraw, [noDraw]( bool enable ) { noDraw->setEnabled( !enable ); } );
   return std::make_pair( noDraw, enabler );
+}
+
+void QgsAbstractRenderView::onTargetOutputUpdate()
+{
+  if ( mRenderTargetSelector )
+  {
+    if ( ! mTargetOutputs.isEmpty() )
+    {
+      Qt3DRender::QRenderTarget *renderTarget = new Qt3DRender::QRenderTarget;
+      renderTarget->setObjectName( mViewName + "::Target" );
+
+      for ( Qt3DRender::QRenderTargetOutput *targetOutput : qAsConst( mTargetOutputs ) )
+        renderTarget->addOutput( targetOutput );
+
+      mRenderTargetSelector->setTarget( renderTarget );
+    }
+    else
+    {
+      mRenderTargetSelector->setTarget( nullptr );
+    }
+  }
+}
+
+Qt3DRender::QLayer *QgsAbstractRenderView::layerToFilter()
+{
+  return mLayer;
+}
+
+Qt3DRender::QViewport *QgsAbstractRenderView::viewport()
+{
+  return nullptr;
+}
+
+Qt3DRender::QFrameGraphNode *QgsAbstractRenderView::topGraphNode()
+{
+  return mRoot;
+}
+
+void QgsAbstractRenderView::enableSubTree( bool enable )
+{
+  mRoot->setEnabled( ! enable );
+  mRendererEnabler->setEnabled( enable );
+}
+
+bool QgsAbstractRenderView::isSubTreeEnabled()
+{
+  return ! mRoot->isEnabled() && mRendererEnabler->isEnabled();
 }

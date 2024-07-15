@@ -67,20 +67,8 @@ class _3D_EXPORT Qgs3DAxisRenderView : public QgsAbstractRenderView
     Qgs3DAxisRenderView( QObject *parent, Qgs3DMapCanvas *canvas,
                          Qt3DRender::QCamera *objectCamera, Qt3DRender::QCamera *labelsCamera, Qgs3DMapSettings *settings );
 
-    //! Returns the layer to be used by entities to be included in this renderview
-    virtual Qt3DRender::QLayer *layerToFilter() override;
-
     //! Returns the viewport associated to this renderview
     virtual Qt3DRender::QViewport *viewport() override;
-
-    //! Returns the top node of this renderview branch
-    virtual Qt3DRender::QFrameGraphNode *topGraphNode() override;
-
-    //! Enable or disable via \a enable the renderview sub tree
-    virtual void enableSubTree( bool enable ) override;
-
-    //! Returns true if renderview is enabled
-    virtual bool isSubTreeEnabled() override;
 
     Qt3DRender::QLayer *labelsLayer() { return mLabelsLayer; }
 
@@ -104,13 +92,7 @@ class _3D_EXPORT Qgs3DAxisRenderView : public QgsAbstractRenderView
     Qt3DRender::QLayer *mObjectLayer = nullptr;
     Qt3DRender::QLayer *mLabelsLayer = nullptr;
     Qt3DRender::QViewport *mViewport = nullptr;
-    Qt3DRender::QFrameGraphNode *mRoot = nullptr;
-    Qt3DRender::QSubtreeEnabler *mRendererEnabler = nullptr;
     Qgs3DMapSettings *mMapSettings = nullptr;
-    Qt3DRender::QRenderTargetSelector *mRenderTargetSelector = nullptr;
-
-    //! Handles target outputs changes
-    virtual void onTargetOutputUpdate() override;
 };
 
 

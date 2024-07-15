@@ -16,10 +16,10 @@
       (Qt3DRender::QLayerFilter{42/<no_name>}) [ (AcceptAnyMatchingLayers:[ {11/mRubberBandsLayer} ]) ]
         (Qt3DRender::QRenderStateSet{43/<no_name>}) [ (QDepthTest:Always) ]
           (Qt3DRender::QRenderTargetSelector{45/<no_name>}) [ (outputs:[ (Depth:{17[DepthFormat]/<no_name>), (Color0:{16[RGB8_UNorm]/<no_name>) ]) ]
-    (Qt3DRender::QNoDraw{52/<no_name>})
-      (Qt3DRender::QSubtreeEnabler{53/QgsShadowRenderView}) [D]
-        (Qt3DRender::QCameraSelector{54/Shadow render view CameraSelector}) [ (Qt3DRender::QCamera:{48/QgsShadowRenderView::LightCamera}) ]
-          (Qt3DRender::QLayerFilter{55/<no_name>}) [D] [ (AcceptAnyMatchingLayers:[ {51/QgsShadowRenderView::Layer} ]) ]
+    (Qt3DRender::QNoDraw{48/<no_name>})
+      (Qt3DRender::QSubtreeEnabler{49/<no_name>}) [D]
+        (Qt3DRender::QCameraSelector{54/shadow::CameraSelector}) [ (Qt3DRender::QCamera:{50/shadow::LightCamera}) ]
+          (Qt3DRender::QLayerFilter{55/<no_name>}) [D] [ (AcceptAnyMatchingLayers:[ {53/shadow::Layer} ]) ]
             (Qt3DRender::QRenderTargetSelector{56/<no_name>}) [ (outputs:[ (Depth:{46[DepthFormat]/QgsShadowRenderView::DepthTarget) ]) ]
               (Qt3DRender::QClearBuffers{57/<no_name>})
                 (Qt3DRender::QRenderStateSet{58/<no_name>}) [ (QDepthTest:Less), (QCullFace:Front), (QPolygonOffset:[ (scaleFactor:1.1), (depthSteps:4) ]) ]
@@ -37,7 +37,7 @@
         (Qt3DRender::QLayerFilter{111/<no_name>}) [ (AcceptAnyMatchingLayers:[ {116/<no_name>} ]) ]
           (Qt3DRender::QRenderTargetSelector{112/<no_name>}) [ (outputs:[ (Color0:{115[R32F]/<no_name>) ]) ]
     (Qt3DRender::QRenderTargetSelector{129/PostProcessingPass}) [ (outputs:[ (Color0:{132[RGB8_UNorm]/PostProcessingPass::ColorTarget), (Depth:{134[DepthFormat]/PostProcessingPass::DepthTarget) ]) ]
-      (Qt3DRender::QCameraSelector{135/Sub pass Postprocessing}) [ (Qt3DRender::QCamera:{48/QgsShadowRenderView::LightCamera}) ]
+      (Qt3DRender::QCameraSelector{135/Sub pass Postprocessing}) [ (Qt3DRender::QCamera:{50/shadow::LightCamera}) ]
         (Qt3DRender::QLayerFilter{136/<no_name>}) [ (AcceptAnyMatchingLayers:[ {138/<no_name>} ]) ]
           (Qt3DRender::QClearBuffers{137/<no_name>})
       (Qt3DRender::QLayerFilter{172/Sub pass TexturesPreview}) [ (AcceptAnyMatchingLayers:[ {7/<no_name>} ]) ]

@@ -68,20 +68,8 @@ class QgsShadowRenderView : public QgsAbstractRenderView
   public:
     QgsShadowRenderView( QObject *parent );
 
-    //! Returns the layer to be used by entities to be included in this renderview
-    virtual Qt3DRender::QLayer *layerToFilter() override;
-
-    //! Returns the viewport associated to this renderview
-    virtual Qt3DRender::QViewport *viewport() override;
-
-    //! Returns the top node of this renderview branch
-    virtual Qt3DRender::QFrameGraphNode *topGraphNode() override;
-
     //! Enable or disable via \a enable the renderview sub tree
     virtual void enableSubTree( bool enable ) override;
-
-    //! Returns true if renderview is enabled
-    virtual bool isSubTreeEnabled() override;
 
     //! Returns the shadow bias value
     float shadowBias() const { return mBias; }
@@ -105,22 +93,15 @@ class QgsShadowRenderView : public QgsAbstractRenderView
   private:
     float mBias = 0.00001f;
 
-    Qt3DRender::QFrameGraphNode *mRoot = nullptr;
-    Qt3DRender::QSubtreeEnabler *mRendererEnabler = nullptr;
-    Qt3DRender::QLayer *mLayer = nullptr;
     // Shadow rendering pass branch nodes:
     Qt3DRender::QCameraSelector *mLightCameraSelector = nullptr;
     Qt3DRender::QLayerFilter *mLayerFilter = nullptr;
-    Qt3DRender::QRenderTargetSelector *mRenderTargetSelector = nullptr;
     Qt3DRender::QClearBuffers *mClearBuffers = nullptr;
     Qt3DRender::QRenderStateSet *mRenderStateSet = nullptr;
 
     Qt3DRender::QCamera *mLightCamera = nullptr;
 
     Qt3DRender::QFrameGraphNode *buildRenderPass();
-
-    //! Handles target outputs changes
-    virtual void onTargetOutputUpdate() override;
 
     static void calculateViewExtent( const Qt3DRender::QCamera *camera, float shadowRenderingDistance, float y, float &minX, float &maxX, float &minY, float &maxY, float &minZ, float &maxZ );
 

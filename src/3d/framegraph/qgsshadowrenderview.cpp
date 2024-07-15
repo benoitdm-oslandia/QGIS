@@ -34,65 +34,24 @@
 #include <Qt3DRender/qsubtreeenabler.h>
 
 QgsShadowRenderView::QgsShadowRenderView( QObject *parent )
-  : QgsAbstractRenderView( parent )
+  : QgsAbstractRenderView( parent, "shadow" )
 {
   mLightCamera = new Qt3DRender::QCamera;
-  mLightCamera->setObjectName( "QgsShadowRenderView::LightCamera" );
+  mLightCamera->setObjectName( mViewName + "::LightCamera" );
   mLayer = new Qt3DRender::QLayer;
   mLayer->setRecursive( true );
-  mLayer->setObjectName( "QgsShadowRenderView::Layer" );
-
-  std::tie( mRoot, mRendererEnabler ) = createSubtreeEnabler();
-  mRendererEnabler->setObjectName( "QgsShadowRenderView" );
+  mLayer->setObjectName( mViewName + "::Layer" );
 
   // shadow rendering pass
   buildRenderPass();
 }
 
-void QgsShadowRenderView::onTargetOutputUpdate()
-{
-  if ( ! mTargetOutputs.isEmpty() && mRenderTargetSelector )
-  {
-    Qt3DRender::QRenderTarget *renderTarget = new Qt3DRender::QRenderTarget;
-    renderTarget->setObjectName( "QgsShadowRenderView::Target" );
-
-    for ( Qt3DRender::QRenderTargetOutput *targetOutput : qAsConst( mTargetOutputs ) )
-      renderTarget->addOutput( targetOutput );
-
-    mRenderTargetSelector->setTarget( renderTarget );
-  }
-}
-
-Qt3DRender::QLayer *QgsShadowRenderView::layerToFilter()
-{
-  return mLayer;
-}
-
-Qt3DRender::QViewport *QgsShadowRenderView::viewport()
-{
-  return nullptr;
-}
-
-Qt3DRender::QFrameGraphNode *QgsShadowRenderView::topGraphNode()
-{
-  return mRoot;
-}
-
 void QgsShadowRenderView::enableSubTree( bool enable )
 {
-  if ( mRendererEnabler != nullptr )
-  {
-    mRendererEnabler->setEnabled( enable );
-    emit shadowRenderingEnabled( enable );
-    mLayerFilter->setEnabled( enable );
-  }
+  QgsAbstractRenderView::enableSubTree( enable );
+  emit shadowRenderingEnabled( enable );
+  mLayerFilter->setEnabled( enable );
 }
-
-bool QgsShadowRenderView::isSubTreeEnabled()
-{
-  return mRendererEnabler != nullptr && mRendererEnabler->isEnabled();
-}
-
 
 void QgsShadowRenderView::setupDirectionalLight( const QgsDirectionalLightSettings &light, float maximumShadowRenderingDistance,
     const Qt3DRender::QCamera *mainCamera )
@@ -125,7 +84,7 @@ void QgsShadowRenderView::setupDirectionalLight( const QgsDirectionalLightSettin
 Qt3DRender::QFrameGraphNode *QgsShadowRenderView::buildRenderPass()
 {
   mLightCameraSelector = new Qt3DRender::QCameraSelector( mRendererEnabler );
-  mLightCameraSelector->setObjectName( "Shadow render view CameraSelector" );
+  mLightCameraSelector->setObjectName( mViewName + "::CameraSelector" );
   mLightCameraSelector->setCamera( mLightCamera );
 
   mLayerFilter = new Qt3DRender::QLayerFilter( mLightCameraSelector );

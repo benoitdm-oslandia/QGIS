@@ -41,6 +41,7 @@ namespace Qt3DRender
   class QViewport;
   class QTexture2D;
   class QSubtreeEnabler;
+  class QRenderTargetSelector;
 }
 
 class QgsFrameGraph;
@@ -62,13 +63,13 @@ class _3D_EXPORT QgsAbstractRenderView : public QObject
     /**
      * Constructor for QgsAbstractRenderView with the specified \a parent object.
      */
-    QgsAbstractRenderView( QObject *parent = nullptr );
+    QgsAbstractRenderView( QObject *parent = nullptr, const QString &viewName = "unnamed_view" );
 
     //! set output to screen (ie. nullptr) or to a render target output
     virtual void setTargetOutputs( const QList<Qt3DRender::QRenderTargetOutput *> &targetOutputList );
 
     //! Returns list of all target outputs
-    virtual QList<Qt3DRender::QRenderTargetOutput *> targetOutputs() const { return mTargetOutputs; };
+    virtual QList<Qt3DRender::QRenderTargetOutput *> targetOutputs() const { return mTargetOutputs; }
 
     //! Updates map sizes for all target outputs
     virtual void updateTargetOutputSize( int width, int height );
@@ -77,29 +78,34 @@ class _3D_EXPORT QgsAbstractRenderView : public QObject
     virtual Qt3DRender::QTexture2D *outputTexture( Qt3DRender::QRenderTargetOutput::AttachmentPoint attachment );
 
     //! Returns the layer to be used by entities to be included in this renderview
-    virtual Qt3DRender::QLayer *layerToFilter() = 0;
+    virtual Qt3DRender::QLayer *layerToFilter();
 
     //! Returns the viewport associated to this renderview
-    virtual Qt3DRender::QViewport *viewport() = 0;
+    virtual Qt3DRender::QViewport *viewport();
 
     //! Returns the top node of this renderview branch. Will be used to register the renderview.
-    virtual Qt3DRender::QFrameGraphNode *topGraphNode() = 0;
+    virtual Qt3DRender::QFrameGraphNode *topGraphNode();
 
     //! Enable or disable via \a enable the renderview sub tree
-    virtual void enableSubTree( bool enable ) = 0;
+    virtual void enableSubTree( bool enable );
 
     //! Returns true if renderview is enabled
-    virtual bool isSubTreeEnabled() = 0;
+    virtual bool isSubTreeEnabled();
 
   protected:
     std::pair<Qt3DRender::QFrameGraphNode *, Qt3DRender::QSubtreeEnabler *> createSubtreeEnabler( Qt3DRender::QFrameGraphNode *parent = nullptr );
 
     //! Handles target outputs changes
-    virtual void onTargetOutputUpdate() = 0;
+    virtual void onTargetOutputUpdate();
 
     //! Stores target outputs
     QList<Qt3DRender::QRenderTargetOutput *> mTargetOutputs;
 
+    QString mViewName;
+    Qt3DRender::QFrameGraphNode *mRoot = nullptr;
+    Qt3DRender::QSubtreeEnabler *mRendererEnabler = nullptr;
+    Qt3DRender::QLayer *mLayer = nullptr;
+    Qt3DRender::QRenderTargetSelector *mRenderTargetSelector = nullptr;
 };
 
 #endif // QGSABSTRACTRENDERVIEW_H

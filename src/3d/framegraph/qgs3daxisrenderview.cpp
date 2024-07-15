@@ -46,24 +46,24 @@ typedef Qt3DCore::QBuffer Qt3DQBuffer;
 Qgs3DAxisRenderView::Qgs3DAxisRenderView( QObject *parent, Qgs3DMapCanvas *canvas,
     Qt3DRender::QCamera *objectCamera, Qt3DRender::QCamera *labelsCamera,
     Qgs3DMapSettings *settings )
-  : QgsAbstractRenderView( parent )
+  : QgsAbstractRenderView( parent, "3daxis" )
   , mCanvas( canvas )
   , mObjectCamera( objectCamera )
   , mLabelsCamera( labelsCamera )
   , mMapSettings( settings )
 {
-  std::tie( mRoot, mRendererEnabler ) = createSubtreeEnabler();
-  mRendererEnabler->setObjectName( "Qgs3DAxisRenderView" );
-
   mViewport = new Qt3DRender::QViewport( mRendererEnabler );
-  mViewport->setObjectName( "3D axis view Viewport" );
+  mViewport->setObjectName( mViewName + "::Viewport" );
 
   mObjectLayer = new Qt3DRender::QLayer;
-  mObjectLayer->setObjectName( "3DAxis_ObjectLayer" );
+  mObjectLayer->setObjectName( mViewName + "::ObjectLayer" );
   mObjectLayer->setRecursive( true );
 
+  // set inherited object with good default layer
+  mLayer = mObjectLayer;
+
   mLabelsLayer = new Qt3DRender::QLayer;
-  mLabelsLayer->setObjectName( "3DAxis_LabelsLayer" );
+  mLabelsLayer->setObjectName( mViewName + "::LabelsLayer" );
   mLabelsLayer->setRecursive( true );
 
   // render pass for the object (axis or cube)
@@ -112,45 +112,9 @@ Qgs3DAxisRenderView::Qgs3DAxisRenderView( QObject *parent, Qgs3DMapCanvas *canva
   connect( mCanvas, &Qgs3DMapCanvas::heightChanged, this, &Qgs3DAxisRenderView::onViewportSizeUpdate );
 }
 
-void Qgs3DAxisRenderView::onTargetOutputUpdate()
-{
-  if ( ! mTargetOutputs.isEmpty() && mRenderTargetSelector )
-  {
-    Qt3DRender::QRenderTarget *renderTarget = new Qt3DRender::QRenderTarget;
-
-    for ( Qt3DRender::QRenderTargetOutput *targetOutput : qAsConst( mTargetOutputs ) )
-      renderTarget->addOutput( targetOutput );
-
-    mRenderTargetSelector->setTarget( renderTarget );
-  }
-}
-
-void Qgs3DAxisRenderView::enableSubTree( bool enable )
-{
-  if ( mRendererEnabler != nullptr )
-  {
-    mRendererEnabler->setEnabled( enable );
-  }
-}
-
-bool Qgs3DAxisRenderView::isSubTreeEnabled()
-{
-  return mRendererEnabler != nullptr && mRendererEnabler->isEnabled();
-}
-
-Qt3DRender::QFrameGraphNode *Qgs3DAxisRenderView::topGraphNode()
-{
-  return mRoot;
-}
-
 Qt3DRender::QViewport *Qgs3DAxisRenderView::viewport()
 {
   return mViewport;
-}
-
-Qt3DRender::QLayer *Qgs3DAxisRenderView::layerToFilter()
-{
-  return mObjectLayer;
 }
 
 void Qgs3DAxisRenderView::onViewportSizeUpdate( int )
