@@ -81,9 +81,6 @@ class QgsFrameGraph : public Qt3DCore::QEntity
     //! Returns the root entity
     Qt3DCore::QEntity *rootEntity() { return mRootEntity; }
 
-    //! Returns entity for all rubber bands (to show them always on top)
-    Qt3DCore::QEntity *rubberBandsRootEntity() { return mRubberBandsRootEntity; }
-
     //! Returns the render capture object used to take an image of the scene
     Qt3DRender::QRenderCapture *renderCapture();
 
@@ -217,6 +214,8 @@ class QgsFrameGraph : public Qt3DCore::QEntity
     static const QString AO_RENDERVIEW;
     //! Postprocessing render view name
     static const QString POSTPROC_RENDERVIEW;
+    //! rubber band render view name
+    static const QString RUBBER_RENDERVIEW;
 
   private:
     Qt3DRender::QRenderSurfaceSelector *mRenderSurfaceSelector = nullptr;
@@ -224,21 +223,11 @@ class QgsFrameGraph : public Qt3DCore::QEntity
 
     Qt3DRender::QCamera *mMainCamera = nullptr;
 
-    // Rubber bands pass
-    Qt3DRender::QCameraSelector *mRubberBandsCameraSelector = nullptr;
-    Qt3DRender::QLayerFilter *mRubberBandsLayerFilter = nullptr;
-    Qt3DRender::QRenderStateSet *mRubberBandsStateSet = nullptr;
-    Qt3DRender::QRenderTargetSelector *mRubberBandsRenderTargetSelector = nullptr;
-
     QSize mSize = QSize( 1024, 768 );
 
     QVector3D mLightDirection = QVector3D( 0.0, -1.0f, 0.0f );
 
     Qt3DCore::QEntity *mRootEntity = nullptr;
-
-    Qt3DRender::QLayer *mRubberBandsLayer = nullptr;
-
-    Qt3DCore::QEntity *mRubberBandsRootEntity = nullptr;
 
     //! shadow texture debugging
     QgsDebugTextureEntity *mShadowTextureDebugging = nullptr;
@@ -251,7 +240,7 @@ class QgsFrameGraph : public Qt3DCore::QEntity
     void constructPostprocessingPass();
     void constructDepthRenderPass();
     void constructAmbientOcclusionRenderPass();
-    Qt3DRender::QFrameGraphNode *constructRubberBandsPass();
+    void constructRubberBandsPass();
 
     // holds renderviews according to their name
     std::map<QString, std::unique_ptr<QgsAbstractRenderView>> mRenderViewMap;
