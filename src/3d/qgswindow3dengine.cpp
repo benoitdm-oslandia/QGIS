@@ -19,7 +19,6 @@
 #include <Qt3DRender/QRenderSettings>
 
 #include "framegraph/qgsabstractrenderview.h"
-#include "framegraph/qgspreviewquad.h"
 #include "qgs3dmapcanvas.h"
 
 #include "framegraph/qgsframegraph.h"
@@ -65,9 +64,7 @@ void QgsWindow3DEngine::setRootEntity( Qt3DCore::QEntity *root )
   mSceneRoot = root;
   mSceneRoot->setParent( mRoot );
   if ( mFrameGraph->renderView( QgsFrameGraph::FORWARD_RENDERVIEW ) )
-    mSceneRoot->addComponent( mFrameGraph->renderView( QgsFrameGraph::FORWARD_RENDERVIEW )->layerToFilter() );
-  if ( mFrameGraph->renderView( QgsFrameGraph::SHADOW_RENDERVIEW ) )
-    mSceneRoot->addComponent( mFrameGraph->renderView( QgsFrameGraph::SHADOW_RENDERVIEW )->layerToFilter() );
+    mSceneRoot->addComponent( mFrameGraph->filterLayer( QgsFrameGraph::FORWARD_RENDERVIEW ) );
 }
 
 Qt3DRender::QRenderSettings *QgsWindow3DEngine::renderSettings()

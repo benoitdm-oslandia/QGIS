@@ -68,6 +68,8 @@ class QgsFrameGraph : public Qt3DCore::QEntity
     //! Constructor
     QgsFrameGraph( QSurface *surface, QSize s, Qt3DRender::QCamera *mainCamera, Qt3DCore::QEntity *root );
 
+    virtual ~QgsFrameGraph();
+
     //! Returns the root of the frame graph object
     Qt3DRender::QFrameGraphNode *frameGraphRoot() { return mRenderSurfaceSelector; }
 

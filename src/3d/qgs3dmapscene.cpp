@@ -962,6 +962,7 @@ void Qgs3DMapScene::onDebugShadowMapSettingsChanged()
     mShadowTextureDebugging = new QgsDebugTextureEntity( mEngine->frameGraph(), shadowDepthTexture );
   }
 
+  mEngine->frameGraph()->setEnableRenderView( QgsFrameGraph::DEBUG_RENDERVIEW, mMap.debugShadowMapEnabled() || mMap.debugDepthMapEnabled() );
   if ( mShadowTextureDebugging )
   {
     mShadowTextureDebugging->onSettingsChanged( mMap.debugShadowMapEnabled(), mMap.debugShadowMapCorner(), mMap.debugShadowMapSize() );
@@ -977,6 +978,7 @@ void Qgs3DMapScene::onDebugDepthMapSettingsChanged()
     mDepthTextureDebugging = new QgsDebugTextureEntity( mEngine->frameGraph(), forwardDepthTexture );
   }
 
+  mEngine->frameGraph()->setEnableRenderView( QgsFrameGraph::DEBUG_RENDERVIEW, mMap.debugShadowMapEnabled() || mMap.debugDepthMapEnabled() );
   if ( mDepthTextureDebugging )
   {
     mDepthTextureDebugging->onSettingsChanged( mMap.debugDepthMapEnabled(), mMap.debugDepthMapCorner(), mMap.debugDepthMapSize() );

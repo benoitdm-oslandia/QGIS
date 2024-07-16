@@ -150,9 +150,9 @@ void QgsOffscreen3DEngine::setRootEntity( Qt3DCore::QEntity *root )
   mSceneRoot = root;
   mSceneRoot->setParent( mRoot );
   if ( mFrameGraph->renderView( QgsFrameGraph::FORWARD_RENDERVIEW ) )
-    root->addComponent( mFrameGraph->renderView( QgsFrameGraph::FORWARD_RENDERVIEW )->layerToFilter() );
+    root->addComponent( mFrameGraph->filterLayer( QgsFrameGraph::FORWARD_RENDERVIEW ) );
   if ( mFrameGraph->renderView( QgsFrameGraph::SHADOW_RENDERVIEW ) )
-    root->addComponent( mFrameGraph->renderView( QgsFrameGraph::SHADOW_RENDERVIEW )->layerToFilter() );
+    root->addComponent( mFrameGraph->filterLayer( QgsFrameGraph::SHADOW_RENDERVIEW ) );
 }
 
 Qt3DRender::QRenderSettings *QgsOffscreen3DEngine::renderSettings()

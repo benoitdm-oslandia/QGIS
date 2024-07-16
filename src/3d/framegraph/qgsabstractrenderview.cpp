@@ -52,10 +52,14 @@ std::pair<Qt3DRender::QFrameGraphNode *, Qt3DRender::QSubtreeEnabler *> QgsAbstr
   // which is disabled when the enabler is enabled, and vice versa
   using namespace Qt3DRender;
   auto noDraw = new QNoDraw( parent );
+  noDraw->setObjectName( mViewName + "::NoDraw" );
   noDraw->setEnabled( false );
+
   auto enabler = new QSubtreeEnabler( noDraw );
+  enabler->setObjectName( mViewName + "::Enabler" );
   enabler->setEnablement( QSubtreeEnabler::Persistent );
   connect( enabler, &QSubtreeEnabler::enabledChanged, noDraw, [noDraw]( bool enable ) { noDraw->setEnabled( !enable ); } );
+
   return std::make_pair( noDraw, enabler );
 }
 
