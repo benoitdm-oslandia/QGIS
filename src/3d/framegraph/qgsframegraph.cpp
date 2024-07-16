@@ -497,3 +497,8 @@ void QgsFrameGraph::setDebugOverlayEnabled( bool enabled )
   if ( forwardRenderView )
     forwardRenderView->enableDebugOverlay( enabled );
 }
+
+Qt3DCore::QEntity *QgsFrameGraph::rubberBandsRootEntity()
+{
+  return mRubberBandsRootEntity;
+}

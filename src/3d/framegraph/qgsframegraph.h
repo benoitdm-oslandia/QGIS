@@ -85,7 +85,7 @@ class QgsFrameGraph : public Qt3DCore::QEntity
     Qt3DCore::QEntity *rootEntity() { return mRootEntity; }
 
     //! Returns entity for all rubber bands (to show them always on top)
-    Qt3DCore::QEntity *rubberBandsRootEntity() { return mRubberBandsRootEntity; }
+    Qt3DCore::QEntity *rubberBandsRootEntity();
 
     //! Returns the render capture object used to take an image of the scene
     Qt3DRender::QRenderCapture *renderCapture();

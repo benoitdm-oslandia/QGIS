@@ -42,14 +42,17 @@
 #include <Qt3DRender/QMaterial>
 #include <QColor>
 
+#include "framegraph/qgsframegraph.h"
 
 /// @cond PRIVATE
 
 
-QgsRubberBand3D::QgsRubberBand3D( Qgs3DMapSettings &map, QgsWindow3DEngine *engine, Qt3DCore::QEntity *parentEntity )
+QgsRubberBand3D::QgsRubberBand3D( Qgs3DMapSettings &map, QgsWindow3DEngine *engine )
 {
   mMapSettings = &map;
   mEngine = engine;
+
+  Qt3DCore::QEntity *parentEntity = engine->frameGraph()->rubberBandsRootEntity();
 
   // Rubberband line
   mLineEntity = new Qt3DCore::QEntity( parentEntity );
