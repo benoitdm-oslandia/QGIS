@@ -86,6 +86,7 @@
 #include "qgswindow3dengine.h"
 #include "qgspointcloudlayer.h"
 #include "qgsforwardrenderview.h"
+#include "qgsrubberbandrenderview.h"
 
 std::function<QMap<QString, Qgs3DMapScene *>()> Qgs3DMapScene::sOpenScenesFunction = [] { return QMap<QString, Qgs3DMapScene *>(); };
 
@@ -1233,7 +1234,8 @@ void Qgs3DMapScene::onOriginChanged()
     transform->setOrigin( mMap.origin() );
   }
 
-  const QList<QgsGeoTransform *> rubberBandGeoTransforms = mEngine->frameGraph()->rubberBandsRootEntity()->findChildren<QgsGeoTransform *>();
+  Qt3DCore::QEntity *parentEntity = mEngine->frameGraph()->rubberBandRenderView().rubberBandEntity();
+  const QList<QgsGeoTransform *> rubberBandGeoTransforms = parentEntity->findChildren<QgsGeoTransform *>();
   for ( QgsGeoTransform *transform : rubberBandGeoTransforms )
   {
     transform->setOrigin( mMap.origin() );
