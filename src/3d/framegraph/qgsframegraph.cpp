@@ -59,6 +59,7 @@ typedef Qt3DCore::QGeometry Qt3DQGeometry;
 #include "qgsdebugtextureentity.h"
 #include "qgsambientocclusionrenderview.h"
 #include "qgspostprocessingrenderview.h"
+#include "qgsrubberbandrenderview.h"
 
 const QString QgsFrameGraph::FORWARD_RENDERVIEW = "forward";
 const QString QgsFrameGraph::SHADOW_RENDERVIEW = "shadow";
@@ -67,6 +68,7 @@ const QString QgsFrameGraph::DEPTH_RENDERVIEW = "depth";
 const QString QgsFrameGraph::DEBUG_RENDERVIEW = "debug_texture";
 const QString QgsFrameGraph::AMBIENT_OCCLUSION_RENDERVIEW = "ambient_occlusion";
 const QString QgsFrameGraph::POSTPROC_RENDERVIEW = "post_processing";
+const QString QgsFrameGraph::RUBBER_RENDERVIEW = "rubber_band";
 
 void QgsFrameGraph::constructForwardRenderPass()
 {
@@ -111,36 +113,11 @@ void QgsFrameGraph::constructAmbientOcclusionRenderPass()
   registerRenderView( std::unique_ptr<QgsAmbientOcclusionRenderView>( aorv ), AMBIENT_OCCLUSION_RENDERVIEW );
 }
 
-Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructRubberBandsPass()
+void QgsFrameGraph::constructRubberBandsPass()
 {
-  mRubberBandsCameraSelector = new Qt3DRender::QCameraSelector;
-  mRubberBandsCameraSelector->setObjectName( "RubberBands Pass CameraSelector" );
-  mRubberBandsCameraSelector->setCamera( mMainCamera );
-
-  mRubberBandsLayerFilter = new Qt3DRender::QLayerFilter( mRubberBandsCameraSelector );
-  mRubberBandsLayerFilter->addLayer( mRubberBandsLayer );
-
-  Qt3DRender::QBlendEquationArguments *blendState = new Qt3DRender::QBlendEquationArguments;
-  blendState->setSourceRgb( Qt3DRender::QBlendEquationArguments::SourceAlpha );
-  blendState->setDestinationRgb( Qt3DRender::QBlendEquationArguments::OneMinusSourceAlpha );
-
-  Qt3DRender::QBlendEquation *blendEquation = new Qt3DRender::QBlendEquation;
-  blendEquation->setBlendFunction( Qt3DRender::QBlendEquation::Add );
-
-  mRubberBandsStateSet = new Qt3DRender::QRenderStateSet( mRubberBandsLayerFilter );
-  Qt3DRender::QDepthTest *depthTest = new Qt3DRender::QDepthTest;
-  depthTest->setDepthFunction( Qt3DRender::QDepthTest::Always );
-  mRubberBandsStateSet->addRenderState( depthTest );
-  mRubberBandsStateSet->addRenderState( blendState );
-  mRubberBandsStateSet->addRenderState( blendEquation );
-
-  // Here we attach our drawings to the render target also used by forward pass.
-  // This is kind of okay, but as a result, post-processing effects get applied
-  // to rubber bands too. Ideally we would want them on top of everything.
-  mRubberBandsRenderTargetSelector = new Qt3DRender::QRenderTargetSelector( mRubberBandsStateSet );
-  mRubberBandsRenderTargetSelector->setTarget( forwardRenderView().renderTargetSelector()->target() );
-
-  return mRubberBandsCameraSelector;
+  // rubber band render view writes to the same output textures than the forward render view:
+  QgsRubberBandRenderView *rv = new QgsRubberBandRenderView( RUBBER_RENDERVIEW, mMainCamera, mRootEntity, forwardRenderView().renderTargetSelector()->target() );
+  registerRenderView( std::unique_ptr<QgsRubberBandRenderView>( rv ), RUBBER_RENDERVIEW );
 }
 
 void QgsFrameGraph::constructDepthRenderPass()
@@ -191,10 +168,6 @@ QgsFrameGraph::QgsFrameGraph( QSurface *surface, QSize s, Qt3DRender::QCamera *m
   mRootEntity = root;
   mMainCamera = mainCamera;
 
-  mRubberBandsLayer = new Qt3DRender::QLayer;
-  mRubberBandsLayer->setObjectName( "mRubberBandsLayer" );
-  mRubberBandsLayer->setRecursive( true );
-
   mRenderSurfaceSelector = new Qt3DRender::QRenderSurfaceSelector;
 
   QObject *surfaceObj = dynamic_cast<QObject *>( surface );
@@ -210,9 +183,7 @@ QgsFrameGraph::QgsFrameGraph( QSurface *surface, QSize s, Qt3DRender::QCamera *m
   constructForwardRenderPass();
 
   // rubber bands (they should be always on top)
-  Qt3DRender::QFrameGraphNode *rubberBandsPass = constructRubberBandsPass();
-  rubberBandsPass->setObjectName( "rubberBandsPass" );
-  rubberBandsPass->setParent( mMainViewPort );
+  constructRubberBandsPass();
 
   // shadow rendering pass
   constructShadowRenderPass();
@@ -225,10 +196,6 @@ QgsFrameGraph::QgsFrameGraph( QSurface *surface, QSize s, Qt3DRender::QCamera *m
 
   // post process
   constructPostprocessingPass();
-
-  mRubberBandsRootEntity = new Qt3DCore::QEntity( mRootEntity );
-  mRubberBandsRootEntity->setObjectName( "mRubberBandsRootEntity" );
-  mRubberBandsRootEntity->addComponent( mRubberBandsLayer );
 }
 
 void QgsFrameGraph::unregisterRenderView( const QString &name )
@@ -469,4 +436,10 @@ QgsPostprocessingRenderView &QgsFrameGraph::postprocessingRenderView()
 {
   QgsAbstractRenderView *rv = mRenderViewMap[QgsFrameGraph::POSTPROC_RENDERVIEW].get();
   return *( dynamic_cast<QgsPostprocessingRenderView *>( rv ) );
+}
+
+QgsRubberBandRenderView &QgsFrameGraph::rubberBandRenderView()
+{
+  QgsAbstractRenderView *rv = mRenderViewMap[QgsFrameGraph::RUBBER_RENDERVIEW].get();
+  return *( dynamic_cast<QgsRubberBandRenderView *>( rv ) );
 }
