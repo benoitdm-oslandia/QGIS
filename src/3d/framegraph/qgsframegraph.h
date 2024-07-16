@@ -37,13 +37,12 @@
 #include <Qt3DRender/QDebugOverlay>
 
 #include "qgspointlightsettings.h"
+#include "qgsambientocclusionrenderentity.h"
 
 class QgsDirectionalLightSettings;
 class QgsCameraController;
 class QgsRectangle;
 class QgsPostprocessingEntity;
-class QgsAmbientOcclusionRenderEntity;
-class QgsAmbientOcclusionBlurEntity;
 class QgsAbstractRenderView;
 class QgsDebugTextureEntity;
 
@@ -73,12 +72,6 @@ class QgsFrameGraph : public Qt3DCore::QEntity
     Qt3DRender::QFrameGraphNode *frameGraphRoot() { return mRenderSurfaceSelector; }
 
     /**
-     * Returns blurred ambient occlusion factor values texture
-     * \since QGIS 3.28
-     */
-    Qt3DRender::QTexture2D *blurredAmbientOcclusionFactorMap() { return mAmbientOcclusionBlurTexture; }
-
-    /**
      * Returns a layer object used to indicate that the object is transparent
      * TODO should not be there
      * \since QGIS 3.26
@@ -105,54 +98,6 @@ class QgsFrameGraph : public Qt3DCore::QEntity
 
     //! Sets whether frustum culling is enabled
     void setFrustumCullingEnabled( bool enabled );
-
-    /**
-     * Sets whether Screen Space Ambient Occlusion will be enabled
-     * \since QGIS 3.28
-     */
-    void setAmbientOcclusionEnabled( bool enabled );
-
-    /**
-     * Returns whether Screen Space Ambient Occlusion is enabled
-     * \since QGIS 3.28
-     */
-    bool ambientOcclusionEnabled() const { return mAmbientOcclusionEnabled; }
-
-    /**
-     * Sets the ambient occlusion intensity
-     * \since QGIS 3.28
-     */
-    void setAmbientOcclusionIntensity( float intensity );
-
-    /**
-     * Returns the ambient occlusion intensity
-     * \since QGIS 3.28
-     */
-    float ambientOcclusionIntensity() const { return mAmbientOcclusionIntensity; }
-
-    /**
-     * Sets the ambient occlusion radius
-     * \since QGIS 3.28
-     */
-    void setAmbientOcclusionRadius( float radius );
-
-    /**
-     * Returns the ambient occlusion radius
-     * \since QGIS 3.28
-     */
-    float ambientOcclusionRadius() const { return mAmbientOcclusionRadius; }
-
-    /**
-     * Sets the ambient occlusion threshold
-     * \since QGIS 3.28
-     */
-    void setAmbientOcclusionThreshold( float threshold );
-
-    /**
-     * Returns the ambient occlusion threshold
-     * \since QGIS 3.28
-     */
-    float ambientOcclusionThreshold() const { return mAmbientOcclusionThreshold; }
 
     //! Sets the clear color of the scene (background color)
     void setClearColor( const QColor &clearColor );
@@ -209,6 +154,8 @@ class QgsFrameGraph : public Qt3DCore::QEntity
     static const QString AXIS3D_RENDERVIEW;
     static const QString DEPTH_RENDERVIEW;
     static const QString DEBUG_RENDERVIEW;
+    //! Ambient occlusion render view name
+    static const QString AO_RENDERVIEW;
 
   private:
     Qt3DRender::QRenderSurfaceSelector *mRenderSurfaceSelector = nullptr;
@@ -223,22 +170,6 @@ class QgsFrameGraph : public Qt3DCore::QEntity
     Qt3DRender::QTexture2D *mRenderCaptureColorTexture = nullptr;
     Qt3DRender::QTexture2D *mRenderCaptureDepthTexture = nullptr;
 
-    // Ambient occlusion factor generation pass
-    Qt3DRender::QCameraSelector *mAmbientOcclusionRenderCameraSelector = nullptr;
-    Qt3DRender::QRenderStateSet *mAmbientOcclusionRenderStateSet = nullptr;
-    Qt3DRender::QLayerFilter *mAmbientOcclusionRenderLayerFilter = nullptr;
-    Qt3DRender::QRenderTargetSelector *mAmbientOcclusionRenderCaptureTargetSelector = nullptr;
-    // Ambient occlusion factor generation pass texture related objects:
-    Qt3DRender::QTexture2D *mAmbientOcclusionRenderTexture = nullptr;
-
-    // Ambient occlusion factor blur pass
-    Qt3DRender::QCameraSelector *mAmbientOcclusionBlurCameraSelector = nullptr;
-    Qt3DRender::QRenderStateSet *mAmbientOcclusionBlurStateSet = nullptr;
-    Qt3DRender::QLayerFilter *mAmbientOcclusionBlurLayerFilter = nullptr;
-    Qt3DRender::QRenderTargetSelector *mAmbientOcclusionBlurRenderCaptureTargetSelector = nullptr;
-    // Ambient occlusion factor blur pass texture related objects:
-    Qt3DRender::QTexture2D *mAmbientOcclusionBlurTexture = nullptr;
-
     // Rubber bands pass
     Qt3DRender::QCameraSelector *mRubberBandsCameraSelector = nullptr;
     Qt3DRender::QLayerFilter *mRubberBandsLayerFilter = nullptr;
@@ -247,17 +178,7 @@ class QgsFrameGraph : public Qt3DCore::QEntity
 
     static constexpr int mDefaultShadowMapResolution = 2048;
 
-    // Ambient occlusion related settings
-    bool mAmbientOcclusionEnabled = false;
-    float mAmbientOcclusionIntensity = 0.5f;
-    float mAmbientOcclusionRadius = 25.f;
-    float mAmbientOcclusionThreshold = 0.5f;
-
     QSize mSize = QSize( 1024, 768 );
-
-    bool mEyeDomeLightingEnabled = false;
-    double mEyeDomeLightingStrength = 1000.0;
-    int mEyeDomeLightingDistance = 1;
 
     QVector3D mLightDirection = QVector3D( 0.0, -1.0f, 0.0f );
 
@@ -266,8 +187,6 @@ class QgsFrameGraph : public Qt3DCore::QEntity
     Qt3DRender::QLayer *mRubberBandsLayer = nullptr;
 
     QgsPostprocessingEntity *mPostprocessingEntity = nullptr;
-    QgsAmbientOcclusionRenderEntity *mAmbientOcclusionRenderEntity = nullptr;
-    QgsAmbientOcclusionBlurEntity *mAmbientOcclusionBlurEntity = nullptr;
 
     Qt3DCore::QEntity *mRubberBandsRootEntity = nullptr;
 
@@ -276,13 +195,11 @@ class QgsFrameGraph : public Qt3DCore::QEntity
     void constructDebugTexturePass( Qt3DRender::QFrameGraphNode *topNode = nullptr );
     Qt3DRender::QFrameGraphNode *constructPostprocessingPass();
     void constructDepthRenderPass();
-    Qt3DRender::QFrameGraphNode *constructAmbientOcclusionRenderPass();
-    Qt3DRender::QFrameGraphNode *constructAmbientOcclusionBlurPass();
+    void constructAmbientOcclusionRenderPass();
     Qt3DRender::QFrameGraphNode *constructRubberBandsPass();
 
     Qt3DRender::QFrameGraphNode *constructSubPostPassForProcessing();
     Qt3DRender::QFrameGraphNode *constructSubPostPassForRenderCapture();
-    Qt3DRender::QFrameGraphNode *constructSubPostPassForTexturesPreview();
 
     bool mRenderCaptureEnabled = false;
 
