@@ -137,6 +137,8 @@ class QgsFrameGraph : public Qt3DCore::QEntity
     //! Returns the render view named \a name, if any
     QgsAbstractRenderView *renderView( const QString &name );
 
+    const QgsAbstractRenderView *renderView( const QString &name ) const;
+
     //! Returns the layer used to assign entities to the render view named \a name, if any
     Qt3DRender::QLayer *filterLayer( const QString &name );
 
@@ -149,18 +151,14 @@ class QgsFrameGraph : public Qt3DCore::QEntity
     static const QString AO_RENDERVIEW;
     //! Postprocessing render view name
     static const QString POSTPROC_RENDERVIEW;
+    //! rubber band render view name
+    static const QString RUBBER_RENDERVIEW;
 
   private:
     Qt3DRender::QRenderSurfaceSelector *mRenderSurfaceSelector = nullptr;
     Qt3DRender::QViewport *mMainViewPort = nullptr;
 
     Qt3DRender::QCamera *mMainCamera = nullptr;
-
-    // Rubber bands pass
-    Qt3DRender::QCameraSelector *mRubberBandsCameraSelector = nullptr;
-    Qt3DRender::QLayerFilter *mRubberBandsLayerFilter = nullptr;
-    Qt3DRender::QRenderStateSet *mRubberBandsStateSet = nullptr;
-    Qt3DRender::QRenderTargetSelector *mRubberBandsRenderTargetSelector = nullptr;
 
     static constexpr int mDefaultShadowMapResolution = 2048;
 
@@ -170,16 +168,12 @@ class QgsFrameGraph : public Qt3DCore::QEntity
 
     Qt3DCore::QEntity *mRootEntity = nullptr;
 
-    Qt3DRender::QLayer *mRubberBandsLayer = nullptr;
-
-    Qt3DCore::QEntity *mRubberBandsRootEntity = nullptr;
-
     void constructShadowRenderPass();
     void constructForwardRenderPass();
     void constructPostprocessingPass();
     void constructDepthRenderPass();
     void constructAmbientOcclusionRenderPass();
-    Qt3DRender::QFrameGraphNode *constructRubberBandsPass();
+    void constructRubberBandsPass();
 
     QMap<QString, QgsAbstractRenderView *> mRenderViewMap;
 
