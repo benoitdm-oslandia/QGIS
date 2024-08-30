@@ -183,9 +183,9 @@ There are several channels where you can find help and support for QGIS:
 - Using the [QGIS community site](https://qgis.org)
 - Joining the [qgis-users mailing list](https://lists.osgeo.org/mailman/listinfo/qgis-user)
 - Chatting with other users real-time. *Please wait around for a response to your question as many folks on the channel are doing other things and it may take a while for them to notice your question. The following paths all take you to the same chat room:*
-    - Using an IRC client and joining the [#qgis](https://webchat.freenode.net/?channels=#qgis) channel on irc.freenode.net.
-    - Using a Matrix client and joining the [#qgis:matrix.org](https://matrix.to/#/#qgis:matrix.org) room.
-    - Using [Gitter](https://gitter.im/qgis/QGIS) chat.
+    - Using an IRC client and joining the
+      [#qgis](https://web.libera.chat/?channels=#qgis) channel on irc.libera.chat.
+    - Using a Matrix client and joining the [#qgis:osgeo.org](https://matrix.to/#/#qgis:osgeo.org) room.
  - At the [GIS stackexchange](https://gis.stackexchange.com/) or [r/QGIS reddit](https://www.reddit.com/r/QGIS/), which are not maintained by the QGIS team, but where the QGIS and broader GIS community provides lots of advice
 - [Other support channels](https://qgis.org/en/site/forusers/support.html)
 
@@ -207,6 +207,8 @@ If you wish to contribute patches you can:
  The development team can then review your contribution and commit it upstream as appropriate.
 
 If you commit a new feature, add `[FEATURE]` to your commit message AND give a clear description of the new feature. The label `Needs documentation` will be added by maintainers and will automatically create an issue on the QGIS-Documentation repo, where you or others should write documentation about it.
+
+ A [complete developer guide](https://docs.qgis.org/latest/en/docs/developers_guide/index.html) is also available to explain the build process, the unit testing system and more!
 
 For large-scale changes, you can open a [QEP (QGIS Enhancement Proposal)](https://github.com/qgis/QGIS-Enhancement-Proposals). QEPs are used in the process of creating and discussing new enhancements or policy for QGIS.
 

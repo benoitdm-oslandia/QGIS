@@ -51,6 +51,44 @@ class DummyAlgorithm2 : public QgsProcessingAlgorithm
 
 };
 
+class DummyRaiseExceptionAlgorithm : public QgsProcessingAlgorithm
+{
+  public:
+
+    DummyRaiseExceptionAlgorithm( const QString &name ) : mName( name ) { mFlags = QgsProcessingAlgorithm::flags(); hasPostProcessed = false; }
+    static bool hasPostProcessed;
+    ~DummyRaiseExceptionAlgorithm()
+    {
+      hasPostProcessed |= mHasPostProcessed;
+    }
+
+    void initAlgorithm( const QVariantMap & = QVariantMap() ) override
+    {
+    }
+    QString name() const override { return mName; }
+    QString displayName() const override { return mName; }
+    QVariantMap processAlgorithm( const QVariantMap &, QgsProcessingContext &, QgsProcessingFeedback * ) override
+    {
+      throw QgsProcessingException( QStringLiteral( "something bad happened" ) );
+    }
+    static bool postProcessAlgorithmCalled;
+    QVariantMap postProcessAlgorithm( QgsProcessingContext &, QgsProcessingFeedback * ) final
+    {
+      postProcessAlgorithmCalled = true;
+      return QVariantMap();
+    }
+
+    Qgis::ProcessingAlgorithmFlags flags() const override { return mFlags; }
+    DummyRaiseExceptionAlgorithm *createInstance() const override { return new DummyRaiseExceptionAlgorithm( name() ); }
+
+    QString mName;
+
+    Qgis::ProcessingAlgorithmFlags mFlags;
+
+};
+bool DummyRaiseExceptionAlgorithm::hasPostProcessed = false;
+bool DummyRaiseExceptionAlgorithm::postProcessAlgorithmCalled = false;
+
 class DummyProvider4 : public QgsProcessingProvider // clazy:exclude=missing-qobject-macro
 {
   public:
@@ -77,6 +115,7 @@ class DummyProvider4 : public QgsProcessingProvider // clazy:exclude=missing-qob
     void loadAlgorithms() override
     {
       QVERIFY( addAlgorithm( new DummyAlgorithm2( QStringLiteral( "alg1" ) ) ) );
+      QVERIFY( addAlgorithm( new DummyRaiseExceptionAlgorithm( QStringLiteral( "raise" ) ) ) );
     }
 
 };
@@ -108,6 +147,8 @@ class TestQgsProcessingModelAlgorithm: public QgsTest
     void modelValidate();
     void modelInputs();
     void modelOutputs();
+    void modelWithChildException();
+    void modelExecuteWithPreviousState();
     void modelDependencies();
     void modelSource();
     void modelNameMatchesFileName();
@@ -133,6 +174,7 @@ void TestQgsProcessingModelAlgorithm::initTestCase()
   settings.clear();
 
   QgsApplication::processingRegistry()->addProvider( new QgsNativeAlgorithms( QgsApplication::processingRegistry() ) );
+  QgsApplication::processingRegistry()->addProvider( new DummyProvider4() );
 }
 
 void TestQgsProcessingModelAlgorithm::cleanupTestCase()
@@ -462,7 +504,7 @@ void TestQgsProcessingModelAlgorithm::modelerAlgorithm()
   QCOMPARE( map["default_value"].toMap()["create_options"].toMap()[QStringLiteral( "fileEncoding" )].toString(), QStringLiteral( "my_encoding" ) );
   QgsProcessingModelOutput out;
   out.loadVariant( map );
-  QCOMPARE( out.defaultValue().userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( out.defaultValue().userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   layerDef = out.defaultValue().value<QgsProcessingOutputLayerDefinition>();
   QCOMPARE( layerDef.sink.staticValue().toString(), QStringLiteral( "my_path" ) );
   QCOMPARE( layerDef.createOptions[QStringLiteral( "fileEncoding" )].toString(), QStringLiteral( "my_encoding" ) );
@@ -1000,7 +1042,7 @@ void TestQgsProcessingModelAlgorithm::modelerAlgorithm()
   QCOMPARE( alg6c1.parameterSources().value( "zm" ).at( 3 ).source(), Qgis::ProcessingModelChildParameterSource::Expression );
   QCOMPARE( alg6c1.parameterSources().value( "zm" ).at( 3 ).expression(), QStringLiteral( "1+2" ) );
   QCOMPARE( alg6c1.parameterSources().value( "zm" ).at( 4 ).source(), Qgis::ProcessingModelChildParameterSource::StaticValue );
-  QCOMPARE( alg6c1.parameterSources().value( "zm" ).at( 4 ).staticValue().userType(), QMetaType::type( "QgsProperty" ) );
+  QCOMPARE( alg6c1.parameterSources().value( "zm" ).at( 4 ).staticValue().userType(), qMetaTypeId<QgsProperty>() );
   QCOMPARE( alg6c1.parameterSources().value( "zm" ).at( 4 ).staticValue().value< QgsProperty >().expressionString(), QStringLiteral( "1+8" ) );
 
   QCOMPARE( alg6c1.modelOutputs().count(), 1 );
@@ -1292,7 +1334,7 @@ void TestQgsProcessingModelAlgorithm::modelExecution()
   QVERIFY( error.isEmpty() );
   QCOMPARE( params.value( "INPUT" ).toString(), QStringLiteral( "dest.shp" ) );
   QCOMPARE( params.value( "EXPRESSION" ).toString(), QStringLiteral( "true" ) );
-  QCOMPARE( params.value( "OUTPUT" ).userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( params.value( "OUTPUT" ).userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   const QgsProcessingOutputLayerDefinition outDef = qvariant_cast<QgsProcessingOutputLayerDefinition>( params.value( "OUTPUT" ) );
   QCOMPARE( outDef.destinationName, QStringLiteral( "MY_OUT" ) );
   QCOMPARE( outDef.sink.staticValue().toString(), QStringLiteral( "memory:" ) );
@@ -1305,7 +1347,7 @@ void TestQgsProcessingModelAlgorithm::modelExecution()
   QVERIFY( error.isEmpty() );
   QCOMPARE( params.value( "INPUT" ).toString(), QStringLiteral( "dest.shp" ) );
   QCOMPARE( params.value( "EXPRESSION" ).toString(), QStringLiteral( "true" ) );
-  QCOMPARE( params.value( "OUTPUT" ).userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( params.value( "OUTPUT" ).userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   const QgsProcessingOutputLayerDefinition outDef2 = qvariant_cast<QgsProcessingOutputLayerDefinition>( params.value( "OUTPUT" ) );
   QCOMPARE( outDef2.destinationName, QStringLiteral( "MY_OUT" ) );
   QCOMPARE( outDef2.sink.staticValue().toString(), QStringLiteral( "memory:" ) );
@@ -1616,6 +1658,7 @@ void TestQgsProcessingModelAlgorithm::modelBranchPruning()
 
   // raster input
   params.insert( QStringLiteral( "LAYER" ), QStringLiteral( "R1" ) );
+  context.modelResult().clear();
   results = model1.run( params, context, &feedback );
   // we should get the raster branch outputs only
   QVERIFY( !results.value( QStringLiteral( "fill2:RASTER_OUTPUT" ) ).toString().isEmpty() );
@@ -1678,14 +1721,13 @@ void TestQgsProcessingModelAlgorithm::modelBranchPruningConditional()
   context.expressionContext().scope( 0 )->setVariable( QStringLiteral( "var1" ), 0 );
   context.expressionContext().scope( 0 )->setVariable( QStringLiteral( "var2" ), 1 );
 
+  context.modelResult().clear();
   results = model1.run( params, context, &feedback, &ok );
   QVERIFY( ok ); // the branch with the exception should NOT be hit
 }
 
 void TestQgsProcessingModelAlgorithm::modelWithProviderWithLimitedTypes()
 {
-  QgsApplication::processingRegistry()->addProvider( new DummyProvider4() );
-
   QgsProcessingModelAlgorithm alg( "test", "testGroup" );
   QgsProcessingModelChildAlgorithm algc1;
   algc1.setChildId( QStringLiteral( "cx1" ) );
@@ -2253,9 +2295,9 @@ void TestQgsProcessingModelAlgorithm::modelOutputs()
   p.addMapLayer( layer3111 );
   context.setProject( &p );
   params.insert( QStringLiteral( "INPUT" ), QStringLiteral( "v1" ) );
-  params.insert( QStringLiteral( "cx2:a" ), QgsProcessing::TEMPORARY_OUTPUT );
-  params.insert( QStringLiteral( "cx3:b" ), QgsProcessing::TEMPORARY_OUTPUT );
-  params.insert( QStringLiteral( "cx4:c" ), QgsProcessing::TEMPORARY_OUTPUT );
+  params.insert( QStringLiteral( "cx2:a" ), QgsProcessingOutputLayerDefinition( QgsProcessing::TEMPORARY_OUTPUT, &p ) );
+  params.insert( QStringLiteral( "cx3:b" ), QgsProcessingOutputLayerDefinition( QgsProcessing::TEMPORARY_OUTPUT, &p ) );
+  params.insert( QStringLiteral( "cx4:c" ), QgsProcessingOutputLayerDefinition( QgsProcessing::TEMPORARY_OUTPUT, &p ) );
 
   QVariantMap results = m.run( params, context, &feedback );
   const QString destA = results.value( QStringLiteral( "cx2:a" ) ).toString();
@@ -2272,6 +2314,211 @@ void TestQgsProcessingModelAlgorithm::modelOutputs()
   QVERIFY( !destC.isEmpty() );
   QCOMPARE( context.layerToLoadOnCompletionDetails( destC ).groupName, QStringLiteral( "output group" ) );
   QCOMPARE( context.layerToLoadOnCompletionDetails( destC ).layerSortKey, 1 );
+
+  // not all layers are set to load in project
+  QgsProcessingContext context2;
+  context2.setProject( &p );
+  params.clear();
+  params.insert( QStringLiteral( "INPUT" ), QStringLiteral( "v1" ) );
+  // should not be loaded on completion:
+  params.insert( QStringLiteral( "cx2:a" ), QgsProcessing::TEMPORARY_OUTPUT );
+  // should be loaded on completion:
+  params.insert( QStringLiteral( "cx3:b" ), QgsProcessingOutputLayerDefinition( QgsProcessing::TEMPORARY_OUTPUT, &p ) );
+  params.insert( QStringLiteral( "cx4:c" ), QgsProcessingOutputLayerDefinition( QgsProcessing::TEMPORARY_OUTPUT, &p ) );
+
+  QVariantMap results2 = m.run( params, context2, &feedback );
+  const QString destA2 = results2.value( QStringLiteral( "cx2:a" ) ).toString();
+  QVERIFY( !destA2.isEmpty() );
+  QVERIFY( !context2.willLoadLayerOnCompletion( destA2 ) );
+
+  const QString destB2 = results2.value( QStringLiteral( "cx3:b" ) ).toString();
+  QVERIFY( !destB2.isEmpty() );
+  QCOMPARE( context2.layerToLoadOnCompletionDetails( destB2 ).groupName, QStringLiteral( "output group" ) );
+  QCOMPARE( context2.layerToLoadOnCompletionDetails( destB2 ).layerSortKey, 0 );
+
+  const QString destC2 = results2.value( QStringLiteral( "cx4:c" ) ).toString();
+  QVERIFY( !destC2.isEmpty() );
+  QCOMPARE( context2.layerToLoadOnCompletionDetails( destC2 ).groupName, QStringLiteral( "output group" ) );
+  QCOMPARE( context2.layerToLoadOnCompletionDetails( destC2 ).layerSortKey, 1 );
+}
+
+
+void TestQgsProcessingModelAlgorithm::modelWithChildException()
+{
+  QgsProcessingModelAlgorithm m;
+
+  const QgsProcessingModelParameter sourceParam( "INPUT" );
+  m.addModelParameter( new QgsProcessingParameterFeatureSource( "INPUT" ), sourceParam );
+
+  QgsProcessingModelChildAlgorithm algWhichCreatesLayer;
+  algWhichCreatesLayer.setChildId( QStringLiteral( "buffer" ) );
+  algWhichCreatesLayer.setAlgorithmId( "native:buffer" );
+  algWhichCreatesLayer.addParameterSources( "INPUT", { QgsProcessingModelChildParameterSource::fromModelParameter( "INPUT" ) } );
+
+  m.addChildAlgorithm( algWhichCreatesLayer );
+
+  QgsProcessingModelChildAlgorithm algWhichRaisesException;
+  algWhichRaisesException.setChildId( QStringLiteral( "raise" ) );
+  algWhichRaisesException.setDescription( QStringLiteral( "my second step" ) );
+  algWhichRaisesException.setAlgorithmId( "dummy4:raise" );
+  algWhichRaisesException.setDependencies( {QgsProcessingModelChildDependency( QStringLiteral( "buffer" ) )} );
+  m.addChildAlgorithm( algWhichRaisesException );
+
+  // run and check context details
+  QgsProcessingContext context;
+  context.setLogLevel( Qgis::ProcessingLogLevel::ModelDebug );
+  QgsProcessingFeedback feedback;
+  QVariantMap params;
+  QgsVectorLayer *layer3111 = new QgsVectorLayer( "Point?crs=epsg:3111", "v1", "memory" );
+  QgsProject p;
+  p.addMapLayer( layer3111 );
+  context.setProject( &p );
+  params.insert( QStringLiteral( "INPUT" ), QStringLiteral( "v1" ) );
+
+  bool ok = false;
+  m.run( params, context, &feedback, &ok );
+  // model should fail, exception was raised
+  QVERIFY( !ok );
+  // but result from successful buffer step should still be available in the context
+  QCOMPARE( context.temporaryLayerStore()->count(), 1 );
+  // confirm that QgsProcessingAlgorithm::postProcess was called for failing DummyRaiseExceptionAlgorithm step
+  QVERIFY( DummyRaiseExceptionAlgorithm::hasPostProcessed );
+  // but not DummyRaiseExceptionAlgorithm::postProcessAlgorithm
+  QVERIFY( !DummyRaiseExceptionAlgorithm::postProcessAlgorithmCalled );
+
+  // results and inputs from buffer child should be available through the context
+  QCOMPARE( context.modelResult().childResults().value( "buffer" ).executionStatus(), Qgis::ProcessingModelChildAlgorithmExecutionStatus::Success );
+  QCOMPARE( context.modelResult().childResults().value( "buffer" ).inputs().value( "INPUT" ).toString(), QStringLiteral( "v1" ) );
+  QCOMPARE( context.modelResult().childResults().value( "buffer" ).inputs().value( "OUTPUT" ).toString(), QStringLiteral( "memory:Buffered" ) );
+  QCOMPARE( context.modelResult().childResults().value( "buffer" ).htmlLog().left( 50 ), QStringLiteral( "<span style=\"color:#777\">Prepare algorithm: buffer" ) );
+  QCOMPARE( context.modelResult().childResults().value( "buffer" ).htmlLog().right( 21 ), QStringLiteral( "s (1 output(s)).<br/>" ) );
+  QVERIFY( context.temporaryLayerStore()->mapLayer( context.modelResult().childResults().value( "buffer" ).outputs().value( "OUTPUT" ).toString() ) );
+  QCOMPARE( context.modelResult().rawChildInputs().value( "buffer" ).toMap().value( "INPUT" ).toString(), QStringLiteral( "v1" ) );
+  QCOMPARE( context.modelResult().rawChildInputs().value( "buffer" ).toMap().value( "OUTPUT" ).toString(), QStringLiteral( "memory:Buffered" ) );
+  QCOMPARE( context.modelResult().rawChildOutputs().value( "buffer" ).toMap().value( "OUTPUT" ).toString(), context.modelResult().childResults().value( "buffer" ).outputs().value( "OUTPUT" ).toString() );
+
+  QCOMPARE( context.modelResult().childResults().value( "raise" ).executionStatus(), Qgis::ProcessingModelChildAlgorithmExecutionStatus::Failed );
+  QCOMPARE( context.modelResult().childResults().value( "raise" ).htmlLog().left( 49 ), QStringLiteral( "<span style=\"color:#777\">Prepare algorithm: raise" ) );
+  QVERIFY( context.modelResult().childResults().value( "raise" ).htmlLog().contains( QStringLiteral( "Error encountered while running my second step: something bad happened" ) ) );
+
+  QSet<QString> expected{ QStringLiteral( "buffer" ) };
+  QCOMPARE( context.modelResult().executedChildIds(), expected );
+}
+
+void TestQgsProcessingModelAlgorithm::modelExecuteWithPreviousState()
+{
+  QgsProcessingModelAlgorithm m;
+
+  const QgsProcessingModelParameter sourceParam( "test" );
+  m.addModelParameter( new QgsProcessingParameterString( "test" ), sourceParam );
+
+  QgsProcessingModelChildAlgorithm childAlgorithm;
+  childAlgorithm.setChildId( QStringLiteral( "calculate" ) );
+  childAlgorithm.setAlgorithmId( "native:calculateexpression" );
+  childAlgorithm.addParameterSources( "INPUT", { QgsProcessingModelChildParameterSource::fromExpression( " @test || '_1'" ) } );
+  m.addChildAlgorithm( childAlgorithm );
+
+  QgsProcessingModelChildAlgorithm childAlgorithm2;
+  childAlgorithm2.setChildId( QStringLiteral( "calculate2" ) );
+  childAlgorithm2.setAlgorithmId( "native:calculateexpression" );
+  childAlgorithm2.addParameterSources( "INPUT", { QgsProcessingModelChildParameterSource::fromExpression( " @calculate_OUTPUT  || '_2'" ) } );
+  childAlgorithm2.setDependencies( { QgsProcessingModelChildDependency( QStringLiteral( "calculate" ) ) } );
+  m.addChildAlgorithm( childAlgorithm2 );
+
+  // run and check context details
+  QgsProcessingContext context;
+  context.setLogLevel( Qgis::ProcessingLogLevel::ModelDebug );
+  QgsProcessingFeedback feedback;
+  QVariantMap params;
+  params.insert( QStringLiteral( "test" ), QStringLiteral( "my string" ) );
+
+  // start with no initial state
+  bool ok = false;
+  m.run( params, context, &feedback, &ok );
+  QVERIFY( ok );
+  QCOMPARE( context.modelResult().childResults().value( "calculate" ).executionStatus(), Qgis::ProcessingModelChildAlgorithmExecutionStatus::Success );
+  QCOMPARE( context.modelResult().childResults().value( "calculate" ).inputs().value( "INPUT" ).toString(), QStringLiteral( "my string_1" ) );
+  QCOMPARE( context.modelResult().childResults().value( "calculate" ).outputs().value( "OUTPUT" ).toString(), QStringLiteral( "my string_1" ) );
+  QCOMPARE( context.modelResult().rawChildInputs().value( "calculate" ).toMap().value( "INPUT" ).toString(), QStringLiteral( "my string_1" ) );
+  QCOMPARE( context.modelResult().rawChildOutputs().value( "calculate" ).toMap().value( "OUTPUT" ).toString(), QStringLiteral( "my string_1" ) );
+
+  QCOMPARE( context.modelResult().childResults().value( "calculate2" ).executionStatus(), Qgis::ProcessingModelChildAlgorithmExecutionStatus::Success );
+  QCOMPARE( context.modelResult().childResults().value( "calculate2" ).inputs().value( "INPUT" ).toString(), QStringLiteral( "my string_1_2" ) );
+  QCOMPARE( context.modelResult().childResults().value( "calculate2" ).outputs().value( "OUTPUT" ).toString(), QStringLiteral( "my string_1_2" ) );
+  QCOMPARE( context.modelResult().rawChildInputs().value( "calculate2" ).toMap().value( "INPUT" ).toString(), QStringLiteral( "my string_1_2" ) );
+  QCOMPARE( context.modelResult().rawChildOutputs().value( "calculate2" ).toMap().value( "OUTPUT" ).toString(), QStringLiteral( "my string_1_2" ) );
+
+  QSet<QString> expected{ QStringLiteral( "calculate" ), QStringLiteral( "calculate2" ) };
+  QCOMPARE( context.modelResult().executedChildIds(), expected );
+  QgsProcessingModelResult firstResult = context.modelResult();
+
+  context.modelResult().clear();
+  // start with an initial state
+
+  std::unique_ptr< QgsProcessingModelInitialRunConfig > modelConfig = std::make_unique< QgsProcessingModelInitialRunConfig >();
+  modelConfig->setPreviouslyExecutedChildAlgorithms( { QStringLiteral( "calculate" )} );
+  modelConfig->setInitialChildInputs( QVariantMap{ {
+      QStringLiteral( "calculate" ), QVariantMap{
+        { QStringLiteral( "INPUT" ), QStringLiteral( "a different string" ) }
+      }
+    }} );
+  modelConfig->setInitialChildOutputs( QVariantMap{ {
+      QStringLiteral( "calculate" ), QVariantMap{
+        { QStringLiteral( "OUTPUT" ), QStringLiteral( "a different string" ) }
+      }
+    }} );
+  context.setModelInitialRunConfig( std::move( modelConfig ) );
+
+  m.run( params, context, &feedback, &ok );
+  QVERIFY( ok );
+  // "calculate" should not be re-executed
+  QCOMPARE( context.modelResult().childResults().value( "calculate" ).executionStatus(), Qgis::ProcessingModelChildAlgorithmExecutionStatus::NotExecuted );
+  QVERIFY( context.modelResult().childResults().value( "calculate" ).inputs().isEmpty() );
+  QVERIFY( context.modelResult().childResults().value( "calculate" ).outputs().isEmpty() );
+
+  // the second child algorithm should be re-run
+  QCOMPARE( context.modelResult().childResults().value( "calculate2" ).executionStatus(), Qgis::ProcessingModelChildAlgorithmExecutionStatus::Success );
+  QCOMPARE( context.modelResult().childResults().value( "calculate2" ).inputs().value( "INPUT" ).toString(), QStringLiteral( "a different string_2" ) );
+  QCOMPARE( context.modelResult().childResults().value( "calculate2" ).outputs().value( "OUTPUT" ).toString(), QStringLiteral( "a different string_2" ) );
+  QCOMPARE( context.modelResult().rawChildInputs().value( "calculate2" ).toMap().value( "INPUT" ).toString(), QStringLiteral( "a different string_2" ) );
+  QCOMPARE( context.modelResult().rawChildOutputs().value( "calculate2" ).toMap().value( "OUTPUT" ).toString(), QStringLiteral( "a different string_2" ) );
+
+  expected = QSet<QString> { QStringLiteral( "calculate" ), QStringLiteral( "calculate2" ) };
+  QCOMPARE( context.modelResult().executedChildIds(), expected );
+
+  // config should be discarded, it should never be re-used or passed on to non top-level models
+  QVERIFY( !context.modelInitialRunConfig() );
+
+  // merge with first result, to get complete set of results across both executions
+  firstResult.mergeWith( context.modelResult() );
+  QCOMPARE( firstResult.childResults().value( "calculate" ).executionStatus(), Qgis::ProcessingModelChildAlgorithmExecutionStatus::Success );
+  QCOMPARE( firstResult.childResults().value( "calculate" ).inputs().value( "INPUT" ).toString(), QStringLiteral( "my string_1" ) );
+  QCOMPARE( firstResult.childResults().value( "calculate" ).outputs().value( "OUTPUT" ).toString(), QStringLiteral( "my string_1" ) );
+  QCOMPARE( firstResult.rawChildInputs().value( "calculate" ).toMap().value( "INPUT" ).toString(), QStringLiteral( "a different string" ) );
+  QCOMPARE( firstResult.rawChildOutputs().value( "calculate" ).toMap().value( "OUTPUT" ).toString(), QStringLiteral( "a different string" ) );
+  QCOMPARE( firstResult.childResults().value( "calculate2" ).executionStatus(), Qgis::ProcessingModelChildAlgorithmExecutionStatus::Success );
+  QCOMPARE( firstResult.childResults().value( "calculate2" ).inputs().value( "INPUT" ).toString(), QStringLiteral( "a different string_2" ) );
+  QCOMPARE( firstResult.childResults().value( "calculate2" ).outputs().value( "OUTPUT" ).toString(), QStringLiteral( "a different string_2" ) );
+  QCOMPARE( firstResult.rawChildInputs().value( "calculate2" ).toMap().value( "INPUT" ).toString(), QStringLiteral( "a different string_2" ) );
+  QCOMPARE( firstResult.rawChildOutputs().value( "calculate2" ).toMap().value( "OUTPUT" ).toString(), QStringLiteral( "a different string_2" ) );
+
+  QCOMPARE( context.temporaryLayerStore()->count(), 0 );
+
+  // test handling of temporary layers generated during earlier runs
+  modelConfig = std::make_unique< QgsProcessingModelInitialRunConfig >();
+
+  std::unique_ptr < QgsMapLayerStore > previousStore = std::make_unique< QgsMapLayerStore >();
+  QgsVectorLayer *layer = new QgsVectorLayer( "Point?crs=epsg:3111", "v1", "memory" );
+  previousStore->addMapLayer( layer );
+  previousStore->moveToThread( nullptr );
+  modelConfig->setPreviousLayerStore( std::move( previousStore ) );
+
+  context.setModelInitialRunConfig( std::move( modelConfig ) );
+  m.run( params, context, &feedback, &ok );
+  QVERIFY( ok );
+  // layer should have been transferred to context's temporary layer store as part of model execution
+  QCOMPARE( context.temporaryLayerStore()->count(), 1 );
+  QCOMPARE( context.temporaryLayerStore()->mapLayersByName( QStringLiteral( "v1" ) ).at( 0 ), layer );
 }
 
 void TestQgsProcessingModelAlgorithm::modelDependencies()

@@ -47,10 +47,6 @@ class CORE_EXPORT QgsTextFormat
      */
     QgsTextFormat();
 
-    /**
-     * Copy constructor.
-     * \param other source QgsTextFormat
-     */
     QgsTextFormat( const QgsTextFormat &other );
 
     QgsTextFormat &operator=( const QgsTextFormat &other );
@@ -178,7 +174,7 @@ class CORE_EXPORT QgsTextFormat
      * units and map unit scale) for a specified render context.
      * \param context destination render context
      * \param scaleFactor optional font size scaling factor. It is recommended to set this to
-     * QgsTextRenderer::FONT_WORKAROUND_SCALE and then manually scale painter devices or calculations
+     * QgsTextRenderer::calculateScaleFactorForFormat() and then manually scale painter devices or calculations
      * based on the resultant font metrics. Failure to do so will result in poor quality text rendering
      * at small font sizes.
      * \param isZeroSize will be set to true if the font is scaled down to a near 0 size, and nothing should be rendered. Not available in Python bindings.
@@ -462,6 +458,68 @@ class CORE_EXPORT QgsTextFormat
      * \since QGIS 3.28
      */
     void setLineHeightUnit( Qgis::RenderUnit unit );
+
+    /**
+     * Returns the distance for tab stops.
+     *
+     * \see tabStopDistanceUnit()
+     * \see setTabStopDistance()
+     *
+     * \since QGIS 3.38
+     */
+    double tabStopDistance() const;
+
+    /**
+     * Sets the \a distance for tab stops. The units are specified using setTabStopDistanceUnit().
+     *
+     * \see tabStopDistance()
+     * \see setTabStopDistanceUnit()
+     *
+     * \since QGIS 3.38
+     */
+    void setTabStopDistance( double distance );
+
+    /**
+     * Returns the units for the tab stop distance.
+     *
+     * \see tabStopDistance()
+     * \see setTabStopDistanceUnit()
+     *
+     * \since QGIS 3.38
+     */
+    Qgis::RenderUnit tabStopDistanceUnit() const;
+
+    /**
+     * Sets the \a unit used for the tab stop distance.
+     *
+     * \see setTabStopDistance()
+     * \see tabStopDistanceUnit()
+     *
+     * \since QGIS 3.38
+     */
+    void setTabStopDistanceUnit( Qgis::RenderUnit unit );
+
+    /**
+     * Returns the map unit scale object for the tab stop distance. This is only used if the
+     * tab stop distance is set to Qgis::RenderUnit::MapUnits.
+     *
+     * \see setTabStopDistanceMapUnitScale()
+     * \see tabStopDistanceUnit()
+     *
+     * \since QGIS 3.38
+     */
+    QgsMapUnitScale tabStopDistanceMapUnitScale() const;
+
+    /**
+     * Sets the map unit \a scale object for the tab stop distance. This is only used if the
+     * tab stop distance is set to Qgis::RenderUnit::MapUnits.
+     *
+     * \see tabStopDistanceMapUnitScale()
+     * \see setTabStopDistanceUnit()
+     *
+     * \since QGIS 3.38
+     */
+    void setTabStopDistanceMapUnitScale( const QgsMapUnitScale &scale );
 
     /**
      * Returns the orientation of the text.

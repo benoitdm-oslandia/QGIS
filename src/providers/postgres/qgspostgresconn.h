@@ -432,7 +432,7 @@ class QgsPostgresConn : public QObject
 
     qint64 getBinaryInt( QgsPostgresResult &queryResult, int row, int col );
 
-    QString fieldExpressionForWhereClause( const QgsField &fld, QVariant::Type valueType = QVariant::LastType, QString expr = "%1" );
+    QString fieldExpressionForWhereClause( const QgsField &fld, QMetaType::Type valueType = QMetaType::Type::UnknownType, QString expr = "%1" );
 
     QString fieldExpression( const QgsField &fld, QString expr = "%1" );
 
@@ -477,6 +477,12 @@ class QgsPostgresConn : public QObject
     static bool allowProjectsInDatabase( const QString &connName );
     static void deleteConnection( const QString &connName );
     static bool allowMetadataInDatabase( const QString &connName );
+
+    /**
+     * Duplicates \a src connection settings to a new \a dst connection.
+     * \since QGIS 3.40
+     */
+    static void duplicateConnection( const QString &src, const QString &dst );
 
     //! A connection needs to be locked when it uses transactions, see QgsPostgresConn::{begin,commit,rollback}
     void lock() { mLock.lock(); }

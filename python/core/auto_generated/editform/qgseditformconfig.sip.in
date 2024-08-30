@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/editform/qgseditformconfig.h                                *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -28,9 +28,6 @@ Contains configuration settings for an editor form.
     struct GroupData
     {
       GroupData();
-%Docstring
-Constructor for GroupData
-%End
       GroupData( const QString &name, const QList<QString> &fields );
       QString mName;
       QList<QString> mFields;
@@ -39,9 +36,6 @@ Constructor for GroupData
     struct TabData
     {
       TabData();
-%Docstring
-Constructor for TabData
-%End
       TabData( const QString &name, const QList<QString> &fields, const QList<QgsEditFormConfig::GroupData> &groups );
       QString mName;
       QList<QString> mFields;
@@ -58,9 +52,6 @@ Constructor for TabData
     };
 
     QgsEditFormConfig( const QgsEditFormConfig &o );
-%Docstring
-Copy constructor
-%End
     ~QgsEditFormConfig();
 
     bool operator==( const QgsEditFormConfig &o ) const;
@@ -119,7 +110,7 @@ If ``ui`` is a URL, a local copy of the file will be made and will be used to cr
 Set the editor widget config for a widget which is not for a simple field.
 
 Example
--------
+-------------------------------------
 
 .. code-block:: python
 
@@ -132,7 +123,6 @@ Example
 
 :return: ``False`` if a field exists with the provided widgetName. In this case
          :py:class:`QgsVectorLayer`.setEditorWidgetSetup should be used.
-
 
 .. seealso:: :py:func:`QgsVectorLayer.setEditorWidgetSetup`
 %End
@@ -317,5 +307,5 @@ Returns data defined property definitions.
  *                                                                      *
  * src/core/editform/qgseditformconfig.h                                *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

@@ -25,6 +25,7 @@
 #include "qgsmaptoolprofilecurve.h"
 #include "qgsmaptoolprofilecurvefromfeature.h"
 #include "qgsprojectelevationproperties.h"
+#include "qgsvectorlayerelevationproperties.h"
 #include "qgsrubberband.h"
 #include "qgsplottoolpan.h"
 #include "qgsplottoolxaxiszoom.h"
@@ -55,6 +56,7 @@
 #include "qgsprofileexporter.h"
 #include "qgsexpressioncontextutils.h"
 #include "qgsterrainprovider.h"
+#include "qgsprofilesourceregistry.h"
 
 #include <QToolBar>
 #include <QProgressBar>
@@ -476,6 +478,9 @@ QgsElevationProfileWidget::QgsElevationProfileWidget( const QString &name )
   // initially populate layer tree with project layers
   mLayerTreeView->populateInitialLayers( QgsProject::instance() );
 
+  connect( QgsProject::instance()->elevationProperties(), &QgsProjectElevationProperties::changed, this, &QgsElevationProfileWidget::onProjectElevationPropertiesChanged );
+  connect( QgsProject::instance(), &QgsProject::crs3DChanged, this, &QgsElevationProfileWidget::onProjectElevationPropertiesChanged );
+
   updateCanvasLayers();
 }
 
@@ -687,7 +692,7 @@ void QgsElevationProfileWidget::onCanvasPointHovered( const QgsPointXY &, const 
 void QgsElevationProfileWidget::updatePlot()
 {
   mCanvas->setTolerance( mSettingsAction->toleranceSpinBox()->value() );
-  mCanvas->setCrs( mMainCanvas->mapSettings().destinationCrs() );
+  mCanvas->setCrs( QgsProject::instance()->crs3D() );
 
   if ( !mProfileCurve.isEmpty() )
   {
@@ -764,7 +769,7 @@ void QgsElevationProfileWidget::exportAsPdf()
   pageLayout.setMode( QPageLayout::FullPageMode );
   pdfWriter.setPageLayout( pageLayout );
   pdfWriter.setPageMargins( QMarginsF( 0, 0, 0, 0 ) );
-  pdfWriter.setResolution( 300 );
+  pdfWriter.setResolution( 1200 );
 
   QPainter p;
   if ( !p.begin( &pdfWriter ) )
@@ -876,7 +881,7 @@ void QgsElevationProfileWidget::exportResults( Qgis::ProfileExportType type )
   file = QgsFileUtils::ensureFileNameHasExtension( file, QgsFileUtils::extensionsFromFilter( selectedFilter ) );
 
   QgsProfileRequest request( profileCurve.release() );
-  request.setCrs( mMainCanvas->mapSettings().destinationCrs() );
+  request.setCrs( QgsProject::instance()->crs3D() );
   request.setTolerance( mSettingsAction->toleranceSpinBox()->value() );
   request.setTransformContext( QgsProject::instance()->transformContext() );
   request.setTerrainProvider( QgsProject::instance()->elevationProperties()->terrainProvider() ? QgsProject::instance()->elevationProperties()->terrainProvider()->clone() : nullptr );
@@ -887,7 +892,10 @@ void QgsElevationProfileWidget::exportResults( Qgis::ProfileExportType type )
 
   const QList< QgsMapLayer * > layersToGenerate = mCanvas->layers();
   QList< QgsAbstractProfileSource * > sources;
-  sources.reserve( layersToGenerate .size() );
+  const QList< QgsAbstractProfileSource * > registrySources = QgsApplication::profileSourceRegistry()->profileSources();
+  sources.reserve( layersToGenerate.size() + registrySources.size() );
+
+  sources << registrySources;
   for ( QgsMapLayer *layer : layersToGenerate )
   {
     if ( QgsAbstractProfileSource *source = dynamic_cast< QgsAbstractProfileSource * >( layer ) )
@@ -1033,6 +1041,32 @@ void QgsElevationProfileWidget::createOrUpdateRubberBands( )
   {
     if ( mToleranceRubberBand )
       mToleranceRubberBand->hide();
+  }
+}
+
+void QgsElevationProfileWidget::onProjectElevationPropertiesChanged()
+{
+  // Only the vector layers whose clamping depend on the terrain need to be updated
+  // if the project elevation properties have changed.
+  // Therefore, update the plot if this criteria is met.
+  for ( QgsMapLayer *layer : mCanvas->layers() )
+  {
+    if ( layer->type() == Qgis::LayerType::Vector )
+    {
+      QgsVectorLayerElevationProperties *elevationProperties = qgis::down_cast< QgsVectorLayerElevationProperties * >( layer->elevationProperties() );
+      switch ( elevationProperties->clamping() )
+      {
+        case Qgis::AltitudeClamping::Relative:
+        case Qgis::AltitudeClamping::Terrain:
+        {
+          scheduleUpdate();
+          break;
+        }
+
+        case Qgis::AltitudeClamping::Absolute:
+          break;
+      }
+    }
   }
 }
 

@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/layout/qgslayouteffect.h                                    *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -26,13 +26,7 @@ onto a scene with custom composition modes.
 %End
   public:
 
- QgsLayoutEffect() /Deprecated/;
-%Docstring
-Constructor for QgsLayoutEffect.
-
-.. deprecated:: QGIS 3.34
-   -- this class should not be used, it is non-stable and results in crashes. See https://bugreports.qt.io/browse/QTBUG-58501.
-%End
+    QgsLayoutEffect();
 
  void setCompositionMode( QPainter::CompositionMode mode ) /Deprecated/;
 %Docstring
@@ -69,5 +63,5 @@ the item.
  *                                                                      *
  * src/core/layout/qgslayouteffect.h                                    *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

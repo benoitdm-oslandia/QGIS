@@ -962,7 +962,7 @@ class QgsWmsCapabilities
     bool shouldInvertAxisOrientation( const QString &ogcCrs );
 
     //! Find out identify capabilities
-    int identifyCapabilities() const;
+    Qgis::RasterInterfaceCapabilities identifyCapabilities() const;
 
   protected:
     bool parseCapabilitiesDom( const QByteArray &xml, QgsWmsCapabilitiesProperty &capabilitiesProperty );
@@ -1050,6 +1050,12 @@ class QgsWmsCapabilities
      * tile matrix sets hosted by the WMS
      */
     QHash<QString, QgsWmtsTileMatrixSet> mTileMatrixSets;
+
+    /**
+     * ID of the first tile matrix returned in the capabilities, to be used as the default
+     * if no specific tile matrix is specified.
+     */
+    QString mFirstTileMatrixSetId;
 
     //temporarily caches invert axis setting for each crs
     QHash<QString, bool> mCrsInvertAxis;

@@ -32,6 +32,7 @@
 #include "qgsalgorithmassignprojection.h"
 #include "qgsalgorithmattributeindex.h"
 #include "qgsalgorithmb3dmtogltf.h"
+#include "qgsalgorithmbasicstatistics.h"
 #include "qgsalgorithmbatchnominatimgeocode.h"
 #include "qgsalgorithmboundary.h"
 #include "qgsalgorithmboundingbox.h"
@@ -225,6 +226,7 @@
 #include "qgsalgorithmtruncatetable.h"
 #include "qgsalgorithmunion.h"
 #include "qgsalgorithmuniquevalueindex.h"
+#include "qgsalgorithmurlopener.h"
 #include "qgsalgorithmvectorize.h"
 #include "qgsalgorithmvirtualrastercalculator.h"
 #include "qgsalgorithmvoronoipolygons.h"
@@ -298,6 +300,7 @@ void QgsNativeAlgorithms::loadAlgorithms()
   addAlgorithm( new QgsAssignProjectionAlgorithm() );
   addAlgorithm( new QgsAttributeIndexAlgorithm() );
   addAlgorithm( new QgsB3DMToGltfAlgorithm() );
+  addAlgorithm( new QgsBasicStatisticsAlgorithm() );
   addAlgorithm( new QgsBatchNominatimGeocodeAlgorithm() );
   addAlgorithm( new QgsBookmarksToLayerAlgorithm() );
   addAlgorithm( new QgsBoundaryAlgorithm() );
@@ -538,6 +541,7 @@ void QgsNativeAlgorithms::loadAlgorithms()
   addAlgorithm( new QgsTranslateAlgorithm() );
   addAlgorithm( new QgsTruncateTableAlgorithm() );
   addAlgorithm( new QgsUnionAlgorithm() );
+  addAlgorithm( new QgsOpenUrlAlgorithm() );
   addAlgorithm( new QgsVariableWidthBufferByMAlgorithm() );
   addAlgorithm( new QgsVirtualRasterCalculatorAlgorithm() );
   addAlgorithm( new QgsVirtualRasterCalculatorModelerAlgorithm() );

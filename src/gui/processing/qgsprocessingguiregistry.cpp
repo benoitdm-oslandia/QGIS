@@ -26,6 +26,7 @@
 #include "qgsprocessingwidgetwrapperimpl.h"
 #include "qgsprocessingtininputlayerswidget.h"
 #include "qgsprocessingmeshdatasetwidget.h"
+#include "qgsprocessingrasteroptionswidgetwrapper.h"
 #include "qgsprocessingparameters.h"
 #include "qgis.h"
 #include "qgslogger.h"
@@ -41,6 +42,8 @@ QgsProcessingGuiRegistry::QgsProcessingGuiRegistry()
   addParameterWidgetFactory( new QgsProcessingStringWidgetWrapper() );
   addParameterWidgetFactory( new QgsProcessingNumericWidgetWrapper() );
   addParameterWidgetFactory( new QgsProcessingDistanceWidgetWrapper() );
+  addParameterWidgetFactory( new QgsProcessingAreaWidgetWrapper() );
+  addParameterWidgetFactory( new QgsProcessingVolumeWidgetWrapper() );
   addParameterWidgetFactory( new QgsProcessingDurationWidgetWrapper() );
   addParameterWidgetFactory( new QgsProcessingScaleWidgetWrapper() );
   addParameterWidgetFactory( new QgsProcessingRangeWidgetWrapper() );
@@ -86,6 +89,7 @@ QgsProcessingGuiRegistry::QgsProcessingGuiRegistry()
   addParameterWidgetFactory( new QgsProcessingPointCloudDestinationWidgetWrapper() );
   addParameterWidgetFactory( new QgsProcessingPointCloudAttributeWidgetWrapper() );
   addParameterWidgetFactory( new QgsProcessingVectorTileDestinationWidgetWrapper() );
+  addParameterWidgetFactory( new QgsProcessingRasterOptionsWidgetWrapper() );
 }
 
 QgsProcessingGuiRegistry::~QgsProcessingGuiRegistry()
@@ -154,7 +158,9 @@ QgsAbstractProcessingParameterWidgetWrapper *QgsProcessingGuiRegistry::createPar
   if ( !parameter )
     return nullptr;
 
-  const QString parameterType = parameter->type();
+  const QVariantMap metadata = parameter->metadata();
+  const QString widgetType = metadata.value( QStringLiteral( "widget_wrapper" ) ).toMap().value( QStringLiteral( "widget_type" ) ).toString();
+  const QString parameterType = !widgetType.isEmpty() ? widgetType : parameter->type();
   if ( !mParameterWidgetFactories.contains( parameterType ) )
     return nullptr;
 

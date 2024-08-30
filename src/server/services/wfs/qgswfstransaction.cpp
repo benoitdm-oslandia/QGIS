@@ -295,9 +295,9 @@ namespace QgsWfs
       }
 
       // get provider capabilities
-      int cap = provider->capabilities();
-      if ( !( cap & QgsVectorDataProvider::ChangeAttributeValues ) && !( cap & QgsVectorDataProvider::ChangeGeometries )
-           && !( cap & QgsVectorDataProvider::DeleteFeatures ) && !( cap & QgsVectorDataProvider::AddFeatures ) )
+      Qgis::VectorProviderCapabilities cap = provider->capabilities();
+      if ( !( cap & Qgis::VectorProviderCapability::ChangeAttributeValues ) && !( cap & Qgis::VectorProviderCapability::ChangeGeometries )
+           && !( cap & Qgis::VectorProviderCapability::DeleteFeatures ) && !( cap & Qgis::VectorProviderCapability::AddFeatures ) )
       {
         throw QgsRequestNotWellFormedException( QStringLiteral( "No capabilities to do WFS changes on layer '%1'" ).arg( name ) );
       }
@@ -360,8 +360,8 @@ namespace QgsWfs
       QgsVectorDataProvider *provider = vlayer->dataProvider();
 
       // verifying specific capabilities
-      int cap = provider->capabilities();
-      if ( !( cap & QgsVectorDataProvider::ChangeAttributeValues ) || !( cap & QgsVectorDataProvider::ChangeGeometries ) )
+      Qgis::VectorProviderCapabilities cap = provider->capabilities();
+      if ( !( cap & Qgis::VectorProviderCapability::ChangeAttributeValues ) || !( cap & Qgis::VectorProviderCapability::ChangeGeometries ) )
       {
         action.error = true;
         action.errorMsg = QStringLiteral( "No capabilities to do WFS updates on layer '%1'" ).arg( typeName );
@@ -441,7 +441,7 @@ namespace QgsWfs
           }
           else  // Not NULL
           {
-            if ( field.type() == QVariant::Type::Int )
+            if ( field.type() == QMetaType::Type::Int )
             {
               value = it.value().toInt( &conversionSuccess );
               if ( !conversionSuccess )
@@ -452,7 +452,7 @@ namespace QgsWfs
                 break;
               }
             }
-            else if ( field.type() == QVariant::Type::Double )
+            else if ( field.type() == QMetaType::Type::Double )
             {
               value = it.value().toDouble( &conversionSuccess );
               if ( !conversionSuccess )
@@ -463,7 +463,7 @@ namespace QgsWfs
                 break;
               }
             }
-            else if ( field.type() == QVariant::Type::LongLong )
+            else if ( field.type() == QMetaType::Type::LongLong )
             {
               value = it.value().toLongLong( &conversionSuccess );
               if ( !conversionSuccess )
@@ -578,8 +578,8 @@ namespace QgsWfs
       QgsVectorDataProvider *provider = vlayer->dataProvider();
 
       // verifying specific capabilities
-      int cap = provider->capabilities();
-      if ( !( cap & QgsVectorDataProvider::DeleteFeatures ) )
+      Qgis::VectorProviderCapabilities cap = provider->capabilities();
+      if ( !( cap & Qgis::VectorProviderCapability::DeleteFeatures ) )
       {
         action.error = true;
         action.errorMsg = QStringLiteral( "No capabilities to do WFS deletes on layer '%1'" ).arg( typeName );
@@ -696,8 +696,8 @@ namespace QgsWfs
       QgsVectorDataProvider *provider = vlayer->dataProvider();
 
       // verifying specific capabilities
-      int cap = provider->capabilities();
-      if ( !( cap & QgsVectorDataProvider::AddFeatures ) )
+      Qgis::VectorProviderCapabilities cap = provider->capabilities();
+      if ( !( cap & Qgis::VectorProviderCapability::AddFeatures ) )
       {
         action.error = true;
         action.errorMsg = QStringLiteral( "No capabilities to do WFS inserts on layer '%1'" ).arg( typeName );
@@ -827,9 +827,9 @@ namespace QgsWfs
 
             QgsMessageLog::logMessage( QStringLiteral( "attr: name=%1 idx=%2 value=%3" ).arg( attrName ).arg( fieldMapIt.value() ).arg( attrValue ) );
 
-            if ( attrType == QVariant::Int )
+            if ( attrType == QMetaType::Type::Int )
               feat.setAttribute( fieldMapIt.value(), attrValue.toInt( &conversionSuccess ) );
-            else if ( attrType == QVariant::Double )
+            else if ( attrType == QMetaType::Type::Double )
               feat.setAttribute( fieldMapIt.value(), attrValue.toDouble( &conversionSuccess ) );
             else
               feat.setAttribute( fieldMapIt.value(), attrValue );

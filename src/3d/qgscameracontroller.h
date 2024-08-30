@@ -48,12 +48,10 @@ class QgsCameraPose;
 class QgsVector3D;
 class QgsWindow3DEngine;
 class Qgs3DMapScene;
-class QgsCameraController4Test;
 
 /**
  * \ingroup 3d
  * \brief Object that controls camera movement based on user input
- * \note Not available in Python bindings
  */
 #ifndef SIP_RUN
 class _3D_EXPORT QgsCameraController : public Qt3DCore::QEntity
@@ -356,7 +354,9 @@ class _3D_EXPORT QgsCameraController : public QObject
 
     MouseOperation mCurrentOperation = MouseOperation::None;
 
-    friend QgsCameraController4Test;
+    // To test the cameracontroller
+    friend class TestQgs3DRendering;
+    friend class TestQgs3DCameraController;
 };
 
 #endif // QGSCAMERACONTROLLER_H

@@ -593,6 +593,22 @@ bool QgsWmsProvider::setImageCrs( QString const &crs )
     }
 
     mNativeResolutions.clear();
+
+    if ( mSettings.mTileMatrixSetId.isEmpty() && !mCaps.mFirstTileMatrixSetId.isEmpty() )
+    {
+      // if no explicit tile matrix set specified, use first listed
+      mSettings.mTileMatrixSetId = mCaps.mFirstTileMatrixSetId;
+      for ( int i = 0; i < mCaps.mTileLayersSupported.size(); i++ )
+      {
+        QgsWmtsTileLayer *tl = &mCaps.mTileLayersSupported[i];
+        if ( tl->identifier != mSettings.mActiveSubLayers[0] )
+          continue;
+
+        mTileLayer = tl;
+        break;
+      }
+    }
+
     if ( mCaps.mTileMatrixSets.contains( mSettings.mTileMatrixSetId ) )
     {
       mTileMatrixSet = &mCaps.mTileMatrixSets[ mSettings.mTileMatrixSetId ];
@@ -2346,9 +2362,9 @@ bool QgsWmsProvider::calculateExtent() const
 }
 
 
-int QgsWmsProvider::capabilities() const
+Qgis::RasterInterfaceCapabilities QgsWmsProvider::capabilities() const
 {
-  int capability = NoCapabilities;
+  Qgis::RasterInterfaceCapabilities capability = Qgis::RasterInterfaceCapability::NoCapabilities;
   bool canIdentify = false;
 
   if ( mSettings.mTiled && mTileLayer )
@@ -2382,14 +2398,14 @@ int QgsWmsProvider::capabilities() const
     capability = mCaps.identifyCapabilities();
     if ( capability )
     {
-      capability |= Capability::Identify;
+      capability |= Qgis::RasterInterfaceCapability::Identify;
     }
   }
 
   bool enablePrefetch = QgsSettingsRegistryCore::settingsEnableWMSTilePrefetching->value();
   if ( mSettings.mXyz || enablePrefetch )
   {
-    capability |= Capability::Prefetch;
+    capability |= Qgis::RasterInterfaceCapability::Prefetch;
   }
 
   QgsDebugMsgLevel( QStringLiteral( "capability = %1" ).arg( capability ), 2 );
@@ -2628,18 +2644,19 @@ QString QgsWmsProvider::htmlMetadata() const
 
   if ( !mSettings.mTiled )
   {
-    metadata += QStringLiteral( "&nbsp;<a href=\"\" onclick=\"document.getElementById('selectedlayers').scrollIntoView(); return false;\">" ) %
+    // Use also HTML anchors for use in QTextBrowser / mMetadataTextBrowser https://github.com/qgis/QGIS/issues/39689
+    metadata += QStringLiteral( "&nbsp;<a href=\"#selectedlayers\" onclick=\"document.getElementById('selectedlayers').scrollIntoView(); return false;\">" ) %
                 tr( "Selected Layers" ) %
-                QStringLiteral( "</a>&nbsp;<a href=\"\" onclick=\"document.getElementById('otherlayers').scrollIntoView(); return false;\">" ) %
+                QStringLiteral( "</a>&nbsp;<a href=\"#otherlayers\" onclick=\"document.getElementById('otherlayers').scrollIntoView(); return false;\">" ) %
                 tr( "Other Layers" ) %
                 QStringLiteral( "</a>" );
   }
   else
   {
-    metadata += QStringLiteral( "&nbsp;<a href=\"\" onclick=\"document.getElementById('tilesetproperties').scrollIntoView(); return false;\">" ) %
+    metadata += QStringLiteral( "&nbsp;<a href=\"#tilesetproperties\" onclick=\"document.getElementById('tilesetproperties').scrollIntoView(); return false;\">" ) %
                 tr( "Tile Layer Properties" ) %
                 QStringLiteral( "</a> "
-                                "&nbsp;<a href=\"\" onclick=\"document.getElementById('cachestats'); return false;\">" ) %
+                                "&nbsp;<a href=\"#cachestats\" onclick=\"document.getElementById('cachestats').scrollIntoView(); return false;\">" ) %
                 tr( "Cache Stats" ) %
                 QStringLiteral( "</a> " );
   }
@@ -3774,7 +3791,7 @@ QgsRasterIdentifyResult QgsWmsProvider::identify( const QgsPointXY &point, Qgis:
           {
             QgsFeature *feature = featIt.value();
 
-            QgsDebugMsgLevel( QStringLiteral( "feature id = %1 : %2 attributes" ).arg( featIt.key() ).arg( feature->attributes().size() ), 2 );
+            QgsDebugMsgLevel( QStringLiteral( "feature id = %1 : %2 attributes" ).arg( featIt.key() ).arg( feature->attributeCount() ), 2 );
 
             if ( coordinateTransform.isValid() && feature->hasGeometry() )
             {
@@ -3866,7 +3883,7 @@ QgsRasterIdentifyResult QgsWmsProvider::identify( const QgsPointXY &point, Qgis:
 
             for ( ; fieldIterator != properties.constEnd(); ++fieldIterator )
             {
-              fields.append( QgsField( fieldIterator.key(), QVariant::String ) );
+              fields.append( QgsField( fieldIterator.key(), QMetaType::Type::QString ) );
             }
 
             QgsFeature feature( fields );
@@ -4020,19 +4037,19 @@ QgsCoordinateReferenceSystem QgsWmsProvider::crs() const
   return mCrs;
 }
 
-QgsRasterDataProvider::ProviderCapabilities QgsWmsProvider::providerCapabilities() const
+Qgis::RasterProviderCapabilities QgsWmsProvider::providerCapabilities() const
 {
-  QgsRasterDataProvider::ProviderCapabilities capabilities;
+  Qgis::RasterProviderCapabilities capabilities;
   if ( mConverter )
-    capabilities = ProviderCapability::ReadLayerMetadata |
-                   ProviderCapability::ProviderHintBenefitsFromResampling |
-                   ProviderCapability::ProviderHintCanPerformProviderResampling;
+    capabilities = Qgis::RasterProviderCapability::ReadLayerMetadata |
+                   Qgis::RasterProviderCapability::ProviderHintBenefitsFromResampling |
+                   Qgis::RasterProviderCapability::ProviderHintCanPerformProviderResampling;
   else
-    capabilities = ProviderCapability::ReadLayerMetadata;
+    capabilities = Qgis::RasterProviderCapability::ReadLayerMetadata;
 
   if ( mSettings.mTiled || mSettings.mXyz )
   {
-    capabilities |= DpiDependentData;
+    capabilities |= Qgis::RasterProviderCapability::DpiDependentData;
   }
 
   return capabilities;
@@ -4459,7 +4476,7 @@ bool QgsWmsProvider::isUrlForWMTS( const QString &url )
 }
 
 
-QgsWmsProvider *QgsWmsProviderMetadata::createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, QgsDataProvider::ReadFlags flags )
+QgsWmsProvider *QgsWmsProviderMetadata::createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, Qgis::DataProviderReadFlags flags )
 {
   Q_UNUSED( flags );
   return new QgsWmsProvider( uri, options );
@@ -5258,7 +5275,7 @@ QVariantMap QgsWmsProviderMetadata::decodeUri( const QString &uri ) const
     {
       if ( decoded.contains( item.first ) )
       {
-        if ( decoded[ item.first ].type() == QVariant::String )
+        if ( decoded[ item.first ].userType() == QMetaType::Type::QString )
         {
           decoded[ item.first ] = QStringList() << decoded[ item.first ].toString();
         }
@@ -5295,7 +5312,7 @@ QString QgsWmsProviderMetadata::encodeUri( const QVariantMap &parts ) const
     }
     else
     {
-      if ( it.value().type() == QVariant::StringList )
+      if ( it.value().userType() == QMetaType::Type::QStringList )
       {
         listItems.push_back( { it.key(), it.value().toStringList() } );
       }

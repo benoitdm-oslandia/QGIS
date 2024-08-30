@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/project/qgsproject.h                                        *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -305,18 +305,61 @@ Sets the ``type`` of paths used when storing file paths in a QGS/QGZ project fil
 %Docstring
 Returns the project's native coordinate reference system.
 
+.. warning::
+
+   Since QGIS 3.38, consider using :py:func:`~QgsProject.crs3D` whenever transforming 3D data or whenever
+   z/elevation value handling is important.
+
 .. seealso:: :py:func:`setCrs`
 
+.. seealso:: :py:func:`crs3D`
+
+.. seealso:: :py:func:`verticalCrs`
+
 .. seealso:: :py:func:`ellipsoid`
+
+.. seealso:: :py:func:`crsChanged`
+%End
+
+    QgsCoordinateReferenceSystem crs3D() const;
+%Docstring
+Returns the CRS to use for the project when transforming 3D data, or when z/elevation
+value handling is important.
+
+The returned CRS will take into account :py:func:`~QgsProject.verticalCrs` when appropriate, e.g. it may return a compound
+CRS consisting of :py:func:`~QgsProject.crs` + :py:func:`~QgsProject.verticalCrs`. This method may still return a 2D CRS, e.g in the
+case that :py:func:`~QgsProject.crs` is a 2D CRS and no :py:func:`~QgsProject.verticalCrs` has been set for the project. Check :py:func:`QgsCoordinateReferenceSystem.type()`
+on the returned value to determine the type of CRS returned by this method.
+
+.. warning::
+
+   It is NOT guaranteed that the returned CRS will actually be a 3D CRS, but rather
+   it is guaranteed that the returned CRS is ALWAYS the most appropriate CRS to use when handling 3D data.
+
+.. seealso:: :py:func:`crs`
+
+.. seealso:: :py:func:`verticalCrs`
+
+.. seealso:: :py:func:`crs3DChanged`
+
+.. versionadded:: 3.38
 %End
 
     void setCrs( const QgsCoordinateReferenceSystem &crs, bool adjustEllipsoid = false );
 %Docstring
 Sets the project's native coordinate reference system.
-If ``adjustEllipsoid`` is set to ``True``, the ellpsoid of this project will be set to
+
+If ``adjustEllipsoid`` is set to ``True``, the ellipsoid of this project will be set to
 the ellipsoid imposed by the CRS.
 
+Changing the CRS will trigger a :py:func:`~QgsProject.crsChanged` signal. Additionally, if ``crs`` is a compound
+CRS, then the :py:func:`~QgsProject.verticalCrsChanged` signal will also be emitted.
+
 .. seealso:: :py:func:`crs`
+
+.. seealso:: :py:func:`crsChanged`
+
+.. seealso:: :py:func:`setVerticalCrs`
 
 .. seealso:: :py:func:`setEllipsoid`
 %End
@@ -328,17 +371,68 @@ Returns a proj string representing the project's ellipsoid setting, e.g., "WGS84
 .. seealso:: :py:func:`setEllipsoid`
 
 .. seealso:: :py:func:`crs`
+
+.. seealso:: :py:func:`verticalCrs`
 %End
 
     void setEllipsoid( const QString &ellipsoid );
 %Docstring
-Sets the project's ellipsoid from a proj string representation, e.g., "WGS84".
+Sets the project's ``ellipsoid`` from a proj string representation, e.g., "WGS84".
 
 .. seealso:: :py:func:`ellipsoid`
 
 .. seealso:: :py:func:`setCrs`
+
+.. seealso:: :py:func:`setVerticalCrs`
 %End
 
+    QgsCoordinateReferenceSystem verticalCrs() const;
+%Docstring
+Returns the project's vertical coordinate reference system.
+
+If the project :py:func:`~QgsProject.crs` is a compound CRS, then the CRS returned will
+be the vertical component of :py:func:`~QgsProject.crs`. Otherwise it will be the value
+explicitly set by a call to :py:func:`~QgsProject.setVerticalCrs`.
+
+The returned CRS will be invalid if the project has no vertical CRS.
+
+.. note::
+
+   Consider also using :py:func:`~QgsProject.crs3D`, which will return a CRS which takes into account
+   both :py:func:`~QgsProject.crs` and :py:func:`~QgsProject.verticalCrs`.
+
+.. seealso:: :py:func:`crs`
+
+.. seealso:: :py:func:`crs3D`
+
+.. seealso:: :py:func:`setVerticalCrs`
+
+.. versionadded:: 3.38
+%End
+
+    bool setVerticalCrs( const QgsCoordinateReferenceSystem &crs, QString *errorMessage /Out/ = 0 );
+%Docstring
+Sets the project's vertical coordinate reference system.
+
+The :py:func:`~QgsProject.verticalCrsChanged` signal will be raised if the vertical CRS is changed.
+
+.. note::
+
+   If the project :py:func:`~QgsProject.crs` is a compound CRS, then the CRS returned for
+   :py:func:`~QgsProject.verticalCrs` will be the vertical component of :py:func:`~QgsProject.crs`. Otherwise it will be the value
+   explicitly set by this call.
+
+:param crs: the vertical CRS
+
+:return: - ``True`` if vertical CRS was successfully set
+         - errorMessage: will be set to a descriptive message if the vertical CRS could not be set
+
+.. seealso:: :py:func:`verticalCrs`
+
+.. seealso:: :py:func:`setCrs`
+
+.. versionadded:: 3.38
+%End
 
     QgsCoordinateTransformContext transformContext() const;
 %Docstring
@@ -1081,8 +1175,7 @@ Returns ``True`` if the project comes from a zip archive, ``False`` otherwise.
 
 
     QList<QgsMapLayer *> addMapLayers( const QList<QgsMapLayer *> &mapLayers /Transfer/,
-                                       bool addToLegend = true);
-
+                                       bool addToLegend = true );
 %Docstring
 Add a list of layers to the map of loaded layers.
 
@@ -1098,7 +1191,6 @@ The :py:func:`~QgsProject.legendLayersAdded` signal is emitted only if addToLege
          successfully. If a layer or already exists in the registry,
          it will not be part of the returned QList.
 
-
 .. note::
 
    As a side-effect QgsProject is made dirty.
@@ -1112,8 +1204,7 @@ The :py:func:`~QgsProject.legendLayersAdded` signal is emitted only if addToLege
 %End
 
     QgsMapLayer *addMapLayer( QgsMapLayer *mapLayer /Transfer/,
-                              bool addToLegend = true);
-
+                              bool addToLegend = true );
 %Docstring
 Add a layer to the map of loaded layers.
 
@@ -1129,9 +1220,7 @@ If you are adding multiple layers at once, you should use
 
 :return: ``None`` if unable to add layer, otherwise pointer to newly added layer
 
-
 .. seealso:: :py:func:`addMapLayers`
-
 
 .. note::
 
@@ -1528,18 +1617,6 @@ Triggers the collection strings of .qgs to be included in ts file and calls :py:
 
     virtual QString translate( const QString &context, const QString &sourceText, const char *disambiguation = 0, int n = -1 ) const;
 
-%Docstring
-Translates the project with QTranslator and qm file
-
-:return: the result string (in case there is no QTranslator loaded the sourceText)
-
-:param context: describing layer etc.
-:param sourceText: is the identifier of this text
-:param disambiguation: it's the disambiguation
-:param n: if -1 uses the appropriate form
-
-.. versionadded:: 3.4
-%End
 
     bool accept( QgsStyleEntityVisitorInterface *visitor ) const;
 %Docstring
@@ -1722,7 +1799,51 @@ Emitted whenever the expression variables stored in the project have been change
 
     void crsChanged();
 %Docstring
-Emitted when the CRS of the project has changed.
+Emitted when the :py:func:`~QgsProject.crs` of the project has changed.
+
+.. seealso:: :py:func:`crs`
+
+.. seealso:: :py:func:`setCrs`
+
+.. seealso:: :py:func:`verticalCrsChanged`
+
+.. seealso:: :py:func:`ellipsoidChanged`
+%End
+
+    void crs3DChanged();
+%Docstring
+Emitted when the :py:func:`~QgsProject.crs3D` of the project has changed.
+
+.. seealso:: :py:func:`crs3D`
+
+.. seealso:: :py:func:`crsChanged`
+
+.. seealso:: :py:func:`verticalCrsChanged`
+
+.. seealso:: :py:func:`ellipsoidChanged`
+
+.. versionadded:: 3.38
+%End
+
+    void verticalCrsChanged();
+%Docstring
+Emitted when the :py:func:`~QgsProject.verticalCrs` of the project has changed.
+
+This signal will be emitted whenever the vertical CRS of the project is changed, either
+as a direct result of a call to :py:func:`~QgsProject.setVerticalCrs` or when :py:func:`~QgsProject.setCrs` is called with a compound
+CRS.
+
+.. seealso:: :py:func:`crsChanged`
+
+.. seealso:: :py:func:`crs3DChanged`
+
+.. seealso:: :py:func:`setCrs`
+
+.. seealso:: :py:func:`setVerticalCrs`
+
+.. seealso:: :py:func:`verticalCrs`
+
+.. versionadded:: 3.38
 %End
 
     void ellipsoidChanged( const QString &ellipsoid );
@@ -1762,6 +1883,13 @@ Emitted when the project :py:func:`~QgsProject.transformContext` is changed.
     void missingDatumTransforms( const QStringList &missingTransforms );
 %Docstring
 Emitted when datum transforms stored in the project are not available locally.
+%End
+
+    void transactionModeChanged();
+%Docstring
+Emitted when the transaction mode has changed.
+
+.. versionadded:: 3.38
 %End
 
     void transactionGroupsChanged();
@@ -2076,7 +2204,6 @@ be made persistent until :py:func:`~QgsProject.commitChanges` is called, and can
 
 .. seealso:: :py:func:`rollBack`
 
-
 .. versionadded:: 3.26
 %End
 
@@ -2105,11 +2232,9 @@ that the user has some chance of repairing the damage cleanly.
 :return: - ``True`` if the commit was successful.
          - commitErrors: will be set to a list of descriptive errors if the commit fails.
 
-
 .. seealso:: :py:func:`startEditing`
 
 .. seealso:: :py:func:`rollBack`
-
 
 .. versionadded:: 3.26
 %End
@@ -2126,11 +2251,9 @@ Stops a current editing operation on vectorLayer and discards any uncommitted ed
 :return: - ``True`` if the rollback was successful.
          - rollbackErrors: will be set to a list of descriptive errors if the rollback fails.
 
-
 .. seealso:: :py:func:`startEditing`
 
 .. seealso:: :py:func:`commitChanges`
-
 
 .. versionadded:: 3.26
 %End
@@ -2140,7 +2263,7 @@ Stops a current editing operation on vectorLayer and discards any uncommitted ed
 class QgsProjectDirtyBlocker
 {
 %Docstring(signature="appended")
-Temporarily blocks QgsProject "dirtying" for the lifetime of the object.
+Temporarily blocks :py:class:`QgsProject` "dirtying" for the lifetime of the object.
 
 :py:class:`QgsProjectDirtyBlocker` supports "stacked" blocking, so two :py:class:`QgsProjectDirtyBlockers` created
 for the same project will both need to be destroyed before the project can be dirtied again.
@@ -2174,7 +2297,6 @@ This will block dirtying the specified ``project`` for the lifetime of this obje
 %End
 
 
-
     ~QgsProjectDirtyBlocker();
 
   private:
@@ -2190,5 +2312,5 @@ This will block dirtying the specified ``project`` for the lifetime of this obje
  *                                                                      *
  * src/core/project/qgsproject.h                                        *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

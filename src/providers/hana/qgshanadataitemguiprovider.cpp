@@ -23,12 +23,14 @@
 #include "qgshanasourceselect.h"
 #include "qgshanautils.h"
 #include "qgsnewnamedialog.h"
+#include "qgsdataitemguiproviderutils.h"
+#include "qgssettings.h"
 
 #include <QInputDialog>
 #include <QMessageBox>
 
 void QgsHanaDataItemGuiProvider::populateContextMenu(
-  QgsDataItem *item, QMenu *menu, const QList<QgsDataItem *> &, QgsDataItemGuiContext context )
+  QgsDataItem *item, QMenu *menu, const QList<QgsDataItem *> &selection, QgsDataItemGuiContext context )
 {
   if ( QgsHanaRootItem *rootItem = qobject_cast<QgsHanaRootItem *>( item ) )
   {
@@ -49,8 +51,19 @@ void QgsHanaDataItemGuiProvider::populateContextMenu(
     connect( actionEdit, &QAction::triggered, this, [connItem] { editConnection( connItem ); } );
     menu->addAction( actionEdit );
 
-    QAction *actionDelete = new QAction( tr( "Remove Connection" ), this );
-    connect( actionDelete, &QAction::triggered, this, [connItem] { deleteConnection( connItem ); } );
+    QAction *actionDuplicate = new QAction( tr( "Duplicate Connection" ), this );
+    connect( actionDuplicate, &QAction::triggered, this, [connItem] { duplicateConnection( connItem ); } );
+    menu->addAction( actionDuplicate );
+
+    const QList< QgsHanaConnectionItem * > hanaConnectionItems = QgsDataItem::filteredItems<QgsHanaConnectionItem>( selection );
+    QAction *actionDelete = new QAction( hanaConnectionItems.size() > 1 ? tr( "Remove Connections…" ) : tr( "Remove Connection…" ), menu );
+    connect( actionDelete, &QAction::triggered, this, [hanaConnectionItems, context]
+    {
+      QgsDataItemGuiProviderUtils::deleteConnections( hanaConnectionItems, []( const QString & connectionName )
+      {
+        QgsHanaSettings::removeConnection( connectionName );
+      }, context );
+    } );
     menu->addAction( actionDelete );
 
     menu->addSeparator();
@@ -195,17 +208,22 @@ void QgsHanaDataItemGuiProvider::editConnection( QgsDataItem *item )
   }
 }
 
-void QgsHanaDataItemGuiProvider::deleteConnection( QgsDataItem *item )
+void QgsHanaDataItemGuiProvider::duplicateConnection( QgsDataItem *item )
 {
-  if ( QMessageBox::question( nullptr, tr( "Remove Connection" ),
-                              tr( "Are you sure you want to remove the connection to %1?" ).arg( item->name() ),
-                              QMessageBox::Yes | QMessageBox::No, QMessageBox::No ) != QMessageBox::Yes )
-    return;
+  const QString connectionName = item->name();
+  QgsSettings settings;
+  settings.beginGroup( QStringLiteral( "/HANA/connections" ) );
+  const QStringList connections = settings.childGroups();
+  settings.endGroup();
 
-  QgsHanaSettings::removeConnection( item->name() );
-  // the parent should be updated
+  const QString newConnectionName = QgsDataItemGuiProviderUtils::uniqueName( connectionName, connections );
+
+  QgsHanaSettings::duplicateConnection( connectionName, newConnectionName );
+
   if ( item->parent() )
+  {
     item->parent()->refreshConnections();
+  }
 }
 
 void QgsHanaDataItemGuiProvider::refreshConnection( QgsDataItem *item )

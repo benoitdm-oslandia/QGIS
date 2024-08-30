@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/qgsvectorfilewriter.h                                       *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -108,10 +108,8 @@ There are two possibilities how to use this class:
 
     struct MetaData
     {
+
       MetaData();
-%Docstring
-Constructor for MetaData
-%End
 
       MetaData( const QString &longName, const QString &trLongName, const QString &glob, const QString &ext, const QMap<QString, QgsVectorFileWriter::Option *> &driverOptions, const QMap<QString, QgsVectorFileWriter::Option *> &layerOptions, const QString &compulsoryEncoding = QString() );
 
@@ -164,10 +162,8 @@ Interface to convert raw field values to their user-friendly value.
 #include "qgsvectorfilewriter.h"
 %End
       public:
+
         FieldValueConverter();
-%Docstring
-Constructor
-%End
 
         virtual ~FieldValueConverter();
 
@@ -338,10 +334,8 @@ Options to pass to :py:func:`~QgsVectorFileWriter.writeAsVectorFormat`
 #include "qgsvectorfilewriter.h"
 %End
       public:
+
         SaveVectorOptions();
-%Docstring
-Constructor
-%End
 
         virtual ~SaveVectorOptions();
 
@@ -428,6 +422,12 @@ Writes a layer out to a vector file.
                                            Qgis::FeatureSymbologyExport symbologyExport = Qgis::FeatureSymbologyExport::NoSymbology,
                                            QgsFeatureSink::SinkFlags sinkFlags = QgsFeatureSink::SinkFlags()
                                          ) /Deprecated/;
+%Docstring
+Create a new vector file writer
+
+.. deprecated::
+   Use :py:func:`~QgsVectorFileWriter.create` instead.
+%End
 
 
 
@@ -743,5 +743,5 @@ QFlags<QgsVectorFileWriter::VectorFormatOption> operator|(QgsVectorFileWriter::V
  *                                                                      *
  * src/core/qgsvectorfilewriter.h                                       *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

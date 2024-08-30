@@ -21,6 +21,7 @@
 #include "qgscodeeditorcolorscheme.h"
 #include "qgis.h"
 #include "qgssettingstree.h"
+#include "qgspanelwidget.h"
 
 // qscintilla includes
 #include <Qsci/qsciapis.h>
@@ -29,6 +30,9 @@
 
 #include <QMap>
 
+class QgsFilterLineEdit;
+class QToolButton;
+class QCheckBox;
 
 SIP_IF_MODULE( HAVE_QSCI_SIP )
 
@@ -81,8 +85,12 @@ class GUI_EXPORT QgsCodeInterpreter
 };
 
 
-
-class QWidget;
+// TODO QGIS 4.0 -- Consider making QgsCodeEditor inherit QWidget only,
+// with a separate getter for the QsciScintilla child widget. This
+// would give us more flexibility to add functionality to the base
+// QgsCodeEditor class, eg adding a message bar or other child widgets
+// to the editor widget. For now this extra functionality lives in
+// the QgsCodeEditorWidget wrapper widget.
 
 /**
  * \ingroup gui
@@ -99,7 +107,6 @@ class GUI_EXPORT QgsCodeEditor : public QsciScintilla
 #ifndef SIP_RUN
 
     static inline QgsSettingsTreeNode *sTreeCodeEditor = QgsSettingsTree::sTreeGui->createChildNode( QStringLiteral( "code-editor" ) );
-
 #endif
 
     /**
@@ -149,6 +156,9 @@ class GUI_EXPORT QgsCodeEditor : public QsciScintilla
      */
     Q_DECLARE_FLAGS( Flags, Flag )
     Q_FLAG( Flags )
+
+    //! Indicator index for search results
+    static constexpr int SEARCH_RESULT_INDICATOR = QsciScintilla::INDIC_MAX - 1;
 
     /**
      * Construct a new code editor.

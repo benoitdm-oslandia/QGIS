@@ -19,6 +19,7 @@
 
 #include "qgsfeatureiterator.h"
 #include "qgsexpression.h"
+#include "qgsexpressioncontextutils.h"
 #include "qgsfeature.h"
 #include "qgsfeatureselectiondlg.h"
 #include "qgsrelation.h"
@@ -286,8 +287,14 @@ QgsFeatureIds QgsAbstractRelationEditorWidget::addFeature( const QgsGeometry &ge
     for ( const QgsRelation::FieldPair &fieldPair : constFieldPairs )
       keyAttrs.insert( fields.indexFromName( fieldPair.referencingField() ), mFeatureList.first().attribute( fieldPair.referencedField() ) );
 
+    QgsVectorLayerToolsContext context;
+    context.setParentWidget( this );
+    context.setShowModal( false );
+    context.setHideParent( true );
+    std::unique_ptr<QgsExpressionContextScope> scope( QgsExpressionContextUtils::parentFormScope( mFeatureList.first(), mEditorContext.attributeFormModeString() ) );
+    context.setAdditionalExpressionContextScope( scope.get() );
     QgsFeature linkFeature;
-    if ( !vlTools->addFeature( mRelation.referencingLayer(), keyAttrs, geometry, &linkFeature, this, true, true ) )
+    if ( !vlTools->addFeatureV2( mRelation.referencingLayer(), keyAttrs, geometry, &linkFeature, context ) )
       return QgsFeatureIds();
 
     addedFeatureIds.insert( linkFeature.id() );
@@ -440,7 +447,7 @@ void QgsAbstractRelationEditorWidget::deleteFeatures( const QgsFeatureIds &fids 
   }
 }
 
-void QgsAbstractRelationEditorWidget::linkFeature()
+void QgsAbstractRelationEditorWidget::linkFeature( const QString &filterExpression )
 {
   QgsVectorLayer *layer = nullptr;
 
@@ -467,6 +474,7 @@ void QgsAbstractRelationEditorWidget::linkFeature()
 
   const QString displayString = QgsVectorLayerUtils::getFeatureDisplayString( mRelation.referencedLayer(), mFeatureList.first() );
   selectionDlg->setWindowTitle( tr( "Link existing child features for parent %1 \"%2\"" ).arg( mRelation.referencedLayer()->name(), displayString ) );
+  selectionDlg->setFilterExpression( filterExpression, QgsAttributeForm::ReplaceFilter );
 
   connect( selectionDlg, &QDialog::accepted, this, &QgsAbstractRelationEditorWidget::onLinkFeatureDlgAccepted );
   selectionDlg->show();
@@ -675,7 +683,7 @@ void QgsAbstractRelationEditorWidget::unlinkFeatures( const QgsFeatureIds &fids 
 
           mRelation.referencingLayer()->changeAttributeValue( fid,
               referencingLayer->fields().indexFromName( polyRel.referencedLayerField() ),
-              referencingLayer->fields().field( polyRel.referencedLayerField() ).type() );
+              QgsVariantUtils::createNullVariant( referencingLayer->fields().field( polyRel.referencedLayerField() ).type() ) );
           break;
         }
         case Qgis::RelationshipType::Normal:
@@ -686,7 +694,7 @@ void QgsAbstractRelationEditorWidget::unlinkFeatures( const QgsFeatureIds &fids 
       while ( it.hasNext() )
       {
         it.next();
-        mRelation.referencingLayer()->changeAttributeValue( fid, it.key(), QVariant( it.value().type() ) );
+        mRelation.referencingLayer()->changeAttributeValue( fid, it.key(), QgsVariantUtils::createNullVariant( it.value().type() ) );
       }
     }
   }

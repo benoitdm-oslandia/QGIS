@@ -10,7 +10,7 @@ __date__ = '16/01/2017'
 __copyright__ = 'Copyright 2017, The QGIS Project'
 
 from qgis.PyQt.QtCore import QDateTime, QSize
-from qgis.PyQt.QtGui import QImage, QPainter
+from qgis.PyQt.QtGui import QImage, QPainter, QPainterPath
 from qgis.core import (
     Qgis,
     QgsCoordinateReferenceSystem,
@@ -28,6 +28,7 @@ from qgis.core import (
     QgsRenderedFeatureHandlerInterface,
     QgsUnitTypes,
     QgsVectorSimplifyMethod,
+    QgsVectorLayer
 )
 import unittest
 from qgis.testing import start_app, QgisTestCase
@@ -186,6 +187,11 @@ class TestQgsRenderContext(QgisTestCase):
         ms.setFrameRate(30)
         ms.setCurrentFrame(6)
 
+        layer1 = QgsVectorLayer('Point?crs=EPSG:3857', '', 'memory')
+        layer2 = QgsVectorLayer('Point?crs=EPSG:3857', '', 'memory')
+        layer3 = QgsVectorLayer('Point?crs=EPSG:3857', '', 'memory')
+        ms.setLayers([layer1, layer2, layer3])
+
         ms.setTextRenderFormat(QgsRenderContext.TextRenderFormat.TextFormatAlwaysText)
         rc = QgsRenderContext.fromMapSettings(ms)
         self.assertEqual(rc.textRenderFormat(), QgsRenderContext.TextRenderFormat.TextFormatAlwaysText)
@@ -200,6 +206,7 @@ class TestQgsRenderContext(QgisTestCase):
         self.assertEqual(rc.imageFormat(), QImage.Format.Format_Alpha8)
         self.assertEqual(rc.frameRate(), 30)
         self.assertEqual(rc.currentFrame(), 6)
+        self.assertEqual(rc.customProperties()['visible_layer_ids'], [layer1.id(), layer2.id(), layer3.id()])
 
         # should have an valid mapToPixel
         self.assertTrue(rc.mapToPixel().isValid())
@@ -248,6 +255,22 @@ class TestQgsRenderContext(QgisTestCase):
 
         rc2 = QgsRenderContext(rc)
         self.assertEqual(rc2.vectorSimplifyMethod().simplifyHints(), QgsVectorSimplifyMethod.SimplifyHint.GeometrySimplification)
+
+    def test_mask_settings(self):
+        """
+        Test mask settings handling
+        """
+        rc = QgsRenderContext()
+        self.assertEqual(rc.maskSettings().simplifyTolerance(), 0)
+
+        ms = QgsMapSettings()
+        ms.maskSettings().setSimplificationTolerance(11)
+
+        rc = QgsRenderContext.fromMapSettings(ms)
+        self.assertEqual(rc.maskSettings().simplifyTolerance(), 11)
+
+        rc2 = QgsRenderContext(rc)
+        self.assertEqual(rc2.maskSettings().simplifyTolerance(), 11)
 
     def testRenderedFeatureHandlers(self):
         rc = QgsRenderContext()
@@ -681,6 +704,42 @@ class TestQgsRenderContext(QgisTestCase):
         self.assertAlmostEqual(size, 4.0 / 2, places=5)
         self.assertAlmostEqual(r.convertFromMapUnits(size, QgsUnitTypes.RenderUnit.RenderPixels), 2, 4)
 
+    def testConvertFromPainterUnits(self):
+        ms = QgsMapSettings()
+        ms.setExtent(QgsRectangle(0, 0, 100, 100))
+        ms.setOutputSize(QSize(100, 50))
+        ms.setOutputDpi(300)
+        r = QgsRenderContext.fromMapSettings(ms)
+
+        # renderer scale should be about 1:291937841
+
+        # self.assertEqual(r.scaleFactor(),666)
+
+        sf = r.convertFromPainterUnits(1, QgsUnitTypes.RenderUnit.RenderMapUnits)
+        self.assertAlmostEqual(sf, 2.0, places=5)
+        size = r.convertFromPainterUnits(2, QgsUnitTypes.RenderUnit.RenderMapUnits)
+        self.assertAlmostEqual(size, 4.0, places=5)
+
+        sf = r.convertFromPainterUnits(1, QgsUnitTypes.RenderUnit.RenderMillimeters)
+        self.assertAlmostEqual(sf, 1 / 11.8110236, places=5)
+        size = r.convertFromPainterUnits(2, QgsUnitTypes.RenderUnit.RenderMillimeters)
+        self.assertAlmostEqual(size, 2 / 11.8110236, places=5)
+
+        sf = r.convertFromPainterUnits(1, QgsUnitTypes.RenderUnit.RenderPoints)
+        self.assertAlmostEqual(sf, 1 / 4.166666665625, places=5)
+        size = r.convertFromPainterUnits(2, QgsUnitTypes.RenderUnit.RenderPoints)
+        self.assertAlmostEqual(size, 2 / 4.166666665625, places=5)
+
+        sf = r.convertFromPainterUnits(1, QgsUnitTypes.RenderUnit.RenderInches)
+        self.assertAlmostEqual(sf, 1 / 300.0, places=5)
+        size = r.convertFromPainterUnits(2, QgsUnitTypes.RenderUnit.RenderInches)
+        self.assertAlmostEqual(size, 2 / 300.0, places=5)
+
+        sf = r.convertFromPainterUnits(1, QgsUnitTypes.RenderUnit.RenderPixels)
+        self.assertAlmostEqual(sf, 1.0, places=5)
+        size = r.convertFromPainterUnits(2, QgsUnitTypes.RenderUnit.RenderPixels)
+        self.assertAlmostEqual(size, 2.0, places=5)
+
     def testPixelSizeScaleFactor(self):
         ms = QgsMapSettings()
         ms.setExtent(QgsRectangle(0, 0, 100, 100))
@@ -795,6 +854,21 @@ class TestQgsRenderContext(QgisTestCase):
         rc2 = QgsRenderContext(rc)
         self.assertEqual(rc2.featureClipGeometry().asWkt(), 'Polygon ((0 0, 1 0, 1 1, 0 1, 0 0))')
 
+    def test_deprecated_mask_methods(self):
+        rc = QgsRenderContext()
+        self.assertFalse(rc.symbolLayerClipPaths('x'))
+        path = QPainterPath()
+        path.moveTo(1, 1)
+        path.lineTo(1, 10)
+        path.lineTo(10, 10)
+        path.lineTo(10, 1)
+        path.lineTo(1, 1)
+        rc.addSymbolLayerClipPath('x', path)
+        self.assertEqual([g.asWkt() for g in rc.symbolLayerClipGeometries('x')],
+                         ['Polygon ((1 1, 1 10, 10 10, 10 1, 1 1))'])
+        self.assertEqual([p.elementCount() for p in rc.symbolLayerClipPaths('x')],
+                         [5])
+
     def testSetPainterFlags(self):
         rc = QgsRenderContext()
         p = QPainter()
@@ -818,6 +892,61 @@ class TestQgsRenderContext(QgisTestCase):
             pass
 
         p.end()
+
+    def test_symbol_layer_clip_geometries(self):
+        """
+        Test logic relating to symbol layer clip geometries.
+        """
+        rc = QgsRenderContext()
+        self.assertFalse(rc.symbolLayerHasClipGeometries('x'))
+
+        rc.addSymbolLayerClipGeometry('x', QgsGeometry.fromWkt('Polygon(( 0 0, 1 0 , 1 1 , 0 1, 0 0 ))'))
+        self.assertTrue(rc.symbolLayerHasClipGeometries('x'))
+        self.assertFalse(rc.symbolLayerHasClipGeometries('y'))
+
+        self.assertEqual([g.asWkt() for g in rc.symbolLayerClipGeometries('x')],
+                         ['Polygon ((0 0, 1 0, 1 1, 0 1, 0 0))'])
+        self.assertFalse(rc.symbolLayerClipGeometries('y'))
+        rc.addSymbolLayerClipGeometry('x', QgsGeometry.fromWkt(
+            'Polygon(( 20 0, 21 0 , 21 1 , 20 1, 20 0 ))'))
+        self.assertEqual([g.asWkt() for g in rc.symbolLayerClipGeometries('x')],
+                         ['Polygon ((0 0, 1 0, 1 1, 0 1, 0 0))',
+                          'Polygon ((20 0, 21 0, 21 1, 20 1, 20 0))'])
+        self.assertFalse(rc.symbolLayerClipGeometries('y'))
+        rc.addSymbolLayerClipGeometry('y', QgsGeometry.fromWkt(
+            'Polygon(( 30 0, 31 0 , 31 1 , 30 1, 30 0 ))'))
+        self.assertEqual([g.asWkt() for g in rc.symbolLayerClipGeometries('x')],
+                         ['Polygon ((0 0, 1 0, 1 1, 0 1, 0 0))',
+                          'Polygon ((20 0, 21 0, 21 1, 20 1, 20 0))'])
+        self.assertEqual([g.asWkt() for g in rc.symbolLayerClipGeometries('y')],
+                         ['Polygon ((30 0, 31 0, 31 1, 30 1, 30 0))'])
+
+        rc2 = QgsRenderContext(rc)
+        self.assertTrue(rc2.symbolLayerHasClipGeometries('x'))
+        self.assertTrue(rc2.symbolLayerHasClipGeometries('y'))
+        self.assertFalse(rc2.symbolLayerHasClipGeometries('z'))
+        self.assertEqual([g.asWkt() for g in rc2.symbolLayerClipGeometries('x')],
+                         ['Polygon ((0 0, 1 0, 1 1, 0 1, 0 0))',
+                          'Polygon ((20 0, 21 0, 21 1, 20 1, 20 0))'])
+        self.assertEqual(
+            [g.asWkt() for g in rc2.symbolLayerClipGeometries('y')],
+            ['Polygon ((30 0, 31 0, 31 1, 30 1, 30 0))'])
+        self.assertFalse(rc2.symbolLayerClipGeometries('z'))
+
+        # adding multipart geometries to the render context should
+        # split these to multiple separate geometries
+        rc = QgsRenderContext()
+        rc.addSymbolLayerClipGeometry('x', QgsGeometry.fromWkt(
+            'MultiPolygon((( 0 0, 1 0 , 1 1 , 0 1, 0 0 )),((20 0, 21 0, 21 1, 20 1, 20 0)))'))
+        self.assertEqual([g.asWkt() for g in rc.symbolLayerClipGeometries('x')],
+                         ['Polygon ((0 0, 1 0, 1 1, 0 1, 0 0))',
+                          'Polygon ((20 0, 21 0, 21 1, 20 1, 20 0))'])
+        rc.addSymbolLayerClipGeometry('x', QgsGeometry.fromWkt(
+            'Polygon(( 30 0, 31 0 , 31 1 , 30 1, 30 0 ))'))
+        self.assertEqual([g.asWkt() for g in rc.symbolLayerClipGeometries('x')],
+                         ['Polygon ((0 0, 1 0, 1 1, 0 1, 0 0))',
+                          'Polygon ((20 0, 21 0, 21 1, 20 1, 20 0))',
+                          'Polygon ((30 0, 31 0, 31 1, 30 1, 30 0))'])
 
 
 if __name__ == '__main__':

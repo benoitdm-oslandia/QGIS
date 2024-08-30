@@ -91,22 +91,22 @@ void TestQgsArcGisRestUtils::cleanupTestCase()
 
 void TestQgsArcGisRestUtils::testMapEsriFieldType()
 {
-  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeInteger" ) ), QVariant::LongLong );
-  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeSmallInteger" ) ), QVariant::Int );
-  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeDouble" ) ), QVariant::Double );
-  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeSingle" ) ), QVariant::Double );
-  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeString" ) ), QVariant::String );
-  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeDate" ) ), QVariant::DateTime );
-  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeOID" ) ), QVariant::LongLong );
-  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeBlob" ) ), QVariant::ByteArray );
-  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeGlobalID" ) ), QVariant::String );
-  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeRaster" ) ), QVariant::ByteArray );
-  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeGUID" ) ), QVariant::String );
-  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeXML" ) ), QVariant::String );
+  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeInteger" ) ), QMetaType::Type::LongLong );
+  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeSmallInteger" ) ), QMetaType::Type::Int );
+  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeDouble" ) ), QMetaType::Type::Double );
+  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeSingle" ) ), QMetaType::Type::Double );
+  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeString" ) ), QMetaType::Type::QString );
+  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeDate" ) ), QMetaType::Type::QDateTime );
+  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeOID" ) ), QMetaType::Type::LongLong );
+  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeBlob" ) ), QMetaType::Type::QByteArray );
+  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeGlobalID" ) ), QMetaType::Type::QString );
+  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeRaster" ) ), QMetaType::Type::QByteArray );
+  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeGUID" ) ), QMetaType::Type::QString );
+  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeXML" ) ), QMetaType::Type::QString );
 
   // not valid fields
-  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeGeometry" ) ), QVariant::Invalid );
-  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "xxx" ) ), QVariant::Invalid );
+  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "esriFieldTypeGeometry" ) ), QMetaType::Type::UnknownType );
+  QCOMPARE( QgsArcGisRestUtils::convertFieldType( QStringLiteral( "xxx" ) ), QMetaType::Type::UnknownType );
 }
 
 void TestQgsArcGisRestUtils::testParseSpatialReference()
@@ -252,6 +252,71 @@ void TestQgsArcGisRestUtils::testParseMarkerSymbol()
   QCOMPARE( markerLayer->strokeColor(), QColor( 152, 230, 17, 176 ) );
   QCOMPARE( markerLayer->strokeWidth(), 5.0 );
   QCOMPARE( markerLayer->strokeWidthUnit(), Qgis::RenderUnit::Points );
+
+  // esriTS
+  const QVariantMap fontMap = jsonStringToMap( "{"
+                              "\"type\": \"esriTS\","
+                              "\"text\": \"text\","
+                              "\"color\": ["
+                              "78,"
+                              "78,"
+                              "78,"
+                              "255"
+                              "],"
+                              "\"backgroundColor\": ["
+                              "0,"
+                              "0,"
+                              "0,"
+                              "0"
+                              "],"
+                              "\"borderLineSize\": 2,"
+                              "\"borderLineColor\": ["
+                              "255,"
+                              "0,"
+                              "255,"
+                              "255"
+                              "],"
+                              "\"haloSize\": 2,"
+                              "\"haloColor\": ["
+                              "0,"
+                              "255,"
+                              "0,"
+                              "255"
+                              "],"
+                              "\"verticalAlignment\": \"bottom\","
+                              "\"horizontalAlignment\": \"left\","
+                              "\"rightToLeft\": false,"
+                              "\"angle\": 45,"
+                              "\"xoffset\": 0,"
+                              "\"yoffset\": 0,"
+                              "\"kerning\": true,"
+                              "\"font\": {"
+                              "\"family\": \"Arial\","
+                              "\"size\": 12,"
+                              "\"style\": \"normal\","
+                              "\"weight\": \"bold\","
+                              "\"decoration\": \"none\""
+                              "}"
+                              "}" );
+
+  std::unique_ptr<QgsSymbol> fontSymbol( QgsArcGisRestUtils::convertSymbol( fontMap ) );
+  QgsMarkerSymbol *fontMarker = dynamic_cast< QgsMarkerSymbol * >( fontSymbol.get() );
+  QVERIFY( fontMarker );
+  QCOMPARE( fontMarker->symbolLayerCount(), 1 );
+  QgsFontMarkerSymbolLayer *fontMarkerLayer = dynamic_cast< QgsFontMarkerSymbolLayer * >( fontMarker->symbolLayer( 0 ) );
+  QVERIFY( fontMarkerLayer );
+  QCOMPARE( fontMarkerLayer->fontStyle(), QString( "normal" ) );
+  QCOMPARE( fontMarkerLayer->fontFamily(), QString( "Arial" ) );
+  QCOMPARE( fontMarkerLayer->offset(), QPointF( 0, 0 ) );
+  QCOMPARE( fontMarkerLayer->angle(), 45 );
+  QCOMPARE( fontMarkerLayer->horizontalAnchorPoint(),  QgsMarkerSymbolLayer::HorizontalAnchorPoint::Left );
+  QCOMPARE( fontMarkerLayer->verticalAnchorPoint(),  QgsMarkerSymbolLayer::VerticalAnchorPoint::Bottom );
+  QColor mainColor = fontMarkerLayer->color();
+  QCOMPARE( mainColor.name(), QStringLiteral( "#4e4e4e" ) );
+  QColor strokeColor = fontMarkerLayer->strokeColor();
+  QCOMPARE( strokeColor.name(), QStringLiteral( "#ff00ff" ) );
+  QCOMPARE( fontMarkerLayer->strokeWidth(), 2 );
+  QCOMPARE( fontMarkerLayer->character(), QString( "text" ) );
 
   // invalid json
   symbol = QgsArcGisRestUtils::parseEsriMarkerSymbolJson( QVariantMap() );
@@ -609,7 +674,7 @@ void TestQgsArcGisRestUtils::testParseLabeling()
   QgsPalLayerSettings *settings = children.at( 0 )->settings();
   QVERIFY( settings );
   QCOMPARE( settings->placement, Qgis::LabelPlacement::OverPoint );
-  QCOMPARE( settings->quadOffset, Qgis::LabelQuadrantPosition::AboveRight );
+  QCOMPARE( settings->pointSettings().quadrant(), Qgis::LabelQuadrantPosition::AboveRight );
   QCOMPARE( settings->fieldName, QStringLiteral( "\"Name\"" ) );
 
   QgsTextFormat textFormat = settings->format();

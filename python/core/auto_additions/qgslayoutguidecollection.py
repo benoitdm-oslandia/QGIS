@@ -24,3 +24,19 @@ QgsLayoutGuideCollection.LayoutPositionRole.__doc__ = "Guide position in layout 
 QgsLayoutGuideCollection.CustomRole.__doc__ = "Custom model roles.\n\n.. note::\n\n   Prior to QGIS 3.36 this was available as QgsLayoutGuideCollection.Roles\n\n.. versionadded:: 3.36\n\n" + '* ``OrientationRole``: ' + QgsLayoutGuideCollection.CustomRole.Orientation.__doc__ + '\n' + '* ``PositionRole``: ' + QgsLayoutGuideCollection.CustomRole.Position.__doc__ + '\n' + '* ``UnitsRole``: ' + QgsLayoutGuideCollection.CustomRole.Units.__doc__ + '\n' + '* ``PageRole``: ' + QgsLayoutGuideCollection.CustomRole.Page.__doc__ + '\n' + '* ``LayoutPositionRole``: ' + QgsLayoutGuideCollection.CustomRole.LayoutPosition.__doc__
 # --
 QgsLayoutGuideCollection.CustomRole.baseClass = QgsLayoutGuideCollection
+try:
+    QgsLayoutGuide.__attribute_docs__ = {'positionChanged': "Emitted when the guide's position is changed.\n"}
+except NameError:
+    pass
+try:
+    QgsLayoutGuide.__group__ = ['layout']
+except NameError:
+    pass
+try:
+    QgsLayoutGuideCollection.__group__ = ['layout']
+except NameError:
+    pass
+try:
+    QgsLayoutGuideProxyModel.__group__ = ['layout']
+except NameError:
+    pass

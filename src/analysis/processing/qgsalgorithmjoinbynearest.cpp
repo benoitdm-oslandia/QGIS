@@ -110,6 +110,11 @@ QString QgsJoinByNearestAlgorithm::shortDescription() const
   return QObject::tr( "Joins a layer to another layer, using the closest features (nearest neighbors)." );
 }
 
+Qgis::ProcessingAlgorithmDocumentationFlags QgsJoinByNearestAlgorithm::documentationFlags() const
+{
+  return Qgis::ProcessingAlgorithmDocumentationFlag::RegeneratesPrimaryKey;
+}
+
 QgsJoinByNearestAlgorithm *QgsJoinByNearestAlgorithm::createInstance() const
 {
   return new QgsJoinByNearestAlgorithm();
@@ -171,12 +176,12 @@ QVariantMap QgsJoinByNearestAlgorithm::processAlgorithm( const QVariantMap &para
   QgsFields outFields = QgsProcessingUtils::combineFields( input->fields(), outFields2 );
 
   QgsFields resultFields;
-  resultFields.append( QgsField( QStringLiteral( "n" ), QVariant::Int ) );
-  resultFields.append( QgsField( QStringLiteral( "distance" ), QVariant::Double ) );
-  resultFields.append( QgsField( QStringLiteral( "feature_x" ), QVariant::Double ) );
-  resultFields.append( QgsField( QStringLiteral( "feature_y" ), QVariant::Double ) );
-  resultFields.append( QgsField( QStringLiteral( "nearest_x" ), QVariant::Double ) );
-  resultFields.append( QgsField( QStringLiteral( "nearest_y" ), QVariant::Double ) );
+  resultFields.append( QgsField( QStringLiteral( "n" ), QMetaType::Type::Int ) );
+  resultFields.append( QgsField( QStringLiteral( "distance" ), QMetaType::Type::Double ) );
+  resultFields.append( QgsField( QStringLiteral( "feature_x" ), QMetaType::Type::Double ) );
+  resultFields.append( QgsField( QStringLiteral( "feature_y" ), QMetaType::Type::Double ) );
+  resultFields.append( QgsField( QStringLiteral( "nearest_x" ), QMetaType::Type::Double ) );
+  resultFields.append( QgsField( QStringLiteral( "nearest_y" ), QMetaType::Type::Double ) );
   outFields = QgsProcessingUtils::combineFields( outFields, resultFields );
 
   QString dest;
@@ -209,7 +214,8 @@ QVariantMap QgsJoinByNearestAlgorithm::processAlgorithm( const QVariantMap &para
 
     // only keep selected attributes
     QgsAttributes attributes;
-    for ( int j = 0; j < f.attributes().count(); ++j )
+    const int attributeCount = f.attributeCount();
+    for ( int j = 0; j < attributeCount; ++j )
     {
       if ( ! fields2Indices.contains( j ) )
         continue;

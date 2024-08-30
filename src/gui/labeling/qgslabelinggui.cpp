@@ -30,8 +30,7 @@
 #include "qgslabelobstaclesettingswidget.h"
 #include "qgslabellineanchorwidget.h"
 #include "qgsprojectstylesettings.h"
-
-#include <mutex>
+#include "qgsgui.h"
 
 #include <QButtonGroup>
 #include <QMessageBox>
@@ -65,34 +64,6 @@ QgsExpressionContext QgsLabelingGui::createExpressionContext() const
   expContext.setHighlightedVariables( QStringList() << QgsExpressionContext::EXPR_ORIGINAL_VALUE << QgsExpressionContext::EXPR_SYMBOL_COLOR );
 
   return expContext;
-}
-
-static bool _initCalloutWidgetFunction( const QString &name, QgsCalloutWidgetFunc f )
-{
-  QgsCalloutRegistry *registry = QgsApplication::calloutRegistry();
-
-  QgsCalloutAbstractMetadata *abstractMetadata = registry->calloutMetadata( name );
-  if ( !abstractMetadata )
-  {
-    QgsDebugError( QStringLiteral( "Failed to find callout entry in registry: %1" ).arg( name ) );
-    return false;
-  }
-  QgsCalloutMetadata *metadata = dynamic_cast<QgsCalloutMetadata *>( abstractMetadata );
-  if ( !metadata )
-  {
-    QgsDebugError( QStringLiteral( "Failed to cast callout's metadata: " ) .arg( name ) );
-    return false;
-  }
-  metadata->setWidgetFunction( f );
-  return true;
-}
-
-void QgsLabelingGui::initCalloutWidgets()
-{
-  _initCalloutWidgetFunction( QStringLiteral( "simple" ), QgsSimpleLineCalloutWidget::create );
-  _initCalloutWidgetFunction( QStringLiteral( "manhattan" ), QgsManhattanLineCalloutWidget::create );
-  _initCalloutWidgetFunction( QStringLiteral( "curved" ), QgsCurvedLineCalloutWidget::create );
-  _initCalloutWidgetFunction( QStringLiteral( "balloon" ), QgsBalloonCalloutWidget::create );
 }
 
 void QgsLabelingGui::updateCalloutWidget( QgsCallout *callout )
@@ -265,12 +236,9 @@ QgsLabelingGui::QgsLabelingGui( QgsMapLayer *layer, QgsMapCanvas *mapCanvas, con
   , mMode( NoLabels )
   , mCanvas( mapCanvas )
 {
+  QgsGui::initCalloutWidgets();
+
   mGeomType = geomType;
-  static std::once_flag initialized;
-  std::call_once( initialized, [ = ]( )
-  {
-    initCalloutWidgets();
-  } );
 
   mFontMultiLineAlignComboBox->addItem( tr( "Left" ), static_cast< int >( Qgis::LabelMultiLineAlignment::Left ) );
   mFontMultiLineAlignComboBox->addItem( tr( "Center" ), static_cast< int >( Qgis::LabelMultiLineAlignment::Center ) );
@@ -389,8 +357,13 @@ void QgsLabelingGui::setLayer( QgsMapLayer *mapLayer )
   mLineDistanceSpnBx->setValue( mSettings.dist );
   mLineDistanceUnitWidget->setUnit( mSettings.distUnits );
   mLineDistanceUnitWidget->setMapUnitScale( mSettings.distMapUnitScale );
+
+  mMaximumDistanceSpnBx->setValue( mSettings.pointSettings().maximumDistance() );
+  mMaximumDistanceUnitWidget->setUnit( mSettings.pointSettings().maximumDistanceUnit() );
+  mMaximumDistanceUnitWidget->setMapUnitScale( mSettings.pointSettings().maximumDistanceMapUnitScale() );
+
   mOffsetTypeComboBox->setCurrentIndex( mOffsetTypeComboBox->findData( static_cast< int >( mSettings.offsetType ) ) );
-  mQuadrantBtnGrp->button( static_cast<int>( mSettings.quadOffset ) )->setChecked( true );
+  mQuadrantBtnGrp->button( static_cast<int>( mSettings.pointSettings().quadrant() ) )->setChecked( true );
   mPointOffsetXSpinBox->setValue( mSettings.xOffset );
   mPointOffsetYSpinBox->setValue( mSettings.yOffset );
   mPointOffsetUnitWidget->setUnit( mSettings.offsetUnits );
@@ -433,6 +406,7 @@ void QgsLabelingGui::setLayer( QgsMapLayer *mapLayer )
 
   mComboOverlapHandling->setCurrentIndex( mComboOverlapHandling->findData( static_cast< int >( mSettings.placementSettings().overlapHandling() ) ) );
   mCheckAllowDegradedPlacement->setChecked( mSettings.placementSettings().allowDegradedPlacement() );
+  mPrioritizationComboBox->setCurrentIndex( mPrioritizationComboBox->findData( QVariant::fromValue( mSettings.placementSettings().prioritization() ) ) );
 
   chkMergeLines->setChecked( mSettings.lineSettings().mergeLines() );
   mMinSizeSpinBox->setValue( mSettings.thinningSettings().minimumFeatureSize() );
@@ -567,10 +541,15 @@ QgsPalLayerSettings QgsLabelingGui::layerSettings()
   lyr.dist = mLineDistanceSpnBx->value();
   lyr.distUnits = mLineDistanceUnitWidget->unit();
   lyr.distMapUnitScale = mLineDistanceUnitWidget->getMapUnitScale();
+
+  lyr.pointSettings().setMaximumDistance( mMaximumDistanceSpnBx->value() );
+  lyr.pointSettings().setMaximumDistanceUnit( mMaximumDistanceUnitWidget->unit() );
+  lyr.pointSettings().setMaximumDistanceMapUnitScale( mMaximumDistanceUnitWidget->getMapUnitScale() );
+
   lyr.offsetType = static_cast< Qgis::LabelOffsetType >( mOffsetTypeComboBox->currentData().toInt() );
   if ( mQuadrantBtnGrp )
   {
-    lyr.quadOffset = static_cast< Qgis::LabelQuadrantPosition >( mQuadrantBtnGrp->checkedId() );
+    lyr.pointSettings().setQuadrant( static_cast< Qgis::LabelQuadrantPosition >( mQuadrantBtnGrp->checkedId() ) );
   }
   lyr.xOffset = mPointOffsetXSpinBox->value();
   lyr.yOffset = mPointOffsetYSpinBox->value();
@@ -612,6 +591,7 @@ QgsPalLayerSettings QgsLabelingGui::layerSettings()
   lyr.labelPerPart = chkLabelPerFeaturePart->isChecked();
   lyr.placementSettings().setOverlapHandling( static_cast< Qgis::LabelOverlapHandling>( mComboOverlapHandling->currentData().toInt() ) );
   lyr.placementSettings().setAllowDegradedPlacement( mCheckAllowDegradedPlacement->isChecked() );
+  lyr.placementSettings().setPrioritization( mPrioritizationComboBox->currentData().value< Qgis::LabelPrioritization >() );
 
   lyr.lineSettings().setMergeLines( chkMergeLines->isChecked() );
 

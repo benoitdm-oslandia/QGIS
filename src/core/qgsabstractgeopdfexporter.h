@@ -72,9 +72,6 @@ class CORE_EXPORT QgsAbstractGeoPdfExporter
      */
     static QString geoPDFAvailabilityExplanation();
 
-    /**
-     * Constructor for QgsAbstractGeoPdfExporter.
-     */
     QgsAbstractGeoPdfExporter() = default;
 
     virtual ~QgsAbstractGeoPdfExporter() = default;
@@ -85,9 +82,6 @@ class CORE_EXPORT QgsAbstractGeoPdfExporter
     struct RenderedFeature
     {
 
-      /**
-       * Constructor for RenderedFeature.
-       */
       RenderedFeature() = default;
 
       /**
@@ -259,6 +253,8 @@ class CORE_EXPORT QgsAbstractGeoPdfExporter
        *
        * Layers which are not included in this group will always have their own individual layer tree entry
        * created for them automatically.
+       *
+       * \see layerTreeGroupOrder
        */
       QMap< QString, QString > customLayerTreeGroups;
 
@@ -282,9 +278,30 @@ class CORE_EXPORT QgsAbstractGeoPdfExporter
        *
        * Layers appearing earlier in the list will show earlier in the GeoPDF layer tree list.
        *
+       * \see layerTreeGroupOrder
+       *
        * \since QGIS 3.14
        */
       QStringList layerOrder;
+
+      /**
+       * Specifies the ordering of layer tree groups in the generated GeoPDF file.
+       *
+       * Groups appearing earlier in the list will show earlier in the GeoPDF layer tree list.
+       *
+       * \see layerOrder
+       * \see customLayerTreeGroups
+       *
+       * \since QGIS 3.38
+       */
+      QStringList layerTreeGroupOrder;
+
+      /**
+       * Contains a list of group names which should be considered as mutually exclusive.
+       *
+       * \since QGIS 3.40
+       */
+      QSet< QString > mutuallyExclusiveGroups;
 
     };
 

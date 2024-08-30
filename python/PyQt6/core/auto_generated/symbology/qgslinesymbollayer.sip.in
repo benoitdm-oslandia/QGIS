@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/symbology/qgslinesymbollayer.h                              *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -47,6 +47,8 @@ Creates a new QgsSimpleLineSymbolLayer from an SLD XML DOM ``element``.
 %End
 
     virtual QString layerType() const;
+
+    virtual Qgis::SymbolLayerFlags flags() const;
 
     virtual void startRender( QgsSymbolRenderContext &context );
 
@@ -1358,6 +1360,8 @@ Set the line opacity.
 
     virtual QString layerType() const;
 
+    virtual Qgis::SymbolLayerFlags flags() const;
+
     virtual void startRender( QgsSymbolRenderContext &context );
 
     virtual void stopRender( QgsSymbolRenderContext &context );
@@ -1420,6 +1424,8 @@ serialized in the ``properties`` map (corresponding to the output from
 %End
 
     virtual QString layerType() const;
+
+    virtual Qgis::SymbolLayerFlags flags() const;
 
     virtual void startRender( QgsSymbolRenderContext &context );
 
@@ -1606,5 +1612,5 @@ Sets the pen cap ``style`` used to render the line (e.g. flat, square, round, et
  *                                                                      *
  * src/core/symbology/qgslinesymbollayer.h                              *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

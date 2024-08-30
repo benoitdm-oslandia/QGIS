@@ -20,12 +20,6 @@
 
 #include "qgsabstract3dengine.h"
 
-
-namespace Qt3DRender
-{
-  class QRenderCapture;
-}
-
 namespace Qt3DExtras
 {
   class QForwardRenderer;
@@ -63,11 +57,6 @@ class _3D_EXPORT QgsWindow3DEngine : public QgsAbstract3DEngine
     //! Returns the root entity
     Qt3DCore::QEntity *root() const;
 
-    //! Sets whether shadow rendering is enabled
-    void setShadowRenderingEnabled( bool enabled );
-    //! Returns whether shadow rendering is enabled
-    bool shadowRenderingEnabled() { return mShadowRenderingEnabled; }
-
     void setClearColor( const QColor &color ) override;
     void setFrustumCullingEnabled( bool enabled ) override;
     void setRootEntity( Qt3DCore::QEntity *root ) override;
@@ -82,7 +71,6 @@ class _3D_EXPORT QgsWindow3DEngine : public QgsAbstract3DEngine
     //! 3D window with all the 3D magic inside
     Qgs3DMapCanvas *mMapCanvas3D = nullptr;
     //! Frame graph node for render capture
-    bool mShadowRenderingEnabled = false;
     Qt3DCore::QEntity *mRoot = nullptr;
     Qt3DCore::QEntity *mSceneRoot = nullptr;
 

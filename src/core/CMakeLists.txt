@@ -65,6 +65,7 @@ set(QGIS_CORE_SRCS
   elevation/qgsprofilerenderer.cpp
   elevation/qgsprofilerequest.cpp
   elevation/qgsprofilesnapping.cpp
+  elevation/qgsprofilesourceregistry.cpp
   elevation/qgsterrainprovider.cpp
 
   geocoding/qgsabstractgeocoderlocatorfilter.cpp
@@ -194,6 +195,7 @@ set(QGIS_CORE_SRCS
   numericformats/qgsbearingnumericformat.cpp
   numericformats/qgscoordinatenumericformat.cpp
   numericformats/qgscurrencynumericformat.cpp
+  numericformats/qgsexpressionbasednumericformat.cpp
   numericformats/qgsfallbacknumericformat.cpp
   numericformats/qgsfractionnumericformat.cpp
   numericformats/qgsnumericformat.cpp
@@ -219,8 +221,11 @@ set(QGIS_CORE_SRCS
   annotations/qgsannotationlinetextitem.cpp
   annotations/qgsannotationmarkeritem.cpp
   annotations/qgsannotationmanager.cpp
+  annotations/qgsannotationpictureitem.cpp
   annotations/qgsannotationpointtextitem.cpp
   annotations/qgsannotationpolygonitem.cpp
+  annotations/qgsannotationrectangletextitem.cpp
+  annotations/qgsannotationrectitem.cpp
   annotations/qgshtmlannotation.cpp
   annotations/qgsrenderedannotationitemdetails.cpp
   annotations/qgssvgannotation.cpp
@@ -252,6 +257,12 @@ set(QGIS_CORE_SRCS
   network/qgshttpheaders.cpp
   network/qgsrangerequestcache.cpp
 
+  painting/qgsgeometrypaintdevice.cpp
+  painting/qgsmaskpaintdevice.cpp
+  painting/qgsnullpainterdevice.cpp
+  painting/qgspaintenginehack.cpp
+  painting/qgspainting.cpp
+
   pdf/qgspdfrenderer.cpp
 
   processing/qgsprocessing.cpp
@@ -279,8 +290,10 @@ set(QGIS_CORE_SRCS
   processing/models/qgsprocessingmodelcomment.cpp
   processing/models/qgsprocessingmodelcomponent.cpp
   processing/models/qgsprocessingmodelgroupbox.cpp
+  processing/models/qgsprocessingmodelconfig.cpp
   processing/models/qgsprocessingmodelparameter.cpp
   processing/models/qgsprocessingmodeloutput.cpp
+  processing/models/qgsprocessingmodelresult.cpp
 
   providers/qgsabstractproviderconnection.cpp
   providers/qgsabstractdatabaseproviderconnection.cpp
@@ -298,6 +311,8 @@ set(QGIS_CORE_SRCS
   providers/arcgis/qgsarcgisrestquery.cpp
   providers/arcgis/qgsarcgisrestutils.cpp
 
+  providers/gdal/qgsgdalcloudconnection.cpp
+  providers/gdal/qgsgdalclouddataitems.cpp
   providers/gdal/qgsgdalproviderbase.cpp
   providers/gdal/qgsgdalprovider.cpp
 
@@ -357,6 +372,8 @@ set(QGIS_CORE_SRCS
   tiledscene/qgscesiumtilesdataprovider.cpp
   tiledscene/qgscesiumutils.cpp
   tiledscene/qgsgltfutils.cpp
+  tiledscene/qgsquantizedmeshdataprovider.cpp
+  tiledscene/qgsquantizedmeshtiles.cpp
   tiledscene/qgstiledsceneboundingvolume.cpp
   tiledscene/qgstiledsceneconnection.cpp
   tiledscene/qgstiledscenedataitems.cpp
@@ -500,14 +517,13 @@ set(QGIS_CORE_SRCS
   qgsmapunitscale.cpp
   qgsmargins.cpp
   qgsmaskidprovider.cpp
+  qgsmaskrendersettings.cpp
   qgsmatrix4x4.cpp
   qgsmbtiles.cpp
-  qgsmaskpaintdevice.cpp
   qgsmessagelog.cpp
   qgsmessageoutput.cpp
   qgsmimedatautils.cpp
   qgsmultirenderchecker.cpp
-  qgsnullpainterdevice.cpp
   qgsobjectcustomproperties.cpp
   qgsofflineediting.cpp
   qgsogcutils.cpp
@@ -515,8 +531,6 @@ set(QGIS_CORE_SRCS
   qgsogrutils.cpp
   qgsoptionalexpression.cpp
   qgsowsconnection.cpp
-  qgspaintenginehack.cpp
-  qgspainting.cpp
   qgspathresolver.cpp
   qgspluginlayer.cpp
   qgspluginlayerregistry.cpp
@@ -784,6 +798,7 @@ set(QGIS_CORE_SRCS
   raster/qgssinglebandcolordatarenderer.cpp
   raster/qgssinglebandgrayrenderer.cpp
   raster/qgssinglebandpseudocolorrenderer.cpp
+  raster/qgsrastersinglecolorrenderer.cpp
   raster/qgshillshaderenderer.cpp
 
   mesh/qgsmesh3daveraging.cpp
@@ -849,6 +864,7 @@ set(QGIS_CORE_SRCS
   labeling/qgslabelingresults.cpp
   labeling/qgslabellinesettings.cpp
   labeling/qgslabelplacementsettings.cpp
+  labeling/qgslabelpointsettings.cpp
   labeling/qgslabelobstaclesettings.cpp
   labeling/qgslabelsearchtree.cpp
   labeling/qgslabelsink.cpp
@@ -948,6 +964,7 @@ set(QGIS_CORE_SRCS
   vector/qgsvectorlayerselectionproperties.cpp
   vector/qgsvectorlayertemporalproperties.cpp
   vector/qgsvectorlayertools.cpp
+  vector/qgsvectorlayertoolscontext.cpp
   vector/qgsvectorlayerundocommand.cpp
   vector/qgsvectorlayerundopassthroughcommand.cpp
   vector/qgsvectorlayerutils.cpp
@@ -1055,8 +1072,6 @@ else()
 endif()
 
 set(QGIS_CORE_HDRS
-  ${CMAKE_SOURCE_DIR}/external/nlohmann/json_fwd.hpp
-
   ${CMAKE_BINARY_DIR}/qgsconfig.h
 
   ../plugins/qgisplugin.h
@@ -1197,14 +1212,13 @@ set(QGIS_CORE_HDRS
   qgsmapunitscale.h
   qgsmargins.h
   qgsmaskidprovider.h
-  qgsmaskpaintdevice.h
+  qgsmaskrendersettings.h
   qgsmatrix4x4.h
   qgsmbtiles.h
   qgsmessagelog.h
   qgsmessageoutput.h
   qgsmimedatautils.h
   qgsmultirenderchecker.h
-  qgsnullpainterdevice.h
   qgsobjectcustomproperties.h
   qgsofflineediting.h
   qgsogcutils.h
@@ -1213,8 +1227,6 @@ set(QGIS_CORE_HDRS
   qgsoptional.h
   qgsoptionalexpression.h
   qgsowsconnection.h
-  qgspaintenginehack.h
-  qgspainting.h
   qgspathresolver.h
   qgspluginlayer.h
   qgspluginlayerregistry.h
@@ -1330,8 +1342,11 @@ set(QGIS_CORE_HDRS
   annotations/qgsannotationlinetextitem.h
   annotations/qgsannotationmarkeritem.h
   annotations/qgsannotationmanager.h
+  annotations/qgsannotationpictureitem.h
   annotations/qgsannotationpointtextitem.h
   annotations/qgsannotationpolygonitem.h
+  annotations/qgsannotationrectangletextitem.h
+  annotations/qgsannotationrectitem.h
   annotations/qgsannotationregistry.h
   annotations/qgshtmlannotation.h
   annotations/qgsrenderedannotationitemdetails.h
@@ -1407,6 +1422,7 @@ set(QGIS_CORE_HDRS
   elevation/qgsprofilerenderer.h
   elevation/qgsprofilerequest.h
   elevation/qgsprofilesnapping.h
+  elevation/qgsprofilesourceregistry.h
   elevation/qgsterrainprovider.h
 
   externalstorage/qgsexternalstorage.h
@@ -1507,6 +1523,7 @@ set(QGIS_CORE_HDRS
   labeling/qgslabellinesettings.h
   labeling/qgslabelobstaclesettings.h
   labeling/qgslabelplacementsettings.h
+  labeling/qgslabelpointsettings.h
   labeling/qgslabelposition.h
   labeling/qgslabelsearchtree.h
   labeling/qgslabelsink.h
@@ -1639,6 +1656,12 @@ set(QGIS_CORE_HDRS
   mesh/qgsmeshlayerlabeling.h
   mesh/qgsmeshlayerlabelprovider.h
 
+  painting/qgsgeometrypaintdevice.h
+  painting/qgsmaskpaintdevice.h
+  painting/qgsnullpainterdevice.h
+  painting/qgspaintenginehack.h
+  painting/qgspainting.h
+
   pal/costcalculator.h
   pal/feature.h
   pal/geomfunction.h
@@ -1727,6 +1750,7 @@ set(QGIS_CORE_HDRS
   numericformats/qgsbearingnumericformat.h
   numericformats/qgscoordinatenumericformat.h
   numericformats/qgscurrencynumericformat.h
+  numericformats/qgsexpressionbasednumericformat.h
   numericformats/qgsfallbacknumericformat.h
   numericformats/qgsfractionnumericformat.h
   numericformats/qgsnumericformat.h
@@ -1740,9 +1764,11 @@ set(QGIS_CORE_HDRS
   processing/models/qgsprocessingmodelchildparametersource.h
   processing/models/qgsprocessingmodelcomment.h
   processing/models/qgsprocessingmodelcomponent.h
+  processing/models/qgsprocessingmodelconfig.h
   processing/models/qgsprocessingmodelgroupbox.h
   processing/models/qgsprocessingmodeloutput.h
   processing/models/qgsprocessingmodelparameter.h
+  processing/models/qgsprocessingmodelresult.h
   processing/qgsprocessing.h
   processing/qgsprocessingalgorithm.h
   processing/qgsprocessingalgrunnertask.h
@@ -1799,6 +1825,8 @@ set(QGIS_CORE_HDRS
   providers/arcgis/qgsarcgisrestquery.h
   providers/arcgis/qgsarcgisrestutils.h
 
+  providers/gdal/qgsgdalcloudconnection.h
+  providers/gdal/qgsgdalclouddataitems.h
   providers/gdal/qgsgdalprovider.h
 
   providers/memory/qgsmemoryfeatureiterator.h
@@ -1881,6 +1909,7 @@ set(QGIS_CORE_HDRS
   raster/qgssinglebandcolordatarenderer.h
   raster/qgssinglebandgrayrenderer.h
   raster/qgssinglebandpseudocolorrenderer.h
+  raster/qgsrastersinglecolorrenderer.h
 
   scalebar/qgsdoubleboxscalebarrenderer.h
   scalebar/qgshollowscalebarrenderer.h
@@ -1955,6 +1984,8 @@ set(QGIS_CORE_HDRS
   tiledscene/qgscesiumtilesdataprovider.h
   tiledscene/qgscesiumutils.h
   tiledscene/qgsgltfutils.h
+  tiledscene/qgsquantizedmeshdataprovider.h
+  tiledscene/qgsquantizedmeshtiles.h
   tiledscene/qgstiledsceneboundingvolume.h
   tiledscene/qgstiledsceneconnection.h
   tiledscene/qgstiledscenedataprovider.h
@@ -2015,6 +2046,7 @@ set(QGIS_CORE_HDRS
   vector/qgsvectorlayerselectionproperties.h
   vector/qgsvectorlayertemporalproperties.h
   vector/qgsvectorlayertools.h
+  vector/qgsvectorlayertoolscontext.h
   vector/qgsvectorlayerundocommand.h
   vector/qgsvectorlayerundopassthroughcommand.h
   vector/qgsvectorlayerutils.h
@@ -2322,6 +2354,7 @@ target_include_directories(qgis_core PUBLIC
   metadata
   network
   numericformats
+  painting
   pal
   pdf
   plot
@@ -2352,7 +2385,6 @@ target_include_directories(qgis_core PUBLIC
   web
   ${CMAKE_SOURCE_DIR}/external
   ${CMAKE_SOURCE_DIR}/external/delaunator-cpp
-  ${CMAKE_SOURCE_DIR}/external/nlohmann
   ${CMAKE_SOURCE_DIR}/external/kdbush/include
   ${CMAKE_SOURCE_DIR}/external/nmea
   ${CMAKE_SOURCE_DIR}/external/rtree/include
@@ -2400,6 +2432,10 @@ endif()
 
 if(NOT APPLE OR NOT QGIS_MACAPP_FRAMEWORK)
   install(FILES ${QGIS_CORE_HDRS} DESTINATION ${QGIS_INCLUDE_DIR})
+
+  if(WITH_INTERNAL_NLOHMANN_JSON)
+    install(FILES ${CMAKE_SOURCE_DIR}/external/nlohmann/json_fwd.hpp DESTINATION ${QGIS_INCLUDE_DIR}/nlohmann)
+  endif()
 else()
 
   set_target_properties(qgis_core PROPERTIES
@@ -2466,6 +2502,7 @@ target_link_libraries(qgis_core
   ${ZLIB_LIBRARIES}
   ${EXIV2_LIBRARY}
   PROJ::proj
+  nlohmann_json::nlohmann_json
 )
 
 if(BUILD_WITH_QT6)

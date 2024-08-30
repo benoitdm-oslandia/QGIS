@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/raster/qgsrasterresampler.h                                 *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -71,7 +71,7 @@ class QgsRasterResamplerV2 : QgsRasterResampler
 {
 %Docstring(signature="appended")
 Interface for resampling rasters (V2) (e.g. to have a smoother appearance),
-which provides a more efficient interface vs QgsRasterResampler.
+which provides a more efficient interface vs :py:class:`QgsRasterResampler`.
 
 .. versionadded:: 3.10.1
 %End
@@ -95,5 +95,5 @@ Returns the resampled image, or a null QImage if the resampling fails.
  *                                                                      *
  * src/core/raster/qgsrasterresampler.h                                 *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

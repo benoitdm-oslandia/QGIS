@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/qgsdistancearea.h                                           *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -38,15 +38,9 @@ Internally, the GeographicLib library is used to calculate all ellipsoid based m
   public:
 
     QgsDistanceArea();
-%Docstring
-Constructor
-%End
     ~QgsDistanceArea();
 
     QgsDistanceArea( const QgsDistanceArea &other );
-%Docstring
-Copy constructor
-%End
 
     bool willUseEllipsoid() const;
 %Docstring
@@ -382,7 +376,6 @@ will also be in this same CRS.
 
 .. seealso:: :py:func:`splitGeometryAtAntimeridian`
 
-
 .. versionadded:: 3.6
 %End
 
@@ -420,5 +413,5 @@ created at the antimeridian.
  *                                                                      *
  * src/core/qgsdistancearea.h                                           *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

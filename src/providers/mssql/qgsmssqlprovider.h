@@ -66,7 +66,7 @@ class QgsMssqlProvider final: public QgsVectorDataProvider
     static const QString MSSQL_PROVIDER_DESCRIPTION;
 
     explicit QgsMssqlProvider( const QString &uri, const QgsDataProvider::ProviderOptions &providerOptions,
-                               QgsDataProvider::ReadFlags flags = QgsDataProvider::ReadFlags() );
+                               Qgis::DataProviderReadFlags flags = Qgis::DataProviderReadFlags() );
 
     ~QgsMssqlProvider() override;
 
@@ -100,7 +100,7 @@ class QgsMssqlProvider final: public QgsVectorDataProvider
 
     bool supportsSubsetString() const override { return true; }
 
-    QgsVectorDataProvider::Capabilities capabilities() const override;
+    Qgis::VectorProviderCapabilities capabilities() const override;
 
 
     /* Implementation of functions from QgsDataProvider */
@@ -173,7 +173,7 @@ class QgsMssqlProvider final: public QgsVectorDataProvider
 
   protected:
     //! Loads fields from input file to member attributeFields
-    QVariant::Type DecodeSqlType( const QString &sqlTypeName );
+    QMetaType::Type DecodeSqlType( const QString &sqlTypeName );
     void loadFields();
     void loadMetadata();
 
@@ -322,7 +322,7 @@ class QgsMssqlProviderMetadata final: public QgsProviderMetadata
       QMap<int, int> &oldToNewAttrIdxMap,
       QString &errorMessage,
       const QMap<QString, QVariant> *options ) override;
-    QgsMssqlProvider *createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, QgsDataProvider::ReadFlags flags = QgsDataProvider::ReadFlags() ) override;
+    QgsMssqlProvider *createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, Qgis::DataProviderReadFlags flags = Qgis::DataProviderReadFlags() ) override;
     virtual QList< QgsDataItemProvider * > dataItemProviders() const override;
     QgsTransaction *createTransaction( const QString &connString ) override;
 

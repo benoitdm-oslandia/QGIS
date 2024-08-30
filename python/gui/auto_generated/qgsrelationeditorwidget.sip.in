@@ -3,7 +3,7 @@
  *                                                                      *
  * src/gui/qgsrelationeditorwidget.h                                    *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -191,6 +191,10 @@ Update the configuration widget to represent the given configuration.
 :param config: The configuration which should be represented by this widget
 %End
 
+    void mEditExpression_clicked();
+%Docstring
+Opens an expression dialog and sets its value as filter expression for the linking dialog
+%End
 };
 
 
@@ -201,5 +205,5 @@ Update the configuration widget to represent the given configuration.
  *                                                                      *
  * src/gui/qgsrelationeditorwidget.h                                    *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/processing/qgsprocessingutils.h                             *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -509,7 +509,6 @@ a conversion in this case and will return the target layer name in the ``layerNa
 
 :return: path to source layer, or nearly converted compatible layer
 
-
 .. seealso:: :py:func:`convertToCompatibleFormat`
 
 .. versionadded:: 3.10
@@ -736,5 +735,5 @@ Returns the geometry check method for the source.
  *                                                                      *
  * src/core/processing/qgsprocessingutils.h                             *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

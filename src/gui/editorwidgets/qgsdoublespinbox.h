@@ -140,6 +140,21 @@ class GUI_EXPORT QgsDoubleSpinBox : public QDoubleSpinBox
     double valueFromText( const QString &text ) const override;
     QValidator::State validate( QString &input, int &pos ) const override;
     void paintEvent( QPaintEvent *e ) override;
+    void stepBy( int steps ) override;
+
+  signals:
+
+    /**
+     * Emitted when the Return or Enter key is used in the line edit.
+     * \since QGIS 3.40
+     */
+    void returnPressed();
+
+    /**
+     * Emitted when the the value has been manually edited via line edit.
+     * \since QGIS 3.40
+     */
+    void textEdited( const QString &text );
 
   protected:
     void changeEvent( QEvent *event ) override;

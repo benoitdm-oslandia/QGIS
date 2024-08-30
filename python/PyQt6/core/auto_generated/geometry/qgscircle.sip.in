@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/geometry/qgscircle.h                                        *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -112,7 +112,7 @@ The azimuth always takes the default value.
 .. seealso:: :py:func:`from3TangentsMulti`
 
 Example
--------
+-------------------------------------
 
 .. code-block:: python
 
@@ -156,10 +156,9 @@ The azimuth always takes the default value.
 .. seealso:: :py:func:`from3Tangents`
 
 Example
--------
+-------------------------------------
 
 .. code-block:: python
-
 
       # [(0 0), (5 0)] and [(5 5), (10 5)] are parallels
       QgsCircle.from3TangentsMulti(QgsPoint(0, 0), QgsPoint(5, 0), QgsPoint(5, 5), QgsPoint(10, 5), QgsPoint(2.5, 0), QgsPoint(7.5, 5))
@@ -389,5 +388,5 @@ Coordinates are taken from quadrant North, East and South.
  *                                                                      *
  * src/core/geometry/qgscircle.h                                        *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

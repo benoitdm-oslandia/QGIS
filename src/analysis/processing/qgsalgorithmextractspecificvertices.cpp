@@ -64,6 +64,11 @@ QString QgsExtractSpecificVerticesAlgorithm::shortHelpString() const
                       "polygons), distance along the original geometry and bisector angle of vertex for the original geometry." );
 }
 
+Qgis::ProcessingAlgorithmDocumentationFlags QgsExtractSpecificVerticesAlgorithm::documentationFlags() const
+{
+  return Qgis::ProcessingAlgorithmDocumentationFlag::RegeneratesPrimaryKey;
+}
+
 QString QgsExtractSpecificVerticesAlgorithm::outputName() const
 {
   return QObject::tr( "Vertices" );
@@ -82,16 +87,16 @@ Qgis::ProcessingSourceType QgsExtractSpecificVerticesAlgorithm::outputLayerType(
 QgsFields QgsExtractSpecificVerticesAlgorithm::outputFields( const QgsFields &inputFields ) const
 {
   QgsFields outputFields = inputFields;
-  outputFields.append( QgsField( QStringLiteral( "vertex_pos" ), QVariant::Int ) );
-  outputFields.append( QgsField( QStringLiteral( "vertex_index" ), QVariant::Int ) );
-  outputFields.append( QgsField( QStringLiteral( "vertex_part" ), QVariant::Int ) );
+  outputFields.append( QgsField( QStringLiteral( "vertex_pos" ), QMetaType::Type::Int ) );
+  outputFields.append( QgsField( QStringLiteral( "vertex_index" ), QMetaType::Type::Int ) );
+  outputFields.append( QgsField( QStringLiteral( "vertex_part" ), QMetaType::Type::Int ) );
   if ( mGeometryType == Qgis::GeometryType::Polygon )
   {
-    outputFields.append( QgsField( QStringLiteral( "vertex_part_ring" ), QVariant::Int ) );
+    outputFields.append( QgsField( QStringLiteral( "vertex_part_ring" ), QMetaType::Type::Int ) );
   }
-  outputFields.append( QgsField( QStringLiteral( "vertex_part_index" ), QVariant::Int ) );
-  outputFields.append( QgsField( QStringLiteral( "distance" ), QVariant::Double ) );
-  outputFields.append( QgsField( QStringLiteral( "angle" ), QVariant::Double ) );
+  outputFields.append( QgsField( QStringLiteral( "vertex_part_index" ), QMetaType::Type::Int ) );
+  outputFields.append( QgsField( QStringLiteral( "distance" ), QMetaType::Type::Double ) );
+  outputFields.append( QgsField( QStringLiteral( "angle" ), QMetaType::Type::Double ) );
 
   return outputFields;
 }
@@ -129,6 +134,9 @@ void QgsExtractSpecificVerticesAlgorithm::initParameters( const QVariantMap & )
 bool QgsExtractSpecificVerticesAlgorithm::prepareAlgorithm( const QVariantMap &parameters, QgsProcessingContext &context, QgsProcessingFeedback * )
 {
   std::unique_ptr< QgsProcessingFeatureSource > source( parameterAsSource( parameters, QStringLiteral( "INPUT" ), context ) );
+  if ( !source )
+    throw QgsProcessingException( invalidSourceError( parameters, QStringLiteral( "INPUT" ) ) );
+
   mGeometryType = QgsWkbTypes::geometryType( source->wkbType() );
 
   const QString verticesString = parameterAsString( parameters, QStringLiteral( "VERTICES" ), context );

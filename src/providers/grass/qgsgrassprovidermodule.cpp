@@ -816,7 +816,7 @@ bool QgsGrassMapsetItem::handleDrop( const QMimeData *data, Qt::DropAction )
       int newXSize;
       int newYSize;
       bool useSrcRegion = true;
-      if ( rasterProvider->capabilities() & QgsRasterInterface::Size )
+      if ( rasterProvider->capabilities() & Qgis::RasterInterfaceCapability::Size )
       {
         newXSize = rasterProvider->xSize();
         newYSize = rasterProvider->ySize();
@@ -1294,7 +1294,7 @@ QgsGrassProviderMetadata::QgsGrassProviderMetadata()
   : QgsProviderMetadata( PROVIDER_KEY, PROVIDER_DESCRIPTION )
 {}
 
-QgsDataProvider *QgsGrassProviderMetadata::createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, QgsDataProvider::ReadFlags flags )
+QgsDataProvider *QgsGrassProviderMetadata::createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, Qgis::DataProviderReadFlags flags )
 {
   Q_UNUSED( options )
   Q_UNUSED( flags )

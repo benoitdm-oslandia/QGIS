@@ -36,9 +36,6 @@ class _3D_EXPORT QgsMetalRoughMaterialSettings : public QgsAbstractMaterialSetti
 {
   public:
 
-    /**
-     * Constructor for QgsMetalRoughMaterialSettings.
-     */
     QgsMetalRoughMaterialSettings() = default;
 
     QString type() const override;
@@ -104,7 +101,7 @@ class _3D_EXPORT QgsMetalRoughMaterialSettings : public QgsAbstractMaterialSetti
 
 #ifndef SIP_RUN
     Qt3DRender::QMaterial *toMaterial( QgsMaterialSettingsRenderingTechnique technique, const QgsMaterialContext &context ) const override SIP_FACTORY;
-    void addParametersToEffect( Qt3DRender::QEffect *effect ) const override;
+    void addParametersToEffect( Qt3DRender::QEffect *effect, const QgsMaterialContext &materialContext ) const override;
 #endif
 
     // TODO c++20 - replace with = default

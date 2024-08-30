@@ -2068,13 +2068,48 @@ QgsCoordinateReferenceSystem QgsGrass::crs( const QString &gisdbase, const QStri
     QString &error )
 {
   QgsDebugMsgLevel( QStringLiteral( "gisdbase = %1 location = %2" ).arg( gisdbase, location ), 2 );
-  QgsCoordinateReferenceSystem crs = QgsCoordinateReferenceSystem();
+  QgsCoordinateReferenceSystem crs;
+
+  // try getting SRID directly first
   try
   {
-    QString wkt = getInfo( QStringLiteral( "proj" ), gisdbase, location );
-    QgsDebugMsgLevel( "wkt: " + wkt, 2 );
+    const QString srid = getInfo( QStringLiteral( "srid" ), gisdbase, location );
+    QgsDebugMsgLevel( QStringLiteral( "srid: %1" ).arg( srid ), 2 );
+    crs = QgsCoordinateReferenceSystem( srid );
+    if ( crs.isValid() )
+      return crs;
+  }
+  catch ( QgsGrass::Exception &e )
+  {
+    error = tr( "Cannot get SRID" ) + "\n" + e.what();
+    QgsDebugError( error );
+  }
+
+  // else try WKT
+  try
+  {
+    const QString wkt = getInfo( QStringLiteral( "wkt" ), gisdbase, location );
+    QgsDebugMsgLevel( QStringLiteral( "wkt: %1" ).arg( wkt ), 2 );
     crs = QgsCoordinateReferenceSystem::fromWkt( wkt );
     QgsDebugMsgLevel( "crs.toWkt: " + crs.toWkt(), 2 );
+    if ( crs.isValid() )
+      return crs;
+  }
+  catch ( QgsGrass::Exception &e )
+  {
+    error = tr( "Cannot get projection" ) + "\n" + e.what();
+    QgsDebugError( error );
+  }
+
+  //else try lossy old proj properties approach
+  try
+  {
+    const QString wktFromProjString = getInfo( QStringLiteral( "proj" ), gisdbase, location );
+    QgsDebugMsgLevel( QStringLiteral( "WKT from proj string: %1" ).arg( wktFromProjString ), 2 );
+    crs = QgsCoordinateReferenceSystem::fromWkt( wktFromProjString );
+    QgsDebugMsgLevel( "crs.toWkt: " + crs.toWkt(), 2 );
+    if ( crs.isValid() )
+      return crs;
   }
   catch ( QgsGrass::Exception &e )
   {
@@ -2375,25 +2410,25 @@ void QgsGrass::createTable( dbDriver *driver, const QString &tableName, const Qg
     QString typeName;
     switch ( field.type() )
     {
-      case QVariant::Int:
-      case QVariant::LongLong:
-      case QVariant::Bool:
+      case QMetaType::Type::Int:
+      case QMetaType::Type::LongLong:
+      case QMetaType::Type::Bool:
         typeName = QStringLiteral( "integer" );
         break;
-      case QVariant::Double:
+      case QMetaType::Type::Double:
         typeName = QStringLiteral( "double precision" );
         break;
       // TODO: verify how is it with SpatiaLite/dbf support for date, time, datetime, v.in.ogr is using all
-      case QVariant::Date:
+      case QMetaType::Type::QDate:
         typeName = QStringLiteral( "date" );
         break;
-      case QVariant::Time:
+      case QMetaType::Type::QTime:
         typeName = QStringLiteral( "time" );
         break;
-      case QVariant::DateTime:
+      case QMetaType::Type::QDateTime:
         typeName = QStringLiteral( "datetime" );
         break;
-      case QVariant::String:
+      case QMetaType::Type::QString:
         typeName = QStringLiteral( "varchar (%1)" ).arg( field.length() );
         break;
       default:

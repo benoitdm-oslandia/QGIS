@@ -162,7 +162,6 @@ class CORE_EXPORT QgsLayoutExporter
     //! Contains settings relating to exporting layouts to raster images
     struct ImageExportSettings
     {
-      //! Constructor for ImageExportSettings
       ImageExportSettings()
         : flags( QgsLayoutRenderContext::FlagAntialiasing | QgsLayoutRenderContext::FlagUseAdvancedEffects )
       {}
@@ -265,7 +264,6 @@ class CORE_EXPORT QgsLayoutExporter
     //! Contains settings relating to exporting layouts to PDF
     struct PdfExportSettings
     {
-      //! Constructor for PdfExportSettings
       PdfExportSettings()
         : flags( QgsLayoutRenderContext::FlagAntialiasing | QgsLayoutRenderContext::FlagUseAdvancedEffects )
       {}
@@ -442,7 +440,6 @@ class CORE_EXPORT QgsLayoutExporter
     //! Contains settings relating to printing layouts
     struct PrintExportSettings
     {
-      //! Constructor for PrintExportSettings
       PrintExportSettings()
         : flags( QgsLayoutRenderContext::FlagAntialiasing | QgsLayoutRenderContext::FlagUseAdvancedEffects )
       {}
@@ -499,7 +496,6 @@ class CORE_EXPORT QgsLayoutExporter
     //! Contains settings relating to exporting layouts to SVG
     struct SvgExportSettings
     {
-      //! Constructor for SvgExportSettings
       SvgExportSettings()
         : flags( QgsLayoutRenderContext::FlagAntialiasing | QgsLayoutRenderContext::FlagUseAdvancedEffects )
       {}
@@ -612,6 +608,13 @@ class CORE_EXPORT QgsLayoutExporter
     QString errorFile() const { return mErrorFileName; }
 
     /**
+     * Returns a string describing the last error encountered during an export.
+     *
+     * \since QGIS 3.38
+     */
+    QString errorMessage() const { return mErrorMessage; }
+
+    /**
      * Returns the labeling results for all map items included in the export. Map keys are the item UUIDs (see QgsLayoutItem::uuid()).
      *
      * Ownership of the results remains with the layout exporter.
@@ -703,6 +706,7 @@ class CORE_EXPORT QgsLayoutExporter
     QMap< QString, QgsLabelingResults * > mLabelingResults;
 
     mutable QString mErrorFileName;
+    mutable QString mErrorMessage;
 
     QImage createImage( const ImageExportSettings &settings, int page, QRectF &bounds, bool &skipPage ) const;
 
@@ -768,9 +772,13 @@ class CORE_EXPORT QgsLayoutExporter
     bool georeferenceOutputPrivate( const QString &file, QgsLayoutItemMap *referenceMap = nullptr,
                                     const QRectF &exportRegion = QRectF(), double dpi = -1, bool includeGeoreference = true, bool includeMetadata = false ) const;
 
-    ExportResult handleLayeredExport( const QList<QGraphicsItem *> &items, const std::function<QgsLayoutExporter::ExportResult( unsigned int layerId, const QgsLayoutItem::ExportLayerDetail &layerDetails )> &exportFunc );
+    ExportResult handleLayeredExport( const QList<QGraphicsItem *> &items,
+                                      const std::function<QgsLayoutExporter::ExportResult( unsigned int layerId, const QgsLayoutItem::ExportLayerDetail &layerDetails )> &exportFunc,
+                                      const std::function<QString( QgsLayoutItem *item )> &getItemExportGroupFunc
+                                    );
 
     static QgsVectorSimplifyMethod createExportSimplifyMethod();
+    static QgsMaskRenderSettings createExportMaskSettings();
     friend class TestQgsLayout;
     friend class TestQgsLayoutExporter;
 

@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/qgsmaptopixel.h                                             *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -94,10 +94,20 @@ Transforms the point specified by x,y from map (world) coordinates to device coo
 
     void transformInPlace( double &x, double &y ) const;
 %Docstring
-Transforms device coordinates to map coordinates.
+Transforms map coordinates to device coordinates.
 
 This method modifies the given coordinates in place. It is intended as a fast way to do the
 transform.
+%End
+
+    QRectF transformBounds( const QRectF &bounds ) const;
+%Docstring
+Transforms a bounding box from map coordinates to device coordinates.
+
+The returns bounding box will always completely enclose the transformed input bounding box (i.e. this
+method will grow the bounds wherever required).
+
+.. versionadded:: 3.40
 %End
 
 
@@ -238,5 +248,5 @@ Returns the center y-coordinate for the transform.
  *                                                                      *
  * src/core/qgsmaptopixel.h                                             *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/qgslayerdefinition.h                                        *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -25,13 +25,34 @@ files also store the layer tree info for the exported layers, including group in
 #include "qgslayerdefinition.h"
 %End
   public:
-    static bool loadLayerDefinition( const QString &path, QgsProject *project, QgsLayerTreeGroup *rootGroup, QString &errorMessage /Out/ );
+
+    static bool loadLayerDefinition( const QString &path, QgsProject *project, QgsLayerTreeGroup *rootGroup, QString &errorMessage /Out/, Qgis::LayerTreeInsertionMethod insertMethod = Qgis::LayerTreeInsertionMethod::OptimalInInsertionGroup, const QgsLayerTreeRegistryBridge::InsertionPoint *insertPoint = 0 );
 %Docstring
 Loads the QLR at path into QGIS.  New layers are added to given project into layer tree specified by rootGroup
+
+:param path: file path to the qlr
+:param project: the current project
+:param rootGroup: the layer tree group to insert the qlr content
+:param insertMethod: method for layer tree (since QGIS 3.38)
+:param insertPoint: describes where in rootGroup the qlr layers/groups shall be inserted (since QGIS 3.38)
+
+:return: - true in case of success
+         - errorMessage: the returned error message
 %End
-    static bool loadLayerDefinition( QDomDocument doc,  QgsProject *project, QgsLayerTreeGroup *rootGroup, QString &errorMessage /Out/, QgsReadWriteContext &context );
+
+    static bool loadLayerDefinition( QDomDocument doc,  QgsProject *project, QgsLayerTreeGroup *rootGroup, QString &errorMessage /Out/, QgsReadWriteContext &context, Qgis::LayerTreeInsertionMethod insertMethod = Qgis::LayerTreeInsertionMethod::OptimalInInsertionGroup, const QgsLayerTreeRegistryBridge::InsertionPoint *insertPoint = 0 );
 %Docstring
 Loads the QLR from the XML document.  New layers are added to given project into layer tree specified by rootGroup
+
+:param doc: the xml document
+:param project: the current project
+:param rootGroup: the layer tree group to insert the qlr content
+:param context: the read write context
+:param insertMethod: method for layer tree (since QGIS 3.38)
+:param insertPoint: describes where in rootGroup the qlr layers/groups shall be inserted (since QGIS 3.38)
+
+:return: - true in case of success
+         - errorMessage: the returned error message
 %End
 
     static bool exportLayerDefinition( const QString &path, const QList<QgsLayerTreeNode *> &selectedTreeNodes, QString &errorMessage /Out/ );
@@ -59,7 +80,6 @@ Exports the selected layer tree nodes to a QLR file.
 
 :return: - ``True`` if the export was successful
          - errorMessage: will be set to any error messages generated during the export
-
 
 .. versionadded:: 3.22
 %End
@@ -158,5 +178,5 @@ Returns whether the layer associated with the``layerId`` is dependent from anoth
  *                                                                      *
  * src/core/qgslayerdefinition.h                                        *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

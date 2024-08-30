@@ -138,7 +138,6 @@ void QgsMapLayer::clone( QgsMapLayer *layer ) const
   }
 
   layer->setName( name() );
-  layer->setShortName( shortName() );
 
   if ( layer->dataProvider() && layer->dataProvider()->elevationProperties() )
   {
@@ -151,13 +150,6 @@ void QgsMapLayer::clone( QgsMapLayer *layer ) const
   layer->setMaximumScale( maximumScale() );
   layer->setMinimumScale( minimumScale() );
   layer->setScaleBasedVisibility( hasScaleBasedVisibility() );
-  layer->setTitle( title() );
-  layer->setAbstract( abstract() );
-  layer->setKeywordList( keywordList() );
-  layer->setDataUrl( dataUrl() );
-  layer->setDataUrlFormat( dataUrlFormat() );
-  layer->setAttribution( attribution() );
-  layer->setAttributionUrl( attributionUrl() );
   layer->setLegendUrl( legendUrl() );
   layer->setLegendUrlFormat( legendUrlFormat() );
   layer->setDependencies( dependencies() );
@@ -210,6 +202,23 @@ QString QgsMapLayer::id() const
   return mID;
 }
 
+bool QgsMapLayer::setId( const QString &id )
+{
+  QGIS_PROTECT_QOBJECT_THREAD_ACCESS
+  if ( qobject_cast< QgsMapLayerStore * >( parent() ) )
+  {
+    // layer is already registered, cannot change id
+    return false;
+  }
+
+  if ( id == mID )
+    return false;
+
+  mID = id;
+  emit idChanged( id );
+  return true;
+}
+
 void QgsMapLayer::setName( const QString &name )
 {
   QGIS_PROTECT_QOBJECT_THREAD_ACCESS
@@ -245,11 +254,117 @@ const QgsDataProvider *QgsMapLayer::dataProvider() const
   return nullptr;
 }
 
+void QgsMapLayer::setShortName( const QString &shortName )
+{
+  QGIS_PROTECT_QOBJECT_THREAD_ACCESS
+
+  mServerProperties->setShortName( shortName );
+}
+
 QString QgsMapLayer::shortName() const
 {
   QGIS_PROTECT_QOBJECT_THREAD_ACCESS
 
-  return mShortName;
+  return mServerProperties->shortName();
+}
+
+void QgsMapLayer::setTitle( const QString &title )
+{
+  QGIS_PROTECT_QOBJECT_THREAD_ACCESS
+
+  mServerProperties->setTitle( title );
+}
+
+QString QgsMapLayer::title() const
+{
+  QGIS_PROTECT_QOBJECT_THREAD_ACCESS_NON_FATAL
+
+  return mServerProperties->title();
+}
+
+void QgsMapLayer::setAbstract( const QString &abstract )
+{
+  QGIS_PROTECT_QOBJECT_THREAD_ACCESS
+
+  mServerProperties->setAbstract( abstract );
+}
+
+QString QgsMapLayer::abstract() const
+{
+  QGIS_PROTECT_QOBJECT_THREAD_ACCESS_NON_FATAL
+
+  return mServerProperties->abstract();
+}
+
+void QgsMapLayer::setKeywordList( const QString &keywords )
+{
+  QGIS_PROTECT_QOBJECT_THREAD_ACCESS
+
+  mServerProperties->setKeywordList( keywords );
+}
+
+QString QgsMapLayer::keywordList() const
+{
+  QGIS_PROTECT_QOBJECT_THREAD_ACCESS_NON_FATAL
+
+  return mServerProperties->keywordList();
+}
+
+void QgsMapLayer::setDataUrl( const QString &dataUrl )
+{
+  QGIS_PROTECT_QOBJECT_THREAD_ACCESS
+
+  mServerProperties->setDataUrl( dataUrl );
+}
+
+QString QgsMapLayer::dataUrl() const
+{
+  QGIS_PROTECT_QOBJECT_THREAD_ACCESS_NON_FATAL
+
+  return mServerProperties->dataUrl();
+}
+
+void QgsMapLayer::setDataUrlFormat( const QString &dataUrlFormat )
+{
+  QGIS_PROTECT_QOBJECT_THREAD_ACCESS
+
+  mServerProperties->setDataUrlFormat( dataUrlFormat );
+}
+
+QString QgsMapLayer::dataUrlFormat() const
+{
+  QGIS_PROTECT_QOBJECT_THREAD_ACCESS_NON_FATAL
+
+  return mServerProperties->dataUrlFormat();
+}
+
+void QgsMapLayer::setAttribution( const QString &attrib )
+{
+  QGIS_PROTECT_QOBJECT_THREAD_ACCESS
+
+  mServerProperties->setAttribution( attrib );
+}
+
+QString QgsMapLayer::attribution() const
+{
+  QGIS_PROTECT_QOBJECT_THREAD_ACCESS_NON_FATAL
+
+  return mServerProperties->attribution();
+}
+
+void QgsMapLayer::setAttributionUrl( const QString &attribUrl )
+{
+  QGIS_PROTECT_QOBJECT_THREAD_ACCESS
+
+  mServerProperties->setAttributionUrl( attribUrl );
+}
+
+QString QgsMapLayer::attributionUrl() const
+{
+  QGIS_PROTECT_QOBJECT_THREAD_ACCESS_NON_FATAL
+
+  return mServerProperties->attributionUrl();
+
 }
 
 void QgsMapLayer::setMetadataUrl( const QString &metaUrl )
@@ -490,7 +605,12 @@ bool QgsMapLayer::readLayerXml( const QDomElement &layerElement, QgsReadWriteCon
     mne = mnl.toElement();
     if ( ! mne.isNull() && mne.text().length() > 10 ) // should be at least 17 (yyyyMMddhhmmsszzz)
     {
-      mID = mne.text();
+      const QString newId = mne.text();
+      if ( newId != mID )
+      {
+        mID = mne.text();
+        emit idChanged( mID );
+      }
     }
   }
 
@@ -504,52 +624,26 @@ bool QgsMapLayer::readLayerXml( const QDomElement &layerElement, QgsReadWriteCon
   // now let the children grab what they need from the Dom node.
   layerError = !readXml( layerElement, context );
 
+  const QgsCoordinateReferenceSystem oldVerticalCrs = verticalCrs();
+  const QgsCoordinateReferenceSystem oldCrs3D = mCrs3D;
+
   // overwrite CRS with what we read from project file before the raster/vector
   // file reading functions changed it. They will if projections is specified in the file.
   // FIXME: is this necessary? Yes, it is (autumn 2019)
   QgsCoordinateReferenceSystem::setCustomCrsValidation( savedValidation );
   mCRS = savedCRS;
 
-  //short name
-  const QDomElement shortNameElem = layerElement.firstChildElement( QStringLiteral( "shortname" ) );
-  if ( !shortNameElem.isNull() )
+  //vertical CRS
   {
-    mShortName = shortNameElem.text();
-  }
-
-  //title
-  const QDomElement titleElem = layerElement.firstChildElement( QStringLiteral( "title" ) );
-  if ( !titleElem.isNull() )
-  {
-    mTitle = titleElem.text();
-  }
-
-  //abstract
-  const QDomElement abstractElem = layerElement.firstChildElement( QStringLiteral( "abstract" ) );
-  if ( !abstractElem.isNull() )
-  {
-    mAbstract = abstractElem.text();
-  }
-
-  //keywordList
-  const QDomElement keywordListElem = layerElement.firstChildElement( QStringLiteral( "keywordList" ) );
-  if ( !keywordListElem.isNull() )
-  {
-    QStringList kwdList;
-    for ( QDomNode n = keywordListElem.firstChild(); !n.isNull(); n = n.nextSibling() )
+    QgsCoordinateReferenceSystem verticalCrs;
+    const QDomNode verticalCrsNode = layerElement.firstChildElement( QStringLiteral( "verticalCrs" ) );
+    if ( !verticalCrsNode.isNull() )
     {
-      kwdList << n.toElement().text();
+      verticalCrs.readXml( verticalCrsNode );
     }
-    mKeywordList = kwdList.join( QLatin1String( ", " ) );
+    mVerticalCrs = verticalCrs;
   }
-
-  //dataUrl
-  const QDomElement dataUrlElem = layerElement.firstChildElement( QStringLiteral( "dataUrl" ) );
-  if ( !dataUrlElem.isNull() )
-  {
-    mDataUrl = dataUrlElem.text();
-    mDataUrlFormat = dataUrlElem.attribute( QStringLiteral( "format" ), QString() );
-  }
+  rebuildCrs3D();
 
   //legendUrl
   const QDomElement legendUrlElem = layerElement.firstChildElement( QStringLiteral( "legendUrl" ) );
@@ -557,14 +651,6 @@ bool QgsMapLayer::readLayerXml( const QDomElement &layerElement, QgsReadWriteCon
   {
     mLegendUrl = legendUrlElem.text();
     mLegendUrlFormat = legendUrlElem.attribute( QStringLiteral( "format" ), QString() );
-  }
-
-  //attribution
-  const QDomElement attribElem = layerElement.firstChildElement( QStringLiteral( "attribution" ) );
-  if ( !attribElem.isNull() )
-  {
-    mAttribution = attribElem.text();
-    mAttributionUrl = attribElem.attribute( QStringLiteral( "href" ), QString() );
   }
 
   serverProperties()->readXml( layerElement );
@@ -609,6 +695,11 @@ bool QgsMapLayer::readLayerXml( const QDomElement &layerElement, QgsReadWriteCon
   }
 
   mLegendPlaceholderImage = layerElement.attribute( QStringLiteral( "legendPlaceholderImage" ) );
+
+  if ( verticalCrs() != oldVerticalCrs )
+    emit verticalCrsChanged();
+  if ( mCrs3D != oldCrs3D )
+    emit crs3DChanged();
 
   return ! layerError;
 } // bool QgsMapLayer::readLayerXML
@@ -670,6 +761,13 @@ bool QgsMapLayer::writeLayerXml( QDomElement &layerElement, QDomDocument &docume
 
   layerElement.appendChild( layerId );
 
+  if ( mVerticalCrs.isValid() )
+  {
+    QDomElement verticalSrsNode = document.createElement( QStringLiteral( "verticalCrs" ) );
+    mVerticalCrs.writeXml( verticalSrsNode, document );
+    layerElement.appendChild( verticalSrsNode );
+  }
+
   // data source
   QDomElement dataSource = document.createElement( QStringLiteral( "datasource" ) );
   const QgsDataProvider *provider = dataProvider();
@@ -687,34 +785,43 @@ bool QgsMapLayer::writeLayerXml( QDomElement &layerElement, QDomDocument &docume
   layerElement.appendChild( layerName );
 
   // layer short name
-  if ( !mShortName.isEmpty() )
+
+  // TODO -- ideally this would be in QgsMapLayerServerProperties::writeXml, but that's currently
+  // only called for SOME map layer subclasses!
+  if ( !mServerProperties->shortName().isEmpty() )
   {
     QDomElement layerShortName = document.createElement( QStringLiteral( "shortname" ) );
-    const QDomText layerShortNameText = document.createTextNode( mShortName );
+    const QDomText layerShortNameText = document.createTextNode( mServerProperties->shortName() );
     layerShortName.appendChild( layerShortNameText );
     layerElement.appendChild( layerShortName );
   }
 
   // layer title
-  if ( !mTitle.isEmpty() )
+  if ( !mServerProperties->title().isEmpty() )
   {
     QDomElement layerTitle = document.createElement( QStringLiteral( "title" ) );
-    const QDomText layerTitleText = document.createTextNode( mTitle );
+    const QDomText layerTitleText = document.createTextNode( mServerProperties->title() );
     layerTitle.appendChild( layerTitleText );
+
+    if ( mServerProperties->title() != mServerProperties->wfsTitle() )
+    {
+      layerTitle.setAttribute( "wfs",  mServerProperties->wfsTitle() );
+    }
+
     layerElement.appendChild( layerTitle );
   }
 
   // layer abstract
-  if ( !mAbstract.isEmpty() )
+  if ( !mServerProperties->abstract().isEmpty() )
   {
     QDomElement layerAbstract = document.createElement( QStringLiteral( "abstract" ) );
-    const QDomText layerAbstractText = document.createTextNode( mAbstract );
+    const QDomText layerAbstractText = document.createTextNode( mServerProperties->abstract() );
     layerAbstract.appendChild( layerAbstractText );
     layerElement.appendChild( layerAbstract );
   }
 
   // layer keyword list
-  const QStringList keywordStringList = keywordList().split( ',' );
+  const QStringList keywordStringList = mServerProperties->keywordList().split( ',' );
   if ( !keywordStringList.isEmpty() )
   {
     QDomElement layerKeywordList = document.createElement( QStringLiteral( "keywordList" ) );
@@ -729,13 +836,13 @@ bool QgsMapLayer::writeLayerXml( QDomElement &layerElement, QDomDocument &docume
   }
 
   // layer dataUrl
-  const QString aDataUrl = dataUrl();
+  const QString aDataUrl = mServerProperties->dataUrl();
   if ( !aDataUrl.isEmpty() )
   {
     QDomElement layerDataUrl = document.createElement( QStringLiteral( "dataUrl" ) );
     const QDomText layerDataUrlText = document.createTextNode( aDataUrl );
     layerDataUrl.appendChild( layerDataUrlText );
-    layerDataUrl.setAttribute( QStringLiteral( "format" ), dataUrlFormat() );
+    layerDataUrl.setAttribute( QStringLiteral( "format" ), mServerProperties->dataUrlFormat() );
     layerElement.appendChild( layerDataUrl );
   }
 
@@ -751,13 +858,13 @@ bool QgsMapLayer::writeLayerXml( QDomElement &layerElement, QDomDocument &docume
   }
 
   // layer attribution
-  const QString aAttribution = attribution();
+  const QString aAttribution = mServerProperties->attribution();
   if ( !aAttribution.isEmpty() )
   {
     QDomElement layerAttribution = document.createElement( QStringLiteral( "attribution" ) );
     const QDomText layerAttributionText = document.createTextNode( aAttribution );
     layerAttribution.appendChild( layerAttributionText );
-    layerAttribution.setAttribute( QStringLiteral( "href" ), attributionUrl() );
+    layerAttribution.setAttribute( QStringLiteral( "href" ), mServerProperties->attributionUrl() );
     layerElement.appendChild( layerAttribution );
   }
 
@@ -986,16 +1093,16 @@ bool QgsMapLayer::mapTipsEnabled() const
   return mMapTipsEnabled;
 }
 
-QgsDataProvider::ReadFlags QgsMapLayer::providerReadFlags( const QDomNode &layerNode, QgsMapLayer::ReadFlags layerReadFlags )
+Qgis::DataProviderReadFlags QgsMapLayer::providerReadFlags( const QDomNode &layerNode, QgsMapLayer::ReadFlags layerReadFlags )
 {
-  QgsDataProvider::ReadFlags flags = QgsDataProvider::ReadFlags();
+  Qgis::DataProviderReadFlags flags;
   if ( layerReadFlags & QgsMapLayer::FlagTrustLayerMetadata )
   {
-    flags |= QgsDataProvider::FlagTrustDataSource;
+    flags |= Qgis::DataProviderReadFlag::TrustDataSource;
   }
   if ( layerReadFlags & QgsMapLayer::FlagForceReadOnly )
   {
-    flags |= QgsDataProvider::ForceReadOnly;
+    flags |= Qgis::DataProviderReadFlag::ForceReadOnly;
   }
 
   if ( layerReadFlags & QgsMapLayer::FlagReadExtentFromXml )
@@ -1006,12 +1113,12 @@ QgsDataProvider::ReadFlags QgsMapLayer::providerReadFlags( const QDomNode &layer
       const QDomNode extentNode = layerNode.namedItem( QStringLiteral( "extent" ) );
       if ( !extentNode.isNull() )
       {
-        flags |= QgsDataProvider::SkipGetExtent;
+        flags |= Qgis::DataProviderReadFlag::SkipGetExtent;
       }
     }
     else
     {
-      flags |= QgsDataProvider::SkipGetExtent;
+      flags |= Qgis::DataProviderReadFlag::SkipGetExtent;
     }
   }
 
@@ -1200,9 +1307,50 @@ QgsCoordinateReferenceSystem QgsMapLayer::crs() const
   return mCRS;
 }
 
+QgsCoordinateReferenceSystem QgsMapLayer::verticalCrs() const
+{
+  QGIS_PROTECT_QOBJECT_THREAD_ACCESS
+
+  switch ( mCRS.type() )
+  {
+    case Qgis::CrsType::Vertical: // would hope this never happens!
+      QgsDebugError( QStringLiteral( "Layer has a vertical CRS set as the horizontal CRS!" ) );
+      return mCRS;
+
+    case Qgis::CrsType::Compound:
+      return mCRS.verticalCrs();
+
+    case Qgis::CrsType::Unknown:
+    case Qgis::CrsType::Geodetic:
+    case Qgis::CrsType::Geocentric:
+    case Qgis::CrsType::Geographic2d:
+    case Qgis::CrsType::Geographic3d:
+    case Qgis::CrsType::Projected:
+    case Qgis::CrsType::Temporal:
+    case Qgis::CrsType::Engineering:
+    case Qgis::CrsType::Bound:
+    case Qgis::CrsType::Other:
+    case Qgis::CrsType::DerivedProjected:
+      break;
+  }
+  return mVerticalCrs;
+}
+
+QgsCoordinateReferenceSystem QgsMapLayer::crs3D() const
+{
+  QGIS_PROTECT_QOBJECT_THREAD_ACCESS
+
+  return mCrs3D.isValid() ? mCrs3D : mCRS;
+}
+
 void QgsMapLayer::setCrs( const QgsCoordinateReferenceSystem &srs, bool emitSignal )
 {
   QGIS_PROTECT_QOBJECT_THREAD_ACCESS
+  if ( mCRS == srs )
+    return;
+
+  const QgsCoordinateReferenceSystem oldVerticalCrs = verticalCrs();
+  const QgsCoordinateReferenceSystem oldCrs3D = mCrs3D;
 
   mCRS = srs;
 
@@ -1212,8 +1360,114 @@ void QgsMapLayer::setCrs( const QgsCoordinateReferenceSystem &srs, bool emitSign
     mCRS.validate();
   }
 
+  rebuildCrs3D();
+
   if ( emitSignal )
     emit crsChanged();
+
+  // Did vertical crs also change as a result of this? If so, emit signal
+  if ( oldVerticalCrs != verticalCrs() )
+    emit verticalCrsChanged();
+  if ( oldCrs3D != mCrs3D )
+    emit crs3DChanged();
+}
+
+bool QgsMapLayer::setVerticalCrs( const QgsCoordinateReferenceSystem &crs, QString *errorMessage )
+{
+  QGIS_PROTECT_QOBJECT_THREAD_ACCESS
+  bool res = true;
+  if ( crs.isValid() )
+  {
+    // validate that passed crs is a vertical crs
+    switch ( crs.type() )
+    {
+      case Qgis::CrsType::Vertical:
+        break;
+
+      case Qgis::CrsType::Unknown:
+      case Qgis::CrsType::Compound:
+      case Qgis::CrsType::Geodetic:
+      case Qgis::CrsType::Geocentric:
+      case Qgis::CrsType::Geographic2d:
+      case Qgis::CrsType::Geographic3d:
+      case Qgis::CrsType::Projected:
+      case Qgis::CrsType::Temporal:
+      case Qgis::CrsType::Engineering:
+      case Qgis::CrsType::Bound:
+      case Qgis::CrsType::Other:
+      case Qgis::CrsType::DerivedProjected:
+        if ( errorMessage )
+          *errorMessage = QObject::tr( "Specified CRS is a %1 CRS, not a Vertical CRS" ).arg( qgsEnumValueToKey( crs.type() ) );
+        return false;
+    }
+  }
+
+  if ( crs != mVerticalCrs )
+  {
+    const QgsCoordinateReferenceSystem oldVerticalCrs = verticalCrs();
+    const QgsCoordinateReferenceSystem oldCrs3D = mCrs3D;
+
+    switch ( mCRS.type() )
+    {
+      case Qgis::CrsType::Compound:
+        if ( crs != oldVerticalCrs )
+        {
+          if ( errorMessage )
+            *errorMessage = QObject::tr( "Layer CRS is a Compound CRS, specified Vertical CRS will be ignored" );
+          return false;
+        }
+        break;
+
+      case Qgis::CrsType::Geographic3d:
+        if ( crs != oldVerticalCrs )
+        {
+          if ( errorMessage )
+            *errorMessage = QObject::tr( "Layer CRS is a Geographic 3D CRS, specified Vertical CRS will be ignored" );
+          return false;
+        }
+        break;
+
+      case Qgis::CrsType::Geocentric:
+        if ( crs != oldVerticalCrs )
+        {
+          if ( errorMessage )
+            *errorMessage = QObject::tr( "Layer CRS is a Geocentric CRS, specified Vertical CRS will be ignored" );
+          return false;
+        }
+        break;
+
+      case Qgis::CrsType::Projected:
+        if ( mCRS.hasVerticalAxis() && crs != oldVerticalCrs )
+        {
+          if ( errorMessage )
+            *errorMessage = QObject::tr( "Layer CRS is a Projected 3D CRS, specified Vertical CRS will be ignored" );
+          return false;
+        }
+        break;
+
+      case Qgis::CrsType::Unknown:
+      case Qgis::CrsType::Geodetic:
+      case Qgis::CrsType::Geographic2d:
+      case Qgis::CrsType::Temporal:
+      case Qgis::CrsType::Engineering:
+      case Qgis::CrsType::Bound:
+      case Qgis::CrsType::Other:
+      case Qgis::CrsType::Vertical:
+      case Qgis::CrsType::DerivedProjected:
+        break;
+    }
+
+    mVerticalCrs = crs;
+    res = rebuildCrs3D( errorMessage );
+
+    // only emit signal if vertical crs was actually changed, so eg if mCrs is compound
+    // then we haven't actually changed the vertical crs by this call!
+    if ( verticalCrs() != oldVerticalCrs )
+      emit verticalCrsChanged();
+    if ( mCrs3D != oldCrs3D )
+      emit crs3DChanged();
+  }
+  return res;
 }
 
 QgsCoordinateTransformContext QgsMapLayer::transformContext() const
@@ -1331,7 +1585,7 @@ QString QgsMapLayer::loadDefaultStyle( bool &resultFlag )
 {
   QGIS_PROTECT_QOBJECT_THREAD_ACCESS
 
-  return loadNamedStyle( styleURI(), resultFlag );
+  return loadNamedStyle( styleURI(), resultFlag, QgsMapLayer::AllStyleCategories, Qgis::LoadStyleFlag::IgnoreMissingStyleErrors );
 }
 
 bool QgsMapLayer::loadNamedMetadataFromDatabase( const QString &db, const QString &uri, QString &qmd )
@@ -1401,20 +1655,21 @@ bool QgsMapLayer::loadNamedPropertyFromDatabase( const QString &db, const QStrin
 }
 
 
-QString QgsMapLayer::loadNamedStyle( const QString &uri, bool &resultFlag, QgsMapLayer::StyleCategories categories )
+QString QgsMapLayer::loadNamedStyle( const QString &uri, bool &resultFlag, QgsMapLayer::StyleCategories categories, Qgis::LoadStyleFlags flags )
 {
   QGIS_PROTECT_QOBJECT_THREAD_ACCESS
 
-  return loadNamedStyle( uri, resultFlag, false, categories );
+  return loadNamedStyle( uri, resultFlag, false, categories, flags );
 }
 
-QString QgsMapLayer::loadNamedProperty( const QString &uri, QgsMapLayer::PropertyType type, bool &resultFlag, StyleCategories categories )
+QString QgsMapLayer::loadNamedProperty( const QString &uri, QgsMapLayer::PropertyType type, bool &namedPropertyExists, bool &propertySuccessfullyLoaded, StyleCategories categories, Qgis::LoadStyleFlags flags )
 {
   QGIS_PROTECT_QOBJECT_THREAD_ACCESS
 
   QgsDebugMsgLevel( QStringLiteral( "uri = %1 myURI = %2" ).arg( uri, publicSource() ), 4 );
 
-  resultFlag = false;
+  namedPropertyExists = false;
+  propertySuccessfullyLoaded = false;
   if ( uri.isEmpty() )
     return QString();
 
@@ -1428,9 +1683,11 @@ QString QgsMapLayer::loadNamedProperty( const QString &uri, QgsMapLayer::Propert
   if ( myFile.open( QFile::ReadOnly ) )
   {
     QgsDebugMsgLevel( QStringLiteral( "file found %1" ).arg( uri ), 2 );
+    namedPropertyExists = true;
+
     // read file
-    resultFlag = myDocument.setContent( &myFile, &myErrorMessage, &line, &column );
-    if ( !resultFlag )
+    propertySuccessfullyLoaded = myDocument.setContent( &myFile, &myErrorMessage, &line, &column );
+    if ( !propertySuccessfullyLoaded )
       myErrorMessage = tr( "%1 at line %2 column %3" ).arg( myErrorMessage ).arg( line ).arg( column );
     myFile.close();
   }
@@ -1448,16 +1705,19 @@ QString QgsMapLayer::loadNamedProperty( const QString &uri, QgsMapLayer::Propert
              ( project.exists() && loadNamedStyleFromDatabase( project.absoluteDir().absoluteFilePath( project.baseName() + ".qmldb" ), uri, xml ) ) ||
              loadNamedStyleFromDatabase( QDir( QgsApplication::pkgDataPath() ).absoluteFilePath( QStringLiteral( "resources/qgis.qmldb" ) ), uri, xml ) )
         {
-          resultFlag = myDocument.setContent( xml, &myErrorMessage, &line, &column );
-          if ( !resultFlag )
+          namedPropertyExists = true;
+          propertySuccessfullyLoaded = myDocument.setContent( xml, &myErrorMessage, &line, &column );
+          if ( !propertySuccessfullyLoaded )
           {
             myErrorMessage = tr( "%1 at line %2 column %3" ).arg( myErrorMessage ).arg( line ).arg( column );
           }
         }
         else
         {
-          myErrorMessage = tr( "Style not found in database" );
-          resultFlag = false;
+          if ( !flags.testFlag( Qgis::LoadStyleFlag::IgnoreMissingStyleErrors ) )
+          {
+            myErrorMessage = tr( "Style not found in database" );
+          }
         }
         break;
       }
@@ -1467,8 +1727,9 @@ QString QgsMapLayer::loadNamedProperty( const QString &uri, QgsMapLayer::Propert
              ( project.exists() && loadNamedMetadataFromDatabase( project.absoluteDir().absoluteFilePath( project.baseName() + ".qmldb" ), uri, xml ) ) ||
              loadNamedMetadataFromDatabase( QDir( QgsApplication::pkgDataPath() ).absoluteFilePath( QStringLiteral( "resources/qgis.qmldb" ) ), uri, xml ) )
         {
-          resultFlag = myDocument.setContent( xml, &myErrorMessage, &line, &column );
-          if ( !resultFlag )
+          namedPropertyExists = true;
+          propertySuccessfullyLoaded = myDocument.setContent( xml, &myErrorMessage, &line, &column );
+          if ( !propertySuccessfullyLoaded )
           {
             myErrorMessage = tr( "%1 at line %2 column %3" ).arg( myErrorMessage ).arg( line ).arg( column );
           }
@@ -1476,14 +1737,13 @@ QString QgsMapLayer::loadNamedProperty( const QString &uri, QgsMapLayer::Propert
         else
         {
           myErrorMessage = tr( "Metadata not found in database" );
-          resultFlag = false;
         }
         break;
       }
     }
   }
 
-  if ( !resultFlag )
+  if ( !propertySuccessfullyLoaded )
   {
     return myErrorMessage;
   }
@@ -1491,13 +1751,13 @@ QString QgsMapLayer::loadNamedProperty( const QString &uri, QgsMapLayer::Propert
   switch ( type )
   {
     case QgsMapLayer::Style:
-      resultFlag = importNamedStyle( myDocument, myErrorMessage, categories );
-      if ( !resultFlag )
+      propertySuccessfullyLoaded = importNamedStyle( myDocument, myErrorMessage, categories );
+      if ( !propertySuccessfullyLoaded )
         myErrorMessage = tr( "Loading style file %1 failed because:\n%2" ).arg( uri, myErrorMessage );
       break;
     case QgsMapLayer::Metadata:
-      resultFlag = importNamedMetadata( myDocument, myErrorMessage );
-      if ( !resultFlag )
+      propertySuccessfullyLoaded = importNamedMetadata( myDocument, myErrorMessage );
+      if ( !propertySuccessfullyLoaded )
         myErrorMessage = tr( "Loading metadata file %1 failed because:\n%2" ).arg( uri, myErrorMessage );
       break;
   }
@@ -1647,7 +1907,14 @@ QString QgsMapLayer::loadNamedMetadata( const QString &uri, bool &resultFlag )
 {
   QGIS_PROTECT_QOBJECT_THREAD_ACCESS
 
-  return loadNamedProperty( uri, QgsMapLayer::Metadata, resultFlag );
+  bool metadataExists = false;
+  bool metadataSuccessfullyLoaded = false;
+  const QString message = loadNamedProperty( uri, QgsMapLayer::Metadata, metadataExists, metadataSuccessfullyLoaded );
+
+  // TODO QGIS 4.0 -- fix API for loadNamedMetadata so we can return metadataExists too
+  ( void )metadataExists;
+  resultFlag = metadataSuccessfullyLoaded;
+  return message;
 }
 
 QString QgsMapLayer::saveNamedProperty( const QString &uri, QgsMapLayer::PropertyType type, bool &resultFlag, StyleCategories categories )
@@ -2159,15 +2426,15 @@ void QgsMapLayer::setDataSource( const QString &dataSource, const QString &baseN
 
   const QgsDataProvider::ProviderOptions options;
 
-  QgsDataProvider::ReadFlags flags = QgsDataProvider::ReadFlags();
+  Qgis::DataProviderReadFlags flags;
   if ( loadDefaultStyleFlag )
   {
-    flags |= QgsDataProvider::FlagLoadDefaultStyle;
+    flags |= Qgis::DataProviderReadFlag::LoadDefaultStyle;
   }
 
   if ( mReadFlags & QgsMapLayer::FlagTrustLayerMetadata )
   {
-    flags |= QgsDataProvider::FlagTrustDataSource;
+    flags |= Qgis::DataProviderReadFlag::TrustDataSource;
   }
   setDataSource( dataSource, baseName, provider, options, flags );
 }
@@ -2177,28 +2444,28 @@ void QgsMapLayer::setDataSource( const QString &dataSource, const QString &baseN
 {
   QGIS_PROTECT_QOBJECT_THREAD_ACCESS
 
-  QgsDataProvider::ReadFlags flags = QgsDataProvider::ReadFlags();
+  Qgis::DataProviderReadFlags flags;
   if ( loadDefaultStyleFlag )
   {
-    flags |= QgsDataProvider::FlagLoadDefaultStyle;
+    flags |= Qgis::DataProviderReadFlag::LoadDefaultStyle;
   }
 
   if ( mReadFlags & QgsMapLayer::FlagTrustLayerMetadata )
   {
-    flags |= QgsDataProvider::FlagTrustDataSource;
+    flags |= Qgis::DataProviderReadFlag::TrustDataSource;
   }
   setDataSource( dataSource, baseName, provider, options, flags );
 }
 
 void QgsMapLayer::setDataSource( const QString &dataSource, const QString &baseName, const QString &provider,
-                                 const QgsDataProvider::ProviderOptions &options, QgsDataProvider::ReadFlags flags )
+                                 const QgsDataProvider::ProviderOptions &options, Qgis::DataProviderReadFlags flags )
 {
   QGIS_PROTECT_QOBJECT_THREAD_ACCESS
 
   if ( ( mReadFlags & QgsMapLayer::FlagTrustLayerMetadata ) &&
-       !( flags & QgsDataProvider::FlagTrustDataSource ) )
+       !( flags & Qgis::DataProviderReadFlag::TrustDataSource ) )
   {
-    flags |= QgsDataProvider::FlagTrustDataSource;
+    flags |= Qgis::DataProviderReadFlag::TrustDataSource;
   }
   setDataSourcePrivate( dataSource, baseName, provider, options, flags );
   emit dataSourceChanged();
@@ -2208,7 +2475,7 @@ void QgsMapLayer::setDataSource( const QString &dataSource, const QString &baseN
 
 
 void QgsMapLayer::setDataSourcePrivate( const QString &dataSource, const QString &baseName, const QString &provider,
-                                        const QgsDataProvider::ProviderOptions &options, QgsDataProvider::ReadFlags flags )
+                                        const QgsDataProvider::ProviderOptions &options, Qgis::DataProviderReadFlags flags )
 {
   QGIS_PROTECT_QOBJECT_THREAD_ACCESS
 
@@ -2438,7 +2705,7 @@ void QgsMapLayer::saveStyleToDatabase( const QString &name, const QString &descr
       description, uiFileContent, useAsDefault, msgError );
 }
 
-QString QgsMapLayer::loadNamedStyle( const QString &theURI, bool &resultFlag, bool loadFromLocalDB, QgsMapLayer::StyleCategories categories )
+QString QgsMapLayer::loadNamedStyle( const QString &theURI, bool &resultFlag, bool loadFromLocalDB, QgsMapLayer::StyleCategories categories, Qgis::LoadStyleFlags flags )
 {
   QGIS_PROTECT_QOBJECT_THREAD_ACCESS
 
@@ -2460,7 +2727,16 @@ QString QgsMapLayer::loadNamedStyle( const QString &theURI, bool &resultFlag, bo
   }
   else
   {
-    returnMessage = loadNamedProperty( theURI, PropertyType::Style, resultFlag, categories );
+    QGIS_PROTECT_QOBJECT_THREAD_ACCESS
+
+    bool styleExists = false;
+    bool styleSuccessfullyLoaded = false;
+
+    returnMessage = loadNamedProperty( theURI, PropertyType::Style, styleExists, styleSuccessfullyLoaded, categories, flags );
+
+    // TODO QGIS 4.0 -- fix API for loadNamedStyle so we can return styleExists too
+    ( void )styleExists;
+    resultFlag = styleSuccessfullyLoaded;
   }
 
   if ( ! styleName.isEmpty() )
@@ -2859,6 +3135,60 @@ void QgsMapLayer::updateExtent( const QgsBox3D &extent ) const
   }
 }
 
+bool QgsMapLayer::rebuildCrs3D( QString *error )
+{
+  bool res = true;
+  if ( !mCRS.isValid() )
+  {
+    mCrs3D = QgsCoordinateReferenceSystem();
+  }
+  else if ( !mVerticalCrs.isValid() )
+  {
+    mCrs3D = mCRS;
+  }
+  else
+  {
+    switch ( mCRS.type() )
+    {
+      case Qgis::CrsType::Compound:
+      case Qgis::CrsType::Geographic3d:
+      case Qgis::CrsType::Geocentric:
+        mCrs3D = mCRS;
+        break;
+
+      case Qgis::CrsType::Projected:
+      {
+        QString tempError;
+        mCrs3D = mCRS.hasVerticalAxis() ? mCRS : QgsCoordinateReferenceSystem::createCompoundCrs( mCRS, mVerticalCrs, error ? *error : tempError );
+        res = mCrs3D.isValid();
+        break;
+      }
+
+      case Qgis::CrsType::Vertical:
+        // nonsense situation
+        mCrs3D = QgsCoordinateReferenceSystem();
+        res = false;
+        break;
+
+      case Qgis::CrsType::Unknown:
+      case Qgis::CrsType::Geodetic:
+      case Qgis::CrsType::Geographic2d:
+      case Qgis::CrsType::Temporal:
+      case Qgis::CrsType::Engineering:
+      case Qgis::CrsType::Bound:
+      case Qgis::CrsType::Other:
+      case Qgis::CrsType::DerivedProjected:
+      {
+        QString tempError;
+        mCrs3D = QgsCoordinateReferenceSystem::createCompoundCrs( mCRS, mVerticalCrs, error ? *error : tempError );
+        res = mCrs3D.isValid();
+        break;
+      }
+    }
+  }
+  return res;
+}
+
 void QgsMapLayer::invalidateWgs84Extent()
 {
   QGIS_PROTECT_QOBJECT_THREAD_ACCESS
@@ -2939,10 +3269,16 @@ QString QgsMapLayer::generalHtmlMetadata() const
 
   metadata += QLatin1String( "</table>\n<br><br>" );
 
+  return metadata;
+}
+
+QString QgsMapLayer::customPropertyHtmlMetadata() const
+{
+  QString metadata;
   // custom properties
   if ( const auto keys = customPropertyKeys(); !keys.isEmpty() )
   {
-    metadata += QStringLiteral( "<h1>" ) + tr( "Custom Properties" ) + QStringLiteral( "</h1>\n<hr>\n" );
+    metadata += QStringLiteral( "<h1>" ) + tr( "Custom properties" ) + QStringLiteral( "</h1>\n<hr>\n" );
     metadata += QLatin1String( "<table class=\"list-view\">\n<tbody>" );
     for ( const QString &key : keys )
     {
@@ -2951,104 +3287,140 @@ QString QgsMapLayer::generalHtmlMetadata() const
         continue;
 
       const QVariant propValue = customProperty( key );
-      metadata += QStringLiteral( "<tr><td class=\"highlight\">%1</td><td>%2</td></tr>" ).arg( key.toHtmlEscaped(), propValue.toString().toHtmlEscaped() );
+      QString stringValue;
+      if ( propValue.type() == QVariant::List || propValue.type() == QVariant::StringList )
+      {
+        for ( const QString &s : propValue.toStringList() )
+        {
+          stringValue += "<p style=\"margin: 0;\">" + s.toHtmlEscaped() + "</p>";
+        }
+      }
+      else
+      {
+        stringValue = propValue.toString().toHtmlEscaped();
+
+        //if the result string is empty but propValue is not, the conversion has failed
+        if ( stringValue.isEmpty() && !QgsVariantUtils::isNull( propValue ) )
+          stringValue = tr( "<i>value cannot be displayed</i>" );
+      }
+
+      metadata += QStringLiteral( "<tr><td class=\"highlight\">%1</td><td>%2</td></tr>" ).arg( key.toHtmlEscaped(), stringValue );
     }
     metadata += QLatin1String( "</tbody></table>\n" );
     metadata += QLatin1String( "<br><br>\n" );
   }
-
   return metadata;
 }
 
 QString QgsMapLayer::crsHtmlMetadata() const
 {
   QGIS_PROTECT_QOBJECT_THREAD_ACCESS
+  QString metadata;
 
-  QString metadata = QStringLiteral( "<h1>" ) + tr( "Coordinate Reference System (CRS)" ) + QStringLiteral( "</h1>\n<hr>\n" );
-  metadata += QLatin1String( "<table class=\"list-view\">\n" );
-
-  // Identifier
-  const QgsCoordinateReferenceSystem c = crs();
-  if ( !c.isValid() )
-    metadata += QStringLiteral( "<tr><td colspan=\"2\" class=\"highlight\">" ) + tr( "Unknown" ) + QStringLiteral( "</td></tr>\n" );
-  else
+  auto addCrsInfo = [&metadata]( const QgsCoordinateReferenceSystem & c, bool includeType, bool includeOperation, bool includeCelestialBody )
   {
-    metadata += QStringLiteral( "<tr><td class=\"highlight\">" ) + tr( "Name" ) + QStringLiteral( "</td><td>" ) + c.userFriendlyIdentifier( Qgis::CrsIdentifierType::FullString ) + QStringLiteral( "</td></tr>\n" );
-
-    // map units
-    metadata += QStringLiteral( "<tr><td class=\"highlight\">" ) + tr( "Units" ) + QStringLiteral( "</td><td>" )
-                + ( c.isGeographic() ? tr( "Geographic (uses latitude and longitude for coordinates)" ) : QgsUnitTypes::toString( c.mapUnits() ) )
-                + QStringLiteral( "</td></tr>\n" );
-
-    metadata += QStringLiteral( "<tr><td class=\"highlight\">" ) + tr( "Type" ) + QStringLiteral( "</td><td>" ) + QgsCoordinateReferenceSystemUtils::crsTypeToString( c.type() ) + QStringLiteral( "</td></tr>\n" );
-
-    // operation
-    const QgsProjOperation operation = c.operation();
-    metadata += QStringLiteral( "<tr><td class=\"highlight\">" ) + tr( "Method" ) + QStringLiteral( "</td><td>" ) + operation.description() + QStringLiteral( "</td></tr>\n" );
-
-    // celestial body
-    try
+    if ( !c.isValid() )
+      metadata += QStringLiteral( "<tr><td colspan=\"2\" class=\"highlight\">" ) + tr( "Unknown" ) + QStringLiteral( "</td></tr>\n" );
+    else
     {
-      const QString celestialBody = c.celestialBodyName();
-      if ( !celestialBody.isEmpty() )
+      metadata += QStringLiteral( "<tr><td class=\"highlight\">" ) + tr( "Name" ) + QStringLiteral( "</td><td>" ) + c.userFriendlyIdentifier( Qgis::CrsIdentifierType::FullString ) + QStringLiteral( "</td></tr>\n" );
+
+      // map units
+      metadata += QStringLiteral( "<tr><td class=\"highlight\">" ) + tr( "Units" ) + QStringLiteral( "</td><td>" )
+                  + ( c.isGeographic() ? tr( "Geographic (uses latitude and longitude for coordinates)" ) : QgsUnitTypes::toString( c.mapUnits() ) )
+                  + QStringLiteral( "</td></tr>\n" );
+
+      if ( includeType )
       {
-        metadata += QStringLiteral( "<tr><td class=\"highlight\">" ) + tr( "Celestial Body" ) + QStringLiteral( "</td><td>" ) + celestialBody + QStringLiteral( "</td></tr>\n" );
+        metadata += QStringLiteral( "<tr><td class=\"highlight\">" ) + tr( "Type" ) + QStringLiteral( "</td><td>" ) + QgsCoordinateReferenceSystemUtils::crsTypeToString( c.type() ) + QStringLiteral( "</td></tr>\n" );
       }
-    }
-    catch ( QgsNotSupportedException & )
-    {
 
-    }
-
-    QString accuracyString;
-    // dynamic crs with no epoch?
-    if ( c.isDynamic() && std::isnan( c.coordinateEpoch() ) )
-    {
-      accuracyString = tr( "Based on a dynamic CRS, but no coordinate epoch is set. Coordinates are ambiguous and of limited accuracy." );
-    }
-
-    // based on datum ensemble?
-    try
-    {
-      const QgsDatumEnsemble ensemble = c.datumEnsemble();
-      if ( ensemble.isValid() )
+      if ( includeOperation )
       {
-        QString id;
-        if ( !ensemble.code().isEmpty() )
-          id = QStringLiteral( "<i>%1</i> (%2:%3)" ).arg( ensemble.name(), ensemble.authority(), ensemble.code() );
-        else
-          id = QStringLiteral( "<i>%</i>”" ).arg( ensemble.name() );
+        // operation
+        const QgsProjOperation operation = c.operation();
+        metadata += QStringLiteral( "<tr><td class=\"highlight\">" ) + tr( "Method" ) + QStringLiteral( "</td><td>" ) + operation.description() + QStringLiteral( "</td></tr>\n" );
+      }
 
-        if ( ensemble.accuracy() > 0 )
+      if ( includeCelestialBody )
+      {
+        // celestial body
+        try
         {
-          accuracyString = tr( "Based on %1, which has a limited accuracy of <b>at best %2 meters</b>." ).arg( id ).arg( ensemble.accuracy() );
+          const QString celestialBody = c.celestialBodyName();
+          if ( !celestialBody.isEmpty() )
+          {
+            metadata += QStringLiteral( "<tr><td class=\"highlight\">" ) + tr( "Celestial Body" ) + QStringLiteral( "</td><td>" ) + celestialBody + QStringLiteral( "</td></tr>\n" );
+          }
         }
-        else
+        catch ( QgsNotSupportedException & )
         {
-          accuracyString = tr( "Based on %1, which has a limited accuracy." ).arg( id );
+
         }
       }
-    }
-    catch ( QgsNotSupportedException & )
-    {
 
-    }
+      QString accuracyString;
+      // dynamic crs with no epoch?
+      if ( c.isDynamic() && std::isnan( c.coordinateEpoch() ) )
+      {
+        accuracyString = tr( "Based on a dynamic CRS, but no coordinate epoch is set. Coordinates are ambiguous and of limited accuracy." );
+      }
 
-    if ( !accuracyString.isEmpty() )
-    {
-      metadata += QStringLiteral( "<tr><td class=\"highlight\">" ) + tr( "Accuracy" ) + QStringLiteral( "</td><td>" ) + accuracyString + QStringLiteral( "</td></tr>\n" );
-    }
+      // based on datum ensemble?
+      try
+      {
+        const QgsDatumEnsemble ensemble = c.datumEnsemble();
+        if ( ensemble.isValid() )
+        {
+          QString id;
+          if ( !ensemble.code().isEmpty() )
+            id = QStringLiteral( "<i>%1</i> (%2:%3)" ).arg( ensemble.name(), ensemble.authority(), ensemble.code() );
+          else
+            id = QStringLiteral( "<i>%</i>”" ).arg( ensemble.name() );
 
-    // static/dynamic
-    metadata += QStringLiteral( "<tr><td class=\"highlight\">" ) + tr( "Reference" ) + QStringLiteral( "</td><td>%1</td></tr>\n" ).arg( c.isDynamic() ? tr( "Dynamic (relies on a datum which is not plate-fixed)" ) : tr( "Static (relies on a datum which is plate-fixed)" ) );
+          if ( ensemble.accuracy() > 0 )
+          {
+            accuracyString = tr( "Based on %1, which has a limited accuracy of <b>at best %2 meters</b>." ).arg( id ).arg( ensemble.accuracy() );
+          }
+          else
+          {
+            accuracyString = tr( "Based on %1, which has a limited accuracy." ).arg( id );
+          }
+        }
+      }
+      catch ( QgsNotSupportedException & )
+      {
 
-    // coordinate epoch
-    if ( !std::isnan( c.coordinateEpoch() ) )
-    {
-      metadata += QStringLiteral( "<tr><td class=\"highlight\">" ) + tr( "Coordinate Epoch" ) + QStringLiteral( "</td><td>%1</td></tr>\n" ).arg( c.coordinateEpoch() );
+      }
+
+      if ( !accuracyString.isEmpty() )
+      {
+        metadata += QStringLiteral( "<tr><td class=\"highlight\">" ) + tr( "Accuracy" ) + QStringLiteral( "</td><td>" ) + accuracyString + QStringLiteral( "</td></tr>\n" );
+      }
+
+      // static/dynamic
+      metadata += QStringLiteral( "<tr><td class=\"highlight\">" ) + tr( "Reference" ) + QStringLiteral( "</td><td>%1</td></tr>\n" ).arg( c.isDynamic() ? tr( "Dynamic (relies on a datum which is not plate-fixed)" ) : tr( "Static (relies on a datum which is plate-fixed)" ) );
+
+      // coordinate epoch
+      if ( !std::isnan( c.coordinateEpoch() ) )
+      {
+        metadata += QStringLiteral( "<tr><td class=\"highlight\">" ) + tr( "Coordinate Epoch" ) + QStringLiteral( "</td><td>%1</td></tr>\n" ).arg( qgsDoubleToString( c.coordinateEpoch(), 3 ) );
+      }
     }
+  };
+
+  metadata += QStringLiteral( "<h1>" ) + tr( "Coordinate Reference System (CRS)" ) + QStringLiteral( "</h1>\n<hr>\n" );
+  metadata += QLatin1String( "<table class=\"list-view\">\n" );
+  addCrsInfo( crs(), true, true, true );
+  metadata += QLatin1String( "</table>\n<br><br>\n" );
+
+  if ( verticalCrs().isValid() )
+  {
+    metadata += QStringLiteral( "<h1>" ) + tr( "Vertical Coordinate Reference System (CRS)" ) + QStringLiteral( "</h1>\n<hr>\n" );
+    metadata += QLatin1String( "<table class=\"list-view\">\n" );
+    addCrsInfo( verticalCrs(), false, false, false );
+    metadata += QLatin1String( "</table>\n<br><br>\n" );
   }
 
-  metadata += QLatin1String( "</table>\n<br><br>\n" );
   return metadata;
 }

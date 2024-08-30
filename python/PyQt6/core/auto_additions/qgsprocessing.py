@@ -14,3 +14,13 @@ QgsProcessing.LayerOptionsFlag.baseClass = QgsProcessing
 QgsProcessing.LayerOptionsFlags = lambda flags=0: QgsProcessing.LayerOptionsFlag(flags)
 QgsProcessing.LayerOptionsFlags.baseClass = QgsProcessing
 LayerOptionsFlags = QgsProcessing  # dirty hack since SIP seems to introduce the flags in module
+try:
+    QgsProcessing.__attribute_docs__ = {'TEMPORARY_OUTPUT': 'Constant used to indicate that a Processing algorithm output should be a temporary layer/file.\n\n.. versionadded:: 3.6'}
+except NameError:
+    pass
+QgsProcessing.sourceTypeToString = staticmethod(QgsProcessing.sourceTypeToString)
+QgsProcessing.documentationFlagToString = staticmethod(QgsProcessing.documentationFlagToString)
+try:
+    QgsProcessing.__group__ = ['processing']
+except NameError:
+    pass

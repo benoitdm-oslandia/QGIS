@@ -20,7 +20,6 @@ __date__ = 'August 2018'
 __copyright__ = '(C) 2018, Mathieu Pellerin'
 
 import os
-import re
 
 from qgis.PyQt.QtGui import QIcon
 
@@ -64,9 +63,7 @@ class rearrange_bands(GdalAlgorithm):
                                                      defaultValue='',
                                                      optional=True)
         options_param.setFlags(options_param.flags() | QgsProcessingParameterDefinition.Flag.FlagAdvanced)
-        options_param.setMetadata({
-            'widget_wrapper': {
-                'class': 'processing.algs.gdal.ui.RasterOptionsWidget.RasterOptionsWidgetWrapper'}})
+        options_param.setMetadata({'widget_wrapper': {'widget_type': 'rasteroptions'}})
         self.addParameter(options_param)
 
         dataType_param = QgsProcessingParameterEnum(self.DATA_TYPE,
@@ -106,6 +103,8 @@ class rearrange_bands(GdalAlgorithm):
         inLayer = self.parameterAsRasterLayer(parameters, self.INPUT, context)
         if inLayer is None:
             raise QgsProcessingException(self.invalidRasterError(parameters, self.INPUT))
+        input_details = GdalUtils.gdal_connection_details_from_layer(
+            inLayer)
 
         out = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
         self.setOutputValue(self.OUTPUT, out)
@@ -134,7 +133,13 @@ class rearrange_bands(GdalAlgorithm):
         if options:
             arguments.extend(GdalUtils.parseCreationOptions(options))
 
-        arguments.append(inLayer.source())
+        arguments.append(input_details.connection_string)
         arguments.append(out)
+
+        if input_details.open_options:
+            arguments.extend(input_details.open_options_as_arguments())
+
+        if input_details.credential_options:
+            arguments.extend(input_details.credential_options_as_arguments())
 
         return [self.commandName(), GdalUtils.escapeAndJoin(arguments)]

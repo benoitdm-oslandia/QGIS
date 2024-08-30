@@ -319,16 +319,23 @@ void QgsLayoutItemLegend::setCustomLayerTree( QgsLayerTree *rootGroup )
   mCustomLayerTree.reset( rootGroup );
 }
 
-void QgsLayoutItemLegend::ensureModelIsInitialized()
+void QgsLayoutItemLegend::ensureModelIsInitialized() const
 {
   if ( mDeferLegendModelInitialization )
   {
-    mDeferLegendModelInitialization = false;
-    setCustomLayerTree( mCustomLayerTree.release() );
+    QgsLayoutItemLegend *mutableThis = const_cast< QgsLayoutItemLegend * >( this );
+    mutableThis->mDeferLegendModelInitialization = false;
+    mutableThis->setCustomLayerTree( mutableThis->mCustomLayerTree.release() );
   }
 }
 
 QgsLegendModel *QgsLayoutItemLegend::model()
+{
+  ensureModelIsInitialized();
+  return mLegendModel.get();
+}
+
+const QgsLegendModel *QgsLayoutItemLegend::model() const
 {
   ensureModelIsInitialized();
   return mLegendModel.get();
@@ -1016,10 +1023,12 @@ void QgsLayoutItemLegend::updateFilterByMapAndRedraw()
 void QgsLayoutItemLegend::setModelStyleOverrides( const QMap<QString, QString> &overrides )
 {
   mLegendModel->setLayerStyleOverrides( overrides );
-  const QList< QgsLayerTreeLayer * > layers =  mLegendModel->rootGroup()->findLayers();
-  for ( QgsLayerTreeLayer *nodeLayer : layers )
-    mLegendModel->refreshLayerLegend( nodeLayer );
-
+  if ( QgsLayerTree *rootGroup = mLegendModel->rootGroup() )
+  {
+    const QList< QgsLayerTreeLayer * > layers =  rootGroup->findLayers();
+    for ( QgsLayerTreeLayer *nodeLayer : std::as_const( layers ) )
+      mLegendModel->refreshLayerLegend( nodeLayer );
+  }
 }
 
 void QgsLayoutItemLegend::clearLegendCachedData()
@@ -1343,7 +1352,7 @@ bool QgsLayoutItemLegend::accept( QgsStyleEntityVisitorInterface *visitor ) cons
     }
     return true;
   };
-  return visit( mLegendModel->rootGroup( ) );
+  return visit( model()->rootGroup( ) );
 }
 
 bool QgsLayoutItemLegend::isRefreshing() const

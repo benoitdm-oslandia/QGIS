@@ -36,9 +36,6 @@ class _3D_EXPORT QgsPhongMaterialSettings : public QgsAbstractMaterialSettings
 {
   public:
 
-    /**
-     * Constructor for QgsPhongMaterialSettings.
-     */
     QgsPhongMaterialSettings() = default;
 
     QString type() const override;
@@ -112,7 +109,7 @@ class _3D_EXPORT QgsPhongMaterialSettings : public QgsAbstractMaterialSettings
     //! Sets specular color component
     void setSpecular( const QColor &specular ) { mSpecular = specular; }
     //! Sets shininess of the surface
-    void setShininess( float shininess ) { mShininess = shininess; }
+    void setShininess( double shininess ) { mShininess = shininess; }
 
     /**
      * Sets opacity of the surface
@@ -158,7 +155,7 @@ class _3D_EXPORT QgsPhongMaterialSettings : public QgsAbstractMaterialSettings
 
 #ifndef SIP_RUN
     Qt3DRender::QMaterial *toMaterial( QgsMaterialSettingsRenderingTechnique technique, const QgsMaterialContext &context ) const override SIP_FACTORY;
-    void addParametersToEffect( Qt3DRender::QEffect *effect ) const override;
+    void addParametersToEffect( Qt3DRender::QEffect *effect, const QgsMaterialContext &materialContext ) const override;
 
     QByteArray dataDefinedVertexColorsAsByte( const QgsExpressionContext &expressionContext ) const override;
     int dataDefinedByteStride() const override;
@@ -195,8 +192,7 @@ class _3D_EXPORT QgsPhongMaterialSettings : public QgsAbstractMaterialSettings
     double mOpacity = 1.0;
 
     //! Constructs a material from shader files
-    Qt3DRender::QMaterial *constantColorMaterial( const QgsMaterialContext &context ) const;
-    Qt3DRender::QMaterial *dataDefinedMaterial() const;
+    Qt3DRender::QMaterial *buildMaterial( const QgsMaterialContext &context ) const;
 };
 
 

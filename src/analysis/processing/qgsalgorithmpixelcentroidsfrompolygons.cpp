@@ -16,7 +16,7 @@
  ***************************************************************************/
 
 #include "qgsalgorithmpixelcentroidsfrompolygons.h"
-#include "qgsgeometryengine.h"
+#include "qgsgeos.h"
 #include "qgsrasteranalysisutils.h"
 
 ///@cond PRIVATE
@@ -52,6 +52,11 @@ QString QgsPixelCentroidsFromPolygonsAlgorithm::shortHelpString() const
                       "for further raster sampling." );
 }
 
+Qgis::ProcessingAlgorithmDocumentationFlags QgsPixelCentroidsFromPolygonsAlgorithm::documentationFlags() const
+{
+  return Qgis::ProcessingAlgorithmDocumentationFlag::RegeneratesPrimaryKey;
+}
+
 QgsPixelCentroidsFromPolygonsAlgorithm *QgsPixelCentroidsFromPolygonsAlgorithm::createInstance() const
 {
   return new QgsPixelCentroidsFromPolygonsAlgorithm();
@@ -77,9 +82,9 @@ QVariantMap QgsPixelCentroidsFromPolygonsAlgorithm::processAlgorithm( const QVar
     throw QgsProcessingException( invalidSourceError( parameters, QStringLiteral( "INPUT_VECTOR" ) ) );
 
   QgsFields fields;
-  fields.append( QgsField( QStringLiteral( "id" ), QVariant::LongLong ) );
-  fields.append( QgsField( QStringLiteral( "poly_id" ), QVariant::Int ) );
-  fields.append( QgsField( QStringLiteral( "point_id" ), QVariant::Int ) );
+  fields.append( QgsField( QStringLiteral( "id" ), QMetaType::Type::LongLong ) );
+  fields.append( QgsField( QStringLiteral( "poly_id" ), QMetaType::Type::Int ) );
+  fields.append( QgsField( QStringLiteral( "point_id" ), QMetaType::Type::Int ) );
 
   QString dest;
   std::unique_ptr< QgsFeatureSink > sink( parameterAsSink( parameters, QStringLiteral( "OUTPUT" ), context, dest, fields, Qgis::WkbType::Point, rasterLayer->crs(), QgsFeatureSink::RegeneratePrimaryKey ) );
@@ -125,7 +130,7 @@ QVariantMap QgsPixelCentroidsFromPolygonsAlgorithm::processAlgorithm( const QVar
     QgsRasterAnalysisUtils::mapToPixel( xMin, yMax, extent, xPixel, yPixel, startRow, startColumn );
     QgsRasterAnalysisUtils::mapToPixel( xMax, yMin, extent, xPixel, yPixel, endRow, endColumn );
 
-    std::unique_ptr< QgsGeometryEngine > engine( QgsGeometry::createGeometryEngine( f.geometry().constGet() ) );
+    std::unique_ptr< QgsGeos > engine = std::make_unique< QgsGeos >( f.geometry().constGet() );
     engine->prepareGeometry();
 
     for ( int row = startRow; row <= endRow; row++ )
@@ -138,11 +143,9 @@ QVariantMap QgsPixelCentroidsFromPolygonsAlgorithm::processAlgorithm( const QVar
         }
 
         QgsRasterAnalysisUtils::pixelToMap( row, col, extent, xPixel, yPixel, x, y );
-        const QgsPoint point( x, y );
-        const QgsGeometry geom( point.clone() );
-        if ( engine->contains( geom.constGet() ) )
+        if ( engine->contains( x, y ) )
         {
-          feature.setGeometry( geom );
+          feature.setGeometry( std::make_unique< QgsPoint >( x, y ) );
           feature.setAttributes( QgsAttributes() << fid << i << pointId );
           if ( !sink->addFeature( feature, QgsFeatureSink::FastInsert ) )
             throw QgsProcessingException( writeFeatureError( sink.get(), parameters, QStringLiteral( "OUTPUT" ) ) );

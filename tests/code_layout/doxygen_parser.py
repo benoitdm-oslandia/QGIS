@@ -64,7 +64,7 @@ class DoxygenParser():
                                          'QgsSQLStatement::NodeUnaryOperator',
                                          'QgsRuleBasedLabeling::Rule',
                                          'QgsSQLStatement::Visitor']
-        self.version_regex = re.compile(r'QGIS [\d\.]+.*')
+        self.version_regex = re.compile(r'.*QGIS\s+(?:<ref.*?>)?[\d\.]+.*', re.MULTILINE)
         self.parseFiles(path)
 
     def parseFiles(self, path):
@@ -257,7 +257,7 @@ class DoxygenParser():
         # test for brief description
         d = e.find('briefdescription')
         has_brief_description = False
-        if d:
+        if d is not None:
             has_brief_description = True
             for para in d.iter('para'):
                 if para.text and re.search(r'\btodo\b', para.text.lower()) is not None:
@@ -271,9 +271,14 @@ class DoxygenParser():
             for s in para.iter('simplesect'):
                 if s.get('kind') == 'since':
                     for p in s.iter('para'):
-                        if self.version_regex.match(p.text):
+                        if self.version_regex.match(ET.tostring(p).decode()):
                             found_version_added = True
                             break
+            for s in para.iter('xrefsect'):
+                if s.find('xreftitle') is not None and 'Deprecated' in s.find('xreftitle').text:
+                    # can't have both deprecated and since, so if we've found deprecated then treat it as having satisfied the "since" requirement too
+                    found_version_added = True
+                    break
 
             if para.text and re.search(r'\btodo\b', para.text.lower()) is not None:
                 noncompliant_members.append({
@@ -373,22 +378,25 @@ class DoxygenParser():
         if self.isDestructor(elem):
             return False
 
-        # ignore constructors with no arguments
         if self.isConstructor(elem):
+            # ignore constructors with no arguments
             try:
-                if elem.find('argsstring').text == '()':
+                if re.match(r'^\s*\(\s*\)\s*(?:=\s*(?:default|delete)\s*)?$', elem.find('argsstring').text):
                     return False
             except:
                 pass
 
+            # ignore copy constructors
+            name = elem.find('name').text
+            match = re.match(r'^\s*\(\s*(?:const)?\s*' + name + r'\s*&?\s*(?:[a-zA-Z0-9_]+)?\s*\)\s*(?:=\s*(?:default|delete)\s*)?$', elem.find('argsstring').text)
+            if match:
+                return False
+
         name = elem.find('name')
 
         # ignore certain obvious operators
-        try:
-            if name.text in ('operator=', 'operator==', 'operator!=', 'Q_ENUM'):
-                return False
-        except:
-            pass
+        if name.text in ('operator=', 'operator==', 'operator!=', 'operator>=', 'operator>', 'operator<=', 'operator<', 'Q_ENUM'):
+            return False
 
         # ignore on_* slots
         try:
@@ -458,7 +466,9 @@ class DoxygenParser():
             name = member_elem.find('name').text
             if f'{name}::{name}' in definition:
                 return True
-        except:
+            if re.match(rf'{name}\s*\<\s*[a-zA-Z0-9_]+\s*\>\s*::{name}', definition):
+                return True
+        except (AttributeError, re.error):
             pass
 
         return False
@@ -529,6 +539,8 @@ class DoxygenParser():
                 decl_deprecated = True
         except:
             pass
+        if b'Q_DECL_DEPRECATED' in ET.tostring(type_elem):
+            decl_deprecated = True
 
         doxy_deprecated = False
         has_description = True

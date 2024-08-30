@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/symbology/qgssymbollayer.h                                  *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -175,7 +175,6 @@ Returns the symbol layer property definitions.
 %End
 
     virtual ~QgsSymbolLayer();
-
 
 
     virtual Qgis::SymbolLayerFlags flags() const;
@@ -361,7 +360,6 @@ The default implementation does nothing.
 
 .. seealso:: :py:func:`startRender`
 
-
 .. versionadded:: 3.12
 %End
 
@@ -384,7 +382,6 @@ The default implementation does nothing.
 .. seealso:: :py:func:`startFeatureRender`
 
 .. seealso:: :py:func:`stopRender`
-
 
 .. versionadded:: 3.12
 %End
@@ -666,6 +663,24 @@ This id is unique in the whole project
 .. versionadded:: 3.30
 %End
 
+    bool installMasks( QgsRenderContext &context, bool recursive, const QRectF &rect = QRectF() );
+%Docstring
+When rendering, install masks on ``context`` painter.
+
+If ``recursive`` is ``True`` masks are installed recursively for all children symbol layers.
+
+Since QGIS 3.38 the ``rect`` argument can be used to specify a target bounds (in painter coordinates)
+for mask geometries. Only mask geometries which intersect ``rect`` will be installed.
+
+:return: ``True`` if any masks were installed (since QGIS 3.38)
+
+.. seealso:: :py:func:`prepareMasks`
+
+.. seealso:: :py:func:`removeMasks`
+
+.. versionadded:: 3.30
+%End
+
   protected:
 
     QgsSymbolLayer( Qgis::SymbolType type, bool locked = false );
@@ -700,18 +715,6 @@ Copies all data defined properties of this layer to another symbol layer.
 Copies paint effect of this layer to another symbol layer
 
 :param destLayer: destination layer
-%End
-
-    void installMasks( QgsRenderContext &context, bool recursive );
-%Docstring
-When rendering, install masks on ``context`` painter
-if ``recursive`` is ``True`` masks are installed recursively for all children symbol layers
-
-.. seealso:: :py:func:`prepareMasks`
-
-.. seealso:: :py:func:`removeMasks`
-
-.. versionadded:: 3.30
 %End
 
     void removeMasks( QgsRenderContext &context, bool recursive );
@@ -765,12 +768,8 @@ Abstract base class for marker symbol layers.
     };
 
 
-
     virtual void startRender( QgsSymbolRenderContext &context );
 
-%Docstring
-QgsMarkerSymbolLayer cannot be copied
-%End
 
     virtual void stopRender( QgsSymbolRenderContext &context );
 
@@ -1118,6 +1117,10 @@ Adjusts a marker offset to account for rotation.
 
 class QgsLineSymbolLayer : QgsSymbolLayer
 {
+%Docstring(signature="appended")
+
+Abstract base class for line symbol layers.
+%End
 
 %TypeHeaderCode
 #include "qgssymbollayer.h"
@@ -1132,12 +1135,8 @@ class QgsLineSymbolLayer : QgsSymbolLayer
     };
 
 
-
     virtual void setOutputUnit( Qgis::RenderUnit unit );
 
-%Docstring
-QgsLineSymbolLayer cannot be copied
-%End
     virtual Qgis::RenderUnit outputUnit() const;
 
     virtual void setMapUnitScale( const QgsMapUnitScale &scale );
@@ -1336,12 +1335,14 @@ for a polygon.
 
 class QgsFillSymbolLayer : QgsSymbolLayer
 {
+%Docstring(signature="appended")
+Abstract base class for fill symbol layers.
+%End
 
 %TypeHeaderCode
 #include "qgssymbollayer.h"
 %End
   public:
-
 
 
     virtual void renderPolygon( const QPolygonF &points, const QVector<QPolygonF> *rings, QgsSymbolRenderContext &context ) = 0;
@@ -1407,5 +1408,5 @@ Default method to render polygon
  *                                                                      *
  * src/core/symbology/qgssymbollayer.h                                  *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

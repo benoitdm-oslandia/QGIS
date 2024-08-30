@@ -33,12 +33,9 @@ class CORE_EXPORT QgsXyzVectorTileDataProviderBase : public QgsVectorTileDataPro
   public:
     QgsXyzVectorTileDataProviderBase( const QString &uri,
                                       const QgsDataProvider::ProviderOptions &providerOptions,
-                                      QgsDataProvider::ReadFlags flags );
+                                      Qgis::DataProviderReadFlags flags );
     QgsXyzVectorTileDataProviderBase( const QgsXyzVectorTileDataProviderBase &other );
 
-    /**
-     * QgsXyzVectorTileDataProviderBase cannot be assigned.
-     */
     QgsXyzVectorTileDataProviderBase &operator=( const QgsXyzVectorTileDataProviderBase &other ) = delete;
 
     bool supportsAsync() const override;
@@ -71,12 +68,9 @@ class CORE_EXPORT QgsXyzVectorTileDataProvider : public QgsXyzVectorTileDataProv
   public:
     QgsXyzVectorTileDataProvider( const QString &uri,
                                   const QgsDataProvider::ProviderOptions &providerOptions,
-                                  QgsDataProvider::ReadFlags flags );
+                                  Qgis::DataProviderReadFlags flags );
     QgsXyzVectorTileDataProvider( const QgsXyzVectorTileDataProvider &other );
 
-    /**
-     * QgsXyzVectorTileDataProvider cannot be assigned.
-     */
     QgsXyzVectorTileDataProvider &operator=( const QgsXyzVectorTileDataProvider &other ) = delete;
 
     Qgis::DataProviderFlags flags() const override;
@@ -116,7 +110,7 @@ class QgsXyzVectorTileDataProviderMetadata : public QgsProviderMetadata
     Q_OBJECT
   public:
     QgsXyzVectorTileDataProviderMetadata();
-    QgsXyzVectorTileDataProvider *createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, QgsDataProvider::ReadFlags flags = QgsDataProvider::ReadFlags() ) override;
+    QgsXyzVectorTileDataProvider *createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, Qgis::DataProviderReadFlags flags = Qgis::DataProviderReadFlags() ) override;
     QIcon icon() const override;
     ProviderCapabilities providerCapabilities() const override;
     QVariantMap decodeUri( const QString &uri ) const override;

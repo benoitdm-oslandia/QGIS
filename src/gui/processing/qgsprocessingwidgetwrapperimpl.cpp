@@ -207,6 +207,8 @@ QStringList QgsProcessingBooleanWidgetWrapper::compatibleParameterTypes() const
          << QgsProcessingParameterString::typeName()
          << QgsProcessingParameterNumber::typeName()
          << QgsProcessingParameterDistance::typeName()
+         << QgsProcessingParameterArea::typeName()
+         << QgsProcessingParameterVolume::typeName()
          << QgsProcessingParameterDuration::typeName()
          << QgsProcessingParameterScale::typeName()
          << QgsProcessingParameterFile::typeName()
@@ -571,6 +573,8 @@ QStringList QgsProcessingStringWidgetWrapper::compatibleParameterTypes() const
          << QgsProcessingParameterAuthConfig::typeName()
          << QgsProcessingParameterNumber::typeName()
          << QgsProcessingParameterDistance::typeName()
+         << QgsProcessingParameterArea::typeName()
+         << QgsProcessingParameterVolume::typeName()
          << QgsProcessingParameterDuration::typeName()
          << QgsProcessingParameterScale::typeName()
          << QgsProcessingParameterFile::typeName()
@@ -953,6 +957,7 @@ QStringList QgsProcessingNumericWidgetWrapper::compatibleParameterTypes() const
          << QgsProcessingParameterString::typeName()
          << QgsProcessingParameterNumber::typeName()
          << QgsProcessingParameterDistance::typeName()
+         << QgsProcessingParameterVolume::typeName()
          << QgsProcessingParameterDuration::typeName()
          << QgsProcessingParameterScale::typeName();
 }
@@ -1261,7 +1266,7 @@ void QgsProcessingDistanceWidgetWrapper::setUnits( Qgis::DistanceUnit units )
 QVariant QgsProcessingDistanceWidgetWrapper::widgetValue() const
 {
   const QVariant val = QgsProcessingNumericWidgetWrapper::widgetValue();
-  if ( val.type() == QVariant::Double && mUnitsCombo && mUnitsCombo->isVisible() )
+  if ( val.userType() == QMetaType::Type::Double && mUnitsCombo && mUnitsCombo->isVisible() )
   {
     Qgis::DistanceUnit displayUnit = static_cast<Qgis::DistanceUnit >( mUnitsCombo->currentData().toInt() );
     return val.toDouble() * QgsUnitTypes::fromUnitToUnitFactor( displayUnit, mBaseUnit );
@@ -1275,6 +1280,588 @@ QVariant QgsProcessingDistanceWidgetWrapper::widgetValue() const
 QgsProcessingAbstractParameterDefinitionWidget *QgsProcessingDistanceWidgetWrapper::createParameterDefinitionWidget( QgsProcessingContext &context, const QgsProcessingParameterWidgetContext &widgetContext, const QgsProcessingParameterDefinition *definition, const QgsProcessingAlgorithm *algorithm )
 {
   return new QgsProcessingDistanceParameterDefinitionWidget( context, widgetContext, definition, algorithm );
+}
+
+
+//
+// QgsProcessingAreaParameterDefinitionWidget
+//
+
+QgsProcessingAreaParameterDefinitionWidget::QgsProcessingAreaParameterDefinitionWidget( QgsProcessingContext &context, const QgsProcessingParameterWidgetContext &widgetContext, const QgsProcessingParameterDefinition *definition, const QgsProcessingAlgorithm *algorithm, QWidget *parent )
+  : QgsProcessingAbstractParameterDefinitionWidget( context, widgetContext, definition, algorithm, parent )
+{
+  QVBoxLayout *vlayout = new QVBoxLayout();
+  vlayout->setContentsMargins( 0, 0, 0, 0 );
+
+  vlayout->addWidget( new QLabel( tr( "Linked input" ) ) );
+
+  mParentLayerComboBox = new QComboBox();
+
+  QString initialParent;
+  if ( const QgsProcessingParameterArea *areaParam = dynamic_cast<const QgsProcessingParameterArea *>( definition ) )
+    initialParent = areaParam->parentParameterName();
+
+  if ( auto *lModel = widgetContext.model() )
+  {
+    // populate combo box with other model input choices
+    const QMap<QString, QgsProcessingModelParameter> components = lModel->parameterComponents();
+    for ( auto it = components.constBegin(); it != components.constEnd(); ++it )
+    {
+      if ( const QgsProcessingParameterFeatureSource *definition = dynamic_cast< const QgsProcessingParameterFeatureSource * >( lModel->parameterDefinition( it.value().parameterName() ) ) )
+      {
+        mParentLayerComboBox-> addItem( definition->description(), definition->name() );
+        if ( !initialParent.isEmpty() && initialParent == definition->name() )
+        {
+          mParentLayerComboBox->setCurrentIndex( mParentLayerComboBox->count() - 1 );
+        }
+      }
+      else if ( const QgsProcessingParameterVectorLayer *definition = dynamic_cast< const QgsProcessingParameterVectorLayer * >( lModel->parameterDefinition( it.value().parameterName() ) ) )
+      {
+        mParentLayerComboBox-> addItem( definition->description(), definition->name() );
+        if ( !initialParent.isEmpty() && initialParent == definition->name() )
+        {
+          mParentLayerComboBox->setCurrentIndex( mParentLayerComboBox->count() - 1 );
+        }
+      }
+      else if ( const QgsProcessingParameterMapLayer *definition = dynamic_cast< const QgsProcessingParameterMapLayer * >( lModel->parameterDefinition( it.value().parameterName() ) ) )
+      {
+        mParentLayerComboBox-> addItem( definition->description(), definition->name() );
+        if ( !initialParent.isEmpty() && initialParent == definition->name() )
+        {
+          mParentLayerComboBox->setCurrentIndex( mParentLayerComboBox->count() - 1 );
+        }
+      }
+      else if ( const QgsProcessingParameterCrs *definition = dynamic_cast< const QgsProcessingParameterCrs * >( lModel->parameterDefinition( it.value().parameterName() ) ) )
+      {
+        mParentLayerComboBox-> addItem( definition->description(), definition->name() );
+        if ( !initialParent.isEmpty() && initialParent == definition->name() )
+        {
+          mParentLayerComboBox->setCurrentIndex( mParentLayerComboBox->count() - 1 );
+        }
+      }
+    }
+  }
+
+  if ( mParentLayerComboBox->count() == 0 && !initialParent.isEmpty() )
+  {
+    // if no parent candidates found, we just add the existing one as a placeholder
+    mParentLayerComboBox->addItem( initialParent, initialParent );
+    mParentLayerComboBox->setCurrentIndex( mParentLayerComboBox->count() - 1 );
+  }
+
+  vlayout->addWidget( mParentLayerComboBox );
+
+  vlayout->addWidget( new QLabel( tr( "Minimum value" ) ) );
+  mMinLineEdit = new QLineEdit();
+  vlayout->addWidget( mMinLineEdit );
+
+  vlayout->addWidget( new QLabel( tr( "Maximum value" ) ) );
+  mMaxLineEdit = new QLineEdit();
+  vlayout->addWidget( mMaxLineEdit );
+
+  vlayout->addWidget( new QLabel( tr( "Default value" ) ) );
+  mDefaultLineEdit = new QLineEdit();
+  vlayout->addWidget( mDefaultLineEdit );
+
+  if ( const QgsProcessingParameterArea *areaParam = dynamic_cast<const QgsProcessingParameterArea *>( definition ) )
+  {
+    mMinLineEdit->setText( QLocale().toString( areaParam->minimum() ) );
+    mMaxLineEdit->setText( QLocale().toString( areaParam->maximum() ) );
+    mDefaultLineEdit->setText( areaParam->defaultValueForGui().toString() );
+  }
+
+  setLayout( vlayout );
+}
+
+QgsProcessingParameterDefinition *QgsProcessingAreaParameterDefinitionWidget::createParameter( const QString &name, const QString &description, Qgis::ProcessingParameterFlags flags ) const
+{
+  bool ok;
+  double val = QgsDoubleValidator::toDouble( mDefaultLineEdit->text(), &ok );
+
+  auto param = std::make_unique< QgsProcessingParameterArea >( name, description, ok ? val : QVariant(), mParentLayerComboBox->currentData().toString() );
+
+  val = QgsDoubleValidator::toDouble( mMinLineEdit->text(), &ok );
+  if ( ok )
+  {
+    param->setMinimum( val );
+  }
+
+  val = QgsDoubleValidator::toDouble( mMaxLineEdit->text(), &ok );
+  if ( ok )
+  {
+    param->setMaximum( val );
+  }
+
+  param->setFlags( flags );
+  return param.release();
+}
+
+
+//
+// QgsProcessingAreaWidgetWrapper
+//
+
+QgsProcessingAreaWidgetWrapper::QgsProcessingAreaWidgetWrapper( const QgsProcessingParameterDefinition *parameter, QgsProcessingGui::WidgetType type, QWidget *parent )
+  : QgsProcessingNumericWidgetWrapper( parameter, type, parent )
+{
+
+}
+
+QString QgsProcessingAreaWidgetWrapper::parameterType() const
+{
+  return QgsProcessingParameterArea::typeName();
+}
+
+QgsAbstractProcessingParameterWidgetWrapper *QgsProcessingAreaWidgetWrapper::createWidgetWrapper( const QgsProcessingParameterDefinition *parameter, QgsProcessingGui::WidgetType type )
+{
+  return new QgsProcessingAreaWidgetWrapper( parameter, type );
+}
+
+QWidget *QgsProcessingAreaWidgetWrapper::createWidget()
+{
+  const QgsProcessingParameterArea *areaDef = static_cast< const QgsProcessingParameterArea * >( parameterDefinition() );
+
+  QWidget *spin = QgsProcessingNumericWidgetWrapper::createWidget();
+  switch ( type() )
+  {
+    case QgsProcessingGui::Standard:
+    {
+      mLabel = new QLabel();
+      mUnitsCombo = new QComboBox();
+
+      mUnitsCombo->addItem( QgsUnitTypes::toString( Qgis::AreaUnit::SquareMeters ), QVariant::fromValue( Qgis::AreaUnit::SquareMeters ) );
+      mUnitsCombo->addItem( QgsUnitTypes::toString( Qgis::AreaUnit::SquareKilometers ), QVariant::fromValue( Qgis::AreaUnit::SquareKilometers ) );
+      mUnitsCombo->addItem( QgsUnitTypes::toString( Qgis::AreaUnit::SquareFeet ), QVariant::fromValue( Qgis::AreaUnit::SquareFeet ) );
+      mUnitsCombo->addItem( QgsUnitTypes::toString( Qgis::AreaUnit::SquareYards ), QVariant::fromValue( Qgis::AreaUnit::SquareYards ) );
+      mUnitsCombo->addItem( QgsUnitTypes::toString( Qgis::AreaUnit::SquareMiles ), QVariant::fromValue( Qgis::AreaUnit::SquareMiles ) );
+      mUnitsCombo->addItem( QgsUnitTypes::toString( Qgis::AreaUnit::Hectares ), QVariant::fromValue( Qgis::AreaUnit::Hectares ) );
+      mUnitsCombo->addItem( QgsUnitTypes::toString( Qgis::AreaUnit::Acres ), QVariant::fromValue( Qgis::AreaUnit::Acres ) );
+      mUnitsCombo->addItem( QgsUnitTypes::toString( Qgis::AreaUnit::SquareNauticalMiles ), QVariant::fromValue( Qgis::AreaUnit::SquareNauticalMiles ) );
+      mUnitsCombo->addItem( QgsUnitTypes::toString( Qgis::AreaUnit::SquareDegrees ), QVariant::fromValue( Qgis::AreaUnit::SquareDegrees ) );
+      mUnitsCombo->addItem( QgsUnitTypes::toString( Qgis::AreaUnit::SquareCentimeters ), QVariant::fromValue( Qgis::AreaUnit::SquareCentimeters ) );
+      mUnitsCombo->addItem( QgsUnitTypes::toString( Qgis::AreaUnit::SquareMillimeters ), QVariant::fromValue( Qgis::AreaUnit::SquareMillimeters ) );
+      mUnitsCombo->addItem( QgsUnitTypes::toString( Qgis::AreaUnit::SquareInches ), QVariant::fromValue( Qgis::AreaUnit::SquareInches ) );
+
+      const int labelMargin = static_cast< int >( std::round( mUnitsCombo->fontMetrics().horizontalAdvance( 'X' ) ) );
+      QHBoxLayout *layout = new QHBoxLayout();
+      layout->addWidget( spin, 1 );
+      layout->insertSpacing( 1, labelMargin / 2 );
+      layout->insertWidget( 2, mLabel );
+      layout->insertWidget( 3, mUnitsCombo );
+
+      // bit of fiddlyness here -- we want the initial spacing to only be visible
+      // when the warning label is shown, so it's embedded inside mWarningLabel
+      // instead of outside it
+      mWarningLabel = new QWidget();
+      QHBoxLayout *warningLayout = new QHBoxLayout();
+      warningLayout->setContentsMargins( 0, 0, 0, 0 );
+      QLabel *warning = new QLabel();
+      QIcon icon = QgsApplication::getThemeIcon( QStringLiteral( "mIconWarning.svg" ) );
+      const int size = static_cast< int >( std::max( 24.0, spin->minimumSize().height() * 0.5 ) );
+      warning->setPixmap( icon.pixmap( icon.actualSize( QSize( size, size ) ) ) );
+      warning->setToolTip( tr( "Area is in geographic degrees. Consider reprojecting to a projected local coordinate system for accurate results." ) );
+      warningLayout->insertSpacing( 0, labelMargin / 2 );
+      warningLayout->insertWidget( 1, warning );
+      mWarningLabel->setLayout( warningLayout );
+      layout->insertWidget( 4, mWarningLabel );
+
+      QWidget *w = new QWidget();
+      layout->setContentsMargins( 0, 0, 0, 0 );
+      w->setLayout( layout );
+
+      setUnits( areaDef->defaultUnit() );
+
+      return w;
+    }
+
+    case QgsProcessingGui::Batch:
+    case QgsProcessingGui::Modeler:
+      return spin;
+
+  }
+  return nullptr;
+}
+
+void QgsProcessingAreaWidgetWrapper::postInitialize( const QList<QgsAbstractProcessingParameterWidgetWrapper *> &wrappers )
+{
+  QgsProcessingNumericWidgetWrapper::postInitialize( wrappers );
+  switch ( type() )
+  {
+    case QgsProcessingGui::Standard:
+    {
+      for ( const QgsAbstractProcessingParameterWidgetWrapper *wrapper : wrappers )
+      {
+        if ( wrapper->parameterDefinition()->name() == static_cast< const QgsProcessingParameterArea * >( parameterDefinition() )->parentParameterName() )
+        {
+          setUnitParameterValue( wrapper->parameterValue(), wrapper );
+          connect( wrapper, &QgsAbstractProcessingParameterWidgetWrapper::widgetValueHasChanged, this, [ = ]
+          {
+            setUnitParameterValue( wrapper->parameterValue(), wrapper );
+          } );
+          break;
+        }
+      }
+      break;
+    }
+
+    case QgsProcessingGui::Batch:
+    case QgsProcessingGui::Modeler:
+      break;
+  }
+}
+
+void QgsProcessingAreaWidgetWrapper::setUnitParameterValue( const QVariant &value, const QgsAbstractProcessingParameterWidgetWrapper *wrapper )
+{
+  Qgis::AreaUnit units = Qgis::AreaUnit::Unknown;
+
+  // evaluate value to layer
+  QgsProcessingContext *context = nullptr;
+  std::unique_ptr< QgsProcessingContext > tmpContext;
+  if ( mProcessingContextGenerator )
+    context = mProcessingContextGenerator->processingContext();
+
+  if ( !context )
+  {
+    tmpContext = std::make_unique< QgsProcessingContext >();
+    context = tmpContext.get();
+  }
+
+  const QgsCoordinateReferenceSystem crs = wrapper
+      ? QgsProcessingParameters::parameterAsCrs( wrapper->parameterDefinition(), wrapper->parameterValue(), *context )
+      : QgsProcessingUtils::variantToCrs( value, *context );
+  if ( crs.isValid() )
+  {
+    units = QgsUnitTypes::distanceToAreaUnit( crs.mapUnits() );
+  }
+
+  setUnits( units );
+}
+
+void QgsProcessingAreaWidgetWrapper::setUnits( Qgis::AreaUnit units )
+{
+  mLabel->setText( QgsUnitTypes::toString( units ) );
+  if ( QgsUnitTypes::unitType( units ) != Qgis::DistanceUnitType::Standard )
+  {
+    mUnitsCombo->hide();
+    mLabel->show();
+  }
+  else
+  {
+    mUnitsCombo->setCurrentIndex( mUnitsCombo->findData( QVariant::fromValue( units ) ) );
+    mUnitsCombo->show();
+    mLabel->hide();
+  }
+  mWarningLabel->setVisible( units == Qgis::AreaUnit::SquareDegrees );
+  mBaseUnit = units;
+}
+
+QVariant QgsProcessingAreaWidgetWrapper::widgetValue() const
+{
+  const QVariant val = QgsProcessingNumericWidgetWrapper::widgetValue();
+  if ( val.userType() == QMetaType::Type::Double && mUnitsCombo && mUnitsCombo->isVisible() )
+  {
+    const Qgis::AreaUnit displayUnit = mUnitsCombo->currentData().value< Qgis::AreaUnit >();
+    return val.toDouble() * QgsUnitTypes::fromUnitToUnitFactor( displayUnit, mBaseUnit );
+  }
+  else
+  {
+    return val;
+  }
+}
+
+QgsProcessingAbstractParameterDefinitionWidget *QgsProcessingAreaWidgetWrapper::createParameterDefinitionWidget( QgsProcessingContext &context, const QgsProcessingParameterWidgetContext &widgetContext, const QgsProcessingParameterDefinition *definition, const QgsProcessingAlgorithm *algorithm )
+{
+  return new QgsProcessingAreaParameterDefinitionWidget( context, widgetContext, definition, algorithm );
+}
+
+
+//
+// QgsProcessingVolumeParameterDefinitionWidget
+//
+
+QgsProcessingVolumeParameterDefinitionWidget::QgsProcessingVolumeParameterDefinitionWidget( QgsProcessingContext &context, const QgsProcessingParameterWidgetContext &widgetContext, const QgsProcessingParameterDefinition *definition, const QgsProcessingAlgorithm *algorithm, QWidget *parent )
+  : QgsProcessingAbstractParameterDefinitionWidget( context, widgetContext, definition, algorithm, parent )
+{
+  QVBoxLayout *vlayout = new QVBoxLayout();
+  vlayout->setContentsMargins( 0, 0, 0, 0 );
+
+  vlayout->addWidget( new QLabel( tr( "Linked input" ) ) );
+
+  mParentLayerComboBox = new QComboBox();
+
+  QString initialParent;
+  if ( const QgsProcessingParameterVolume *volumeParam = dynamic_cast<const QgsProcessingParameterVolume *>( definition ) )
+    initialParent = volumeParam->parentParameterName();
+
+  if ( auto *lModel = widgetContext.model() )
+  {
+    // populate combo box with other model input choices
+    const QMap<QString, QgsProcessingModelParameter> components = lModel->parameterComponents();
+    for ( auto it = components.constBegin(); it != components.constEnd(); ++it )
+    {
+      if ( const QgsProcessingParameterFeatureSource *definition = dynamic_cast< const QgsProcessingParameterFeatureSource * >( lModel->parameterDefinition( it.value().parameterName() ) ) )
+      {
+        mParentLayerComboBox-> addItem( definition->description(), definition->name() );
+        if ( !initialParent.isEmpty() && initialParent == definition->name() )
+        {
+          mParentLayerComboBox->setCurrentIndex( mParentLayerComboBox->count() - 1 );
+        }
+      }
+      else if ( const QgsProcessingParameterVectorLayer *definition = dynamic_cast< const QgsProcessingParameterVectorLayer * >( lModel->parameterDefinition( it.value().parameterName() ) ) )
+      {
+        mParentLayerComboBox-> addItem( definition->description(), definition->name() );
+        if ( !initialParent.isEmpty() && initialParent == definition->name() )
+        {
+          mParentLayerComboBox->setCurrentIndex( mParentLayerComboBox->count() - 1 );
+        }
+      }
+      else if ( const QgsProcessingParameterMapLayer *definition = dynamic_cast< const QgsProcessingParameterMapLayer * >( lModel->parameterDefinition( it.value().parameterName() ) ) )
+      {
+        mParentLayerComboBox-> addItem( definition->description(), definition->name() );
+        if ( !initialParent.isEmpty() && initialParent == definition->name() )
+        {
+          mParentLayerComboBox->setCurrentIndex( mParentLayerComboBox->count() - 1 );
+        }
+      }
+      else if ( const QgsProcessingParameterCrs *definition = dynamic_cast< const QgsProcessingParameterCrs * >( lModel->parameterDefinition( it.value().parameterName() ) ) )
+      {
+        mParentLayerComboBox-> addItem( definition->description(), definition->name() );
+        if ( !initialParent.isEmpty() && initialParent == definition->name() )
+        {
+          mParentLayerComboBox->setCurrentIndex( mParentLayerComboBox->count() - 1 );
+        }
+      }
+    }
+  }
+
+  if ( mParentLayerComboBox->count() == 0 && !initialParent.isEmpty() )
+  {
+    // if no parent candidates found, we just add the existing one as a placeholder
+    mParentLayerComboBox->addItem( initialParent, initialParent );
+    mParentLayerComboBox->setCurrentIndex( mParentLayerComboBox->count() - 1 );
+  }
+
+  vlayout->addWidget( mParentLayerComboBox );
+
+  vlayout->addWidget( new QLabel( tr( "Minimum value" ) ) );
+  mMinLineEdit = new QLineEdit();
+  vlayout->addWidget( mMinLineEdit );
+
+  vlayout->addWidget( new QLabel( tr( "Maximum value" ) ) );
+  mMaxLineEdit = new QLineEdit();
+  vlayout->addWidget( mMaxLineEdit );
+
+  vlayout->addWidget( new QLabel( tr( "Default value" ) ) );
+  mDefaultLineEdit = new QLineEdit();
+  vlayout->addWidget( mDefaultLineEdit );
+
+  if ( const QgsProcessingParameterVolume *volumeParam = dynamic_cast<const QgsProcessingParameterVolume *>( definition ) )
+  {
+    mMinLineEdit->setText( QLocale().toString( volumeParam->minimum() ) );
+    mMaxLineEdit->setText( QLocale().toString( volumeParam->maximum() ) );
+    mDefaultLineEdit->setText( volumeParam->defaultValueForGui().toString() );
+  }
+
+  setLayout( vlayout );
+}
+
+QgsProcessingParameterDefinition *QgsProcessingVolumeParameterDefinitionWidget::createParameter( const QString &name, const QString &description, Qgis::ProcessingParameterFlags flags ) const
+{
+  bool ok;
+  double val = QgsDoubleValidator::toDouble( mDefaultLineEdit->text(), &ok );
+
+  auto param = std::make_unique< QgsProcessingParameterVolume >( name, description, ok ? val : QVariant(), mParentLayerComboBox->currentData().toString() );
+
+  val = QgsDoubleValidator::toDouble( mMinLineEdit->text(), &ok );
+  if ( ok )
+  {
+    param->setMinimum( val );
+  }
+
+  val = QgsDoubleValidator::toDouble( mMaxLineEdit->text(), &ok );
+  if ( ok )
+  {
+    param->setMaximum( val );
+  }
+
+  param->setFlags( flags );
+  return param.release();
+}
+
+
+//
+// QgsProcessingVolumeWidgetWrapper
+//
+
+QgsProcessingVolumeWidgetWrapper::QgsProcessingVolumeWidgetWrapper( const QgsProcessingParameterDefinition *parameter, QgsProcessingGui::WidgetType type, QWidget *parent )
+  : QgsProcessingNumericWidgetWrapper( parameter, type, parent )
+{
+
+}
+
+QString QgsProcessingVolumeWidgetWrapper::parameterType() const
+{
+  return QgsProcessingParameterVolume::typeName();
+}
+
+QgsAbstractProcessingParameterWidgetWrapper *QgsProcessingVolumeWidgetWrapper::createWidgetWrapper( const QgsProcessingParameterDefinition *parameter, QgsProcessingGui::WidgetType type )
+{
+  return new QgsProcessingVolumeWidgetWrapper( parameter, type );
+}
+
+QWidget *QgsProcessingVolumeWidgetWrapper::createWidget()
+{
+  const QgsProcessingParameterVolume *volumeDef = static_cast< const QgsProcessingParameterVolume * >( parameterDefinition() );
+
+  QWidget *spin = QgsProcessingNumericWidgetWrapper::createWidget();
+  switch ( type() )
+  {
+    case QgsProcessingGui::Standard:
+    {
+      mLabel = new QLabel();
+      mUnitsCombo = new QComboBox();
+
+      mUnitsCombo->addItem( QgsUnitTypes::toString( Qgis::VolumeUnit::CubicMeters ), QVariant::fromValue( Qgis::VolumeUnit::CubicMeters ) );
+      mUnitsCombo->addItem( QgsUnitTypes::toString( Qgis::VolumeUnit::CubicFeet ), QVariant::fromValue( Qgis::VolumeUnit::CubicFeet ) );
+      mUnitsCombo->addItem( QgsUnitTypes::toString( Qgis::VolumeUnit::CubicYards ), QVariant::fromValue( Qgis::VolumeUnit::CubicYards ) );
+      mUnitsCombo->addItem( QgsUnitTypes::toString( Qgis::VolumeUnit::Barrel ), QVariant::fromValue( Qgis::VolumeUnit::Barrel ) );
+      mUnitsCombo->addItem( QgsUnitTypes::toString( Qgis::VolumeUnit::CubicDecimeter ), QVariant::fromValue( Qgis::VolumeUnit::CubicDecimeter ) );
+      mUnitsCombo->addItem( QgsUnitTypes::toString( Qgis::VolumeUnit::Liters ), QVariant::fromValue( Qgis::VolumeUnit::Liters ) );
+      mUnitsCombo->addItem( QgsUnitTypes::toString( Qgis::VolumeUnit::GallonUS ), QVariant::fromValue( Qgis::VolumeUnit::GallonUS ) );
+      mUnitsCombo->addItem( QgsUnitTypes::toString( Qgis::VolumeUnit::CubicInch ), QVariant::fromValue( Qgis::VolumeUnit::CubicInch ) );
+      mUnitsCombo->addItem( QgsUnitTypes::toString( Qgis::VolumeUnit::CubicCentimeter ), QVariant::fromValue( Qgis::VolumeUnit::CubicCentimeter ) );
+      mUnitsCombo->addItem( QgsUnitTypes::toString( Qgis::VolumeUnit::CubicDegrees ), QVariant::fromValue( Qgis::VolumeUnit::CubicDegrees ) );
+
+      const int labelMargin = static_cast< int >( std::round( mUnitsCombo->fontMetrics().horizontalAdvance( 'X' ) ) );
+      QHBoxLayout *layout = new QHBoxLayout();
+      layout->addWidget( spin, 1 );
+      layout->insertSpacing( 1, labelMargin / 2 );
+      layout->insertWidget( 2, mLabel );
+      layout->insertWidget( 3, mUnitsCombo );
+
+      // bit of fiddlyness here -- we want the initial spacing to only be visible
+      // when the warning label is shown, so it's embedded inside mWarningLabel
+      // instead of outside it
+      mWarningLabel = new QWidget();
+      QHBoxLayout *warningLayout = new QHBoxLayout();
+      warningLayout->setContentsMargins( 0, 0, 0, 0 );
+      QLabel *warning = new QLabel();
+      QIcon icon = QgsApplication::getThemeIcon( QStringLiteral( "mIconWarning.svg" ) );
+      const int size = static_cast< int >( std::max( 24.0, spin->minimumSize().height() * 0.5 ) );
+      warning->setPixmap( icon.pixmap( icon.actualSize( QSize( size, size ) ) ) );
+      warning->setToolTip( tr( "Volume is in geographic degrees. Consider reprojecting to a projected local coordinate system for accurate results." ) );
+      warningLayout->insertSpacing( 0, labelMargin / 2 );
+      warningLayout->insertWidget( 1, warning );
+      mWarningLabel->setLayout( warningLayout );
+      layout->insertWidget( 4, mWarningLabel );
+
+      QWidget *w = new QWidget();
+      layout->setContentsMargins( 0, 0, 0, 0 );
+      w->setLayout( layout );
+
+      setUnits( volumeDef->defaultUnit() );
+
+      return w;
+    }
+
+    case QgsProcessingGui::Batch:
+    case QgsProcessingGui::Modeler:
+      return spin;
+
+  }
+  return nullptr;
+}
+
+void QgsProcessingVolumeWidgetWrapper::postInitialize( const QList<QgsAbstractProcessingParameterWidgetWrapper *> &wrappers )
+{
+  QgsProcessingNumericWidgetWrapper::postInitialize( wrappers );
+  switch ( type() )
+  {
+    case QgsProcessingGui::Standard:
+    {
+      for ( const QgsAbstractProcessingParameterWidgetWrapper *wrapper : wrappers )
+      {
+        if ( wrapper->parameterDefinition()->name() == static_cast< const QgsProcessingParameterVolume * >( parameterDefinition() )->parentParameterName() )
+        {
+          setUnitParameterValue( wrapper->parameterValue(), wrapper );
+          connect( wrapper, &QgsAbstractProcessingParameterWidgetWrapper::widgetValueHasChanged, this, [ = ]
+          {
+            setUnitParameterValue( wrapper->parameterValue(), wrapper );
+          } );
+          break;
+        }
+      }
+      break;
+    }
+
+    case QgsProcessingGui::Batch:
+    case QgsProcessingGui::Modeler:
+      break;
+  }
+}
+
+void QgsProcessingVolumeWidgetWrapper::setUnitParameterValue( const QVariant &value, const QgsAbstractProcessingParameterWidgetWrapper *wrapper )
+{
+  Qgis::VolumeUnit units = Qgis::VolumeUnit::Unknown;
+
+  // evaluate value to layer
+  QgsProcessingContext *context = nullptr;
+  std::unique_ptr< QgsProcessingContext > tmpContext;
+  if ( mProcessingContextGenerator )
+    context = mProcessingContextGenerator->processingContext();
+
+  if ( !context )
+  {
+    tmpContext = std::make_unique< QgsProcessingContext >();
+    context = tmpContext.get();
+  }
+
+  const QgsCoordinateReferenceSystem crs = wrapper
+      ? QgsProcessingParameters::parameterAsCrs( wrapper->parameterDefinition(), wrapper->parameterValue(), *context )
+      : QgsProcessingUtils::variantToCrs( value, *context );
+  if ( crs.isValid() )
+  {
+    units = QgsUnitTypes::distanceToVolumeUnit( crs.mapUnits() );
+  }
+
+  setUnits( units );
+}
+
+void QgsProcessingVolumeWidgetWrapper::setUnits( Qgis::VolumeUnit units )
+{
+  mLabel->setText( QgsUnitTypes::toString( units ) );
+  if ( QgsUnitTypes::unitType( units ) != Qgis::DistanceUnitType::Standard )
+  {
+    mUnitsCombo->hide();
+    mLabel->show();
+  }
+  else
+  {
+    mUnitsCombo->setCurrentIndex( mUnitsCombo->findData( QVariant::fromValue( units ) ) );
+    mUnitsCombo->show();
+    mLabel->hide();
+  }
+  mWarningLabel->setVisible( units == Qgis::VolumeUnit::CubicDegrees );
+  mBaseUnit = units;
+}
+
+QVariant QgsProcessingVolumeWidgetWrapper::widgetValue() const
+{
+  const QVariant val = QgsProcessingNumericWidgetWrapper::widgetValue();
+  if ( val.userType() == QMetaType::Type::Double && mUnitsCombo && mUnitsCombo->isVisible() )
+  {
+    const Qgis::VolumeUnit displayUnit = mUnitsCombo->currentData().value< Qgis::VolumeUnit >();
+    return val.toDouble() * QgsUnitTypes::fromUnitToUnitFactor( displayUnit, mBaseUnit );
+  }
+  else
+  {
+    return val;
+  }
+}
+
+QgsProcessingAbstractParameterDefinitionWidget *QgsProcessingVolumeWidgetWrapper::createParameterDefinitionWidget( QgsProcessingContext &context, const QgsProcessingParameterWidgetContext &widgetContext, const QgsProcessingParameterDefinition *definition, const QgsProcessingAlgorithm *algorithm )
+{
+  return new QgsProcessingVolumeParameterDefinitionWidget( context, widgetContext, definition, algorithm );
 }
 
 
@@ -1424,7 +2011,7 @@ QLabel *QgsProcessingDurationWidgetWrapper::createLabel()
 QVariant QgsProcessingDurationWidgetWrapper::widgetValue() const
 {
   const QVariant val = QgsProcessingNumericWidgetWrapper::widgetValue();
-  if ( val.type() == QVariant::Double && mUnitsCombo )
+  if ( val.userType() == QMetaType::Type::Double && mUnitsCombo )
   {
     Qgis::TemporalUnit displayUnit = static_cast<Qgis::TemporalUnit >( mUnitsCombo->currentData().toInt() );
     return val.toDouble() * QgsUnitTypes::fromUnitToUnitFactor( displayUnit, mBaseUnit );
@@ -2409,7 +2996,7 @@ void QgsProcessingExpressionWidgetWrapper::setParentLayerWrapperValue( const Qgs
   {
     case Qgis::ExpressionType::Qgis:
     {
-      if ( val.userType() == QMetaType::type( "QgsProcessingFeatureSourceDefinition" ) )
+      if ( val.userType() == qMetaTypeId<QgsProcessingFeatureSourceDefinition>() )
       {
         // input is a QgsProcessingFeatureSourceDefinition - get extra properties from it
         QgsProcessingFeatureSourceDefinition fromVar = qvariant_cast<QgsProcessingFeatureSourceDefinition>( val );
@@ -2485,7 +3072,7 @@ void QgsProcessingExpressionWidgetWrapper::setParentLayerWrapperValue( const Qgs
       {
         if ( mRasterCalculatorExpLineEdit )
         {
-          mRasterCalculatorExpLineEdit->setLayers( val.type() == QVariant::List ? val.toList() : QVariantList() << val );
+          mRasterCalculatorExpLineEdit->setLayers( val.userType() == QMetaType::Type::QVariantList ? val.toList() : QVariantList() << val );
         }
         return;
       }
@@ -2543,8 +3130,9 @@ QStringList QgsProcessingExpressionWidgetWrapper::compatibleParameterTypes() con
          << QgsProcessingParameterString::typeName()
          << QgsProcessingParameterNumber::typeName()
          << QgsProcessingParameterDistance::typeName()
+         << QgsProcessingParameterArea::typeName()
+         << QgsProcessingParameterVolume::typeName()
          << QgsProcessingParameterScale::typeName()
-         << QgsProcessingOutputVariant::typeName()
          << QgsProcessingParameterProviderConnection::typeName();
 }
 
@@ -2552,7 +3140,8 @@ QStringList QgsProcessingExpressionWidgetWrapper::compatibleOutputTypes() const
 {
   return QStringList()
          << QgsProcessingOutputString::typeName()
-         << QgsProcessingOutputNumber::typeName();
+         << QgsProcessingOutputNumber::typeName()
+         << QgsProcessingOutputVariant::typeName();
 }
 
 QString QgsProcessingExpressionWidgetWrapper::modelerExpressionFormatString() const
@@ -2621,7 +3210,7 @@ void QgsProcessingEnumPanelWidget::setValue( const QVariant &value )
 {
   if ( value.isValid() )
   {
-    mValue = value.type() == QVariant::List ? value.toList() : QVariantList() << value;
+    mValue = value.userType() == QMetaType::Type::QVariantList ? value.toList() : QVariantList() << value;
 
     if ( mParam->usesStaticStrings() && mValue.count() == 1 && mValue.at( 0 ).toString().isEmpty() )
       mValue.clear();
@@ -2812,7 +3401,7 @@ void QgsProcessingEnumCheckboxPanelWidget::setValue( const QVariant &value )
   {
     QVariantList selected;
     if ( value.isValid() )
-      selected = value.type() == QVariant::List ? value.toList() : QVariantList() << value;
+      selected = value.userType() == QMetaType::Type::QVariantList ? value.toList() : QVariantList() << value;
     for ( auto it = mButtons.constBegin(); it != mButtons.constEnd(); ++it )
     {
       QVariant v = mParam->usesStaticStrings() ? mParam->options().at( it.key().toInt() ) : it.key();
@@ -2822,7 +3411,7 @@ void QgsProcessingEnumCheckboxPanelWidget::setValue( const QVariant &value )
   else
   {
     QVariant v = value;
-    if ( v.type() == QVariant::List )
+    if ( v.userType() == QMetaType::Type::QVariantList )
       v = v.toList().value( 0 );
 
     v = mParam->usesStaticStrings() ? mParam->options().indexOf( v.toString() ) : v;
@@ -3164,14 +3753,14 @@ QStringList QgsProcessingLayoutWidgetWrapper::compatibleParameterTypes() const
 {
   return QStringList()
          << QgsProcessingParameterLayout::typeName()
-         << QgsProcessingOutputVariant::typeName()
          << QgsProcessingParameterString::typeName();
 }
 
 QStringList QgsProcessingLayoutWidgetWrapper::compatibleOutputTypes() const
 {
   return QStringList()
-         << QgsProcessingOutputString::typeName();
+         << QgsProcessingOutputString::typeName()
+         << QgsProcessingOutputVariant::typeName();
 }
 
 QString QgsProcessingLayoutWidgetWrapper::modelerExpressionFormatString() const
@@ -3474,6 +4063,7 @@ QgsProcessingPointPanel::QgsProcessingPointPanel( QWidget *parent )
   setLayout( l );
 
   connect( mLineEdit, &QLineEdit::textChanged, this, &QgsProcessingPointPanel::changed );
+  connect( mLineEdit, &QLineEdit::textChanged, this, &QgsProcessingPointPanel::textChanged );
   connect( mButton, &QToolButton::clicked, this, &QgsProcessingPointPanel::selectOnCanvas );
   mButton->setVisible( false );
 }
@@ -3494,6 +4084,22 @@ void QgsProcessingPointPanel::setAllowNull( bool allowNull )
   mLineEdit->setShowClearButton( allowNull );
 }
 
+void QgsProcessingPointPanel::setShowPointOnCanvas( bool show )
+{
+  if ( mShowPointOnCanvas == show )
+    return;
+
+  mShowPointOnCanvas = show;
+  if ( mShowPointOnCanvas )
+  {
+    updateRubberBand();
+  }
+  else
+  {
+    mMapPointRubberBand.reset();
+  }
+}
+
 QVariant QgsProcessingPointPanel::value() const
 {
   return mLineEdit->showClearButton() && mLineEdit->text().trimmed().isEmpty() ? QVariant() : QVariant( mLineEdit->text() );
@@ -3506,6 +4112,7 @@ void QgsProcessingPointPanel::clear()
 
 void QgsProcessingPointPanel::setValue( const QgsPointXY &point, const QgsCoordinateReferenceSystem &crs )
 {
+  mPoint = point;
   QString newText = QStringLiteral( "%1,%2" )
                     .arg( QString::number( point.x(), 'f' ),
                           QString::number( point.y(), 'f' ) );
@@ -3516,6 +4123,7 @@ void QgsProcessingPointPanel::setValue( const QgsPointXY &point, const QgsCoordi
     newText += QStringLiteral( " [%1]" ).arg( mCrs.authid() );
   }
   mLineEdit->setText( newText );
+  updateRubberBand();
 }
 
 void QgsProcessingPointPanel::selectOnCanvas()
@@ -3544,6 +4152,68 @@ void QgsProcessingPointPanel::pointPicked()
   emit toggleDialogVisibility( true );
 }
 
+void QgsProcessingPointPanel::textChanged( const QString &text )
+{
+  const thread_local QRegularExpression rx( QStringLiteral( "^\\s*\\(?\\s*(.*?)\\s*,\\s*(.*?)\\s*(?:\\[(.*)\\])?\\s*\\)?\\s*$" ) );
+
+  const QRegularExpressionMatch match = rx.match( text );
+  if ( match.hasMatch() )
+  {
+    bool xOk = false;
+    const double x = match.captured( 1 ).toDouble( &xOk );
+    bool yOk = false;
+    const double y = match.captured( 2 ).toDouble( &yOk );
+
+    if ( xOk && yOk )
+    {
+      mPoint = QgsPointXY( x, y );
+
+      const QgsCoordinateReferenceSystem pointCrs( match.captured( 3 ) );
+      if ( pointCrs.isValid() )
+      {
+        mCrs = pointCrs;
+      }
+    }
+    else
+    {
+      mPoint = QgsPointXY();
+    }
+  }
+  else
+  {
+    mPoint = QgsPointXY();
+  }
+
+  updateRubberBand();
+}
+
+void QgsProcessingPointPanel::updateRubberBand()
+{
+  if ( !mShowPointOnCanvas || !mCanvas )
+    return;
+
+  if ( mPoint.isEmpty() )
+  {
+    mMapPointRubberBand.reset();
+    return;
+  }
+
+  if ( !mMapPointRubberBand )
+  {
+    mMapPointRubberBand.reset( new QgsRubberBand( mCanvas, Qgis::GeometryType::Point ) );
+    mMapPointRubberBand->setZValue( 1000 );
+    mMapPointRubberBand->setIcon( QgsRubberBand::ICON_X );
+
+    const double scaleFactor = mCanvas->fontMetrics().xHeight() * .4;
+    mMapPointRubberBand->setWidth( scaleFactor );
+    mMapPointRubberBand->setIconSize( scaleFactor * 5 );
+
+    mMapPointRubberBand->setSecondaryStrokeColor( QColor( 255, 255, 255, 100 ) );
+    mMapPointRubberBand->setColor( QColor( 200, 0, 200 ) );
+  }
+
+  mMapPointRubberBand->setToGeometry( QgsGeometry::fromPointXY( mPoint ), mCrs );
+}
 
 
 //
@@ -3598,6 +4268,9 @@ QWidget *QgsProcessingPointWidgetWrapper::createWidget()
 
       if ( pointParam->flags() & Qgis::ProcessingParameterFlag::Optional )
         mPanel->setAllowNull( true );
+
+      if ( type() == QgsProcessingGui::Standard )
+        mPanel->setShowPointOnCanvas( true );
 
       mPanel->setToolTip( parameterDefinition()->toolTip() );
 
@@ -3656,7 +4329,7 @@ void QgsProcessingPointWidgetWrapper::setWidgetValue( const QVariant &value, Qgs
 {
   if ( mPanel )
   {
-    if ( !value.isValid() || ( value.type() == QVariant::String && value.toString().isEmpty() ) )
+    if ( !value.isValid() || ( value.userType() == QMetaType::Type::QString && value.toString().isEmpty() ) )
       mPanel->clear();
     else
     {
@@ -3688,14 +4361,14 @@ QStringList QgsProcessingPointWidgetWrapper::compatibleParameterTypes() const
 {
   return QStringList()
          << QgsProcessingParameterPoint::typeName()
-         << QgsProcessingOutputVariant::typeName()
          << QgsProcessingParameterString::typeName();
 }
 
 QStringList QgsProcessingPointWidgetWrapper::compatibleOutputTypes() const
 {
   return QStringList()
-         << QgsProcessingOutputString::typeName();
+         << QgsProcessingOutputString::typeName()
+         << QgsProcessingOutputVariant::typeName();
 }
 
 QString QgsProcessingPointWidgetWrapper::modelerExpressionFormatString() const
@@ -3805,14 +4478,14 @@ QStringList QgsProcessingGeometryWidgetWrapper::compatibleParameterTypes() const
          << QgsProcessingParameterGeometry::typeName()
          << QgsProcessingParameterString::typeName()
          << QgsProcessingParameterPoint::typeName()
-         << QgsProcessingOutputVariant::typeName()
          << QgsProcessingParameterExtent::typeName();
 }
 
 QStringList QgsProcessingGeometryWidgetWrapper::compatibleOutputTypes() const
 {
   return QStringList()
-         << QgsProcessingOutputString::typeName();
+         << QgsProcessingOutputString::typeName()
+         << QgsProcessingOutputVariant::typeName();
 }
 
 QString QgsProcessingGeometryWidgetWrapper::modelerExpressionFormatString() const
@@ -3925,8 +4598,8 @@ void QgsProcessingColorWidgetWrapper::setWidgetValue( const QVariant &value, Qgs
   if ( mColorButton )
   {
     if ( !value.isValid() ||
-         ( value.type() == QVariant::String && value.toString().isEmpty() )
-         || ( value.type() == QVariant::Color && !value.value< QColor >().isValid() ) )
+         ( value.userType() == QMetaType::Type::QString && value.toString().isEmpty() )
+         || ( value.userType() == QMetaType::Type::QColor && !value.value< QColor >().isValid() ) )
       mColorButton->setToNull();
     else
     {
@@ -3951,14 +4624,14 @@ QStringList QgsProcessingColorWidgetWrapper::compatibleParameterTypes() const
 {
   return QStringList()
          << QgsProcessingParameterColor::typeName()
-         << QgsProcessingOutputVariant::typeName()
          << QgsProcessingParameterString::typeName();
 }
 
 QStringList QgsProcessingColorWidgetWrapper::compatibleOutputTypes() const
 {
   return QStringList()
-         << QgsProcessingOutputString::typeName();
+         << QgsProcessingOutputString::typeName()
+         << QgsProcessingOutputVariant::typeName();
 }
 
 QString QgsProcessingColorWidgetWrapper::modelerExpressionFormatString() const
@@ -4201,7 +4874,7 @@ void QgsProcessingCoordinateOperationWidgetWrapper::setWidgetValue( const QVaria
   if ( mOperationWidget )
   {
     if ( !value.isValid() ||
-         ( value.type() == QVariant::String ) )
+         ( value.userType() == QMetaType::Type::QString ) )
     {
       QgsCoordinateOperationWidget::OperationDetails deets;
       deets.proj = value.toString();
@@ -4211,7 +4884,7 @@ void QgsProcessingCoordinateOperationWidgetWrapper::setWidgetValue( const QVaria
   if ( mLineEdit )
   {
     if ( !value.isValid() ||
-         ( value.type() == QVariant::String ) )
+         ( value.userType() == QMetaType::Type::QString ) )
     {
       mLineEdit->setText( value.toString() );
     }
@@ -4343,7 +5016,7 @@ void QgsProcessingFieldPanelWidget::setFields( const QgsFields &fields )
 void QgsProcessingFieldPanelWidget::setValue( const QVariant &value )
 {
   if ( value.isValid() )
-    mValue = value.type() == QVariant::List ? value.toList() : QVariantList() << value;
+    mValue = value.userType() == QMetaType::Type::QVariantList ? value.toList() : QVariantList() << value;
   else
     mValue.clear();
 
@@ -4649,7 +5322,7 @@ void QgsProcessingFieldWidgetWrapper::setParentLayerWrapperValue( const QgsAbstr
 
   QVariant value = parentWrapper->parameterValue();
 
-  if ( value.userType() == QMetaType::type( "QgsProcessingFeatureSourceDefinition" ) )
+  if ( value.userType() == qMetaTypeId<QgsProcessingFeatureSourceDefinition>() )
   {
     // input is a QgsProcessingFeatureSourceDefinition - source from it.
     // this is normally discouraged, and algorithms should NEVER do this -- but in this case we can make
@@ -4829,14 +5502,14 @@ QStringList QgsProcessingFieldWidgetWrapper::compatibleParameterTypes() const
 {
   return QStringList()
          << QgsProcessingParameterField::typeName()
-         << QgsProcessingParameterString::typeName()
-         << QgsProcessingOutputVariant::typeName();
+         << QgsProcessingParameterString::typeName();
 }
 
 QStringList QgsProcessingFieldWidgetWrapper::compatibleOutputTypes() const
 {
   return QStringList()
-         << QgsProcessingOutputString::typeName();
+         << QgsProcessingOutputString::typeName()
+         << QgsProcessingOutputVariant::typeName();
 }
 
 QString QgsProcessingFieldWidgetWrapper::modelerExpressionFormatString() const
@@ -4870,22 +5543,22 @@ QgsFields QgsProcessingFieldWidgetWrapper::filterFields( const QgsFields &fields
         break;
 
       case Qgis::ProcessingFieldParameterDataType::String:
-        if ( f.type() == QVariant::String )
+        if ( f.type() == QMetaType::Type::QString )
           res.append( f );
         break;
 
       case Qgis::ProcessingFieldParameterDataType::DateTime:
-        if ( f.type() == QVariant::Date || f.type() == QVariant::Time || f.type() == QVariant::DateTime )
+        if ( f.type() == QMetaType::Type::QDate || f.type() == QMetaType::Type::QTime || f.type() == QMetaType::Type::QDateTime )
           res.append( f );
         break;
 
       case Qgis::ProcessingFieldParameterDataType::Binary:
-        if ( f.type() == QVariant::ByteArray )
+        if ( f.type() == QMetaType::Type::QByteArray )
           res.append( f );
         break;
 
       case Qgis::ProcessingFieldParameterDataType::Boolean:
-        if ( f.type() == QVariant::Bool )
+        if ( f.type() == QMetaType::Type::Bool )
           res.append( f );
         break;
     }
@@ -5035,14 +5708,14 @@ QStringList QgsProcessingMapThemeWidgetWrapper::compatibleParameterTypes() const
 {
   return QStringList()
          << QgsProcessingParameterString::typeName()
-         << QgsProcessingOutputVariant::typeName()
          << QgsProcessingParameterExpression::typeName();
 }
 
 QStringList QgsProcessingMapThemeWidgetWrapper::compatibleOutputTypes() const
 {
   return QStringList()
-         << QgsProcessingOutputString::typeName();
+         << QgsProcessingOutputString::typeName()
+         << QgsProcessingOutputVariant::typeName();
 }
 
 QString QgsProcessingMapThemeWidgetWrapper::modelerExpressionFormatString() const
@@ -5373,14 +6046,14 @@ QStringList QgsProcessingProviderConnectionWidgetWrapper::compatibleParameterTyp
   return QStringList()
          << QgsProcessingParameterProviderConnection::typeName()
          << QgsProcessingParameterString::typeName()
-         << QgsProcessingOutputVariant::typeName()
          << QgsProcessingParameterExpression::typeName();
 }
 
 QStringList QgsProcessingProviderConnectionWidgetWrapper::compatibleOutputTypes() const
 {
   return QStringList()
-         << QgsProcessingOutputString::typeName();
+         << QgsProcessingOutputString::typeName()
+         << QgsProcessingOutputVariant::typeName();
 }
 
 QString QgsProcessingProviderConnectionWidgetWrapper::modelerExpressionFormatString() const
@@ -5579,16 +6252,16 @@ QVariant QgsProcessingDatabaseSchemaWidgetWrapper::widgetValue() const
 QStringList QgsProcessingDatabaseSchemaWidgetWrapper::compatibleParameterTypes() const
 {
   return QStringList()
-         << QgsProcessingParameterProviderConnection::typeName()
+         << QgsProcessingParameterDatabaseSchema::typeName()
          << QgsProcessingParameterString::typeName()
-         << QgsProcessingOutputVariant::typeName()
          << QgsProcessingParameterExpression::typeName();
 }
 
 QStringList QgsProcessingDatabaseSchemaWidgetWrapper::compatibleOutputTypes() const
 {
   return QStringList()
-         << QgsProcessingOutputString::typeName();
+         << QgsProcessingOutputString::typeName()
+         << QgsProcessingOutputVariant::typeName();
 }
 
 QString QgsProcessingDatabaseSchemaWidgetWrapper::modelerExpressionFormatString() const
@@ -5863,7 +6536,7 @@ QVariant QgsProcessingDatabaseTableWidgetWrapper::widgetValue() const
 QStringList QgsProcessingDatabaseTableWidgetWrapper::compatibleParameterTypes() const
 {
   return QStringList()
-         << QgsProcessingParameterProviderConnection::typeName()
+         << QgsProcessingParameterDatabaseTable::typeName()
          << QgsProcessingParameterString::typeName()
          << QgsProcessingParameterExpression::typeName();
 }
@@ -6044,7 +6717,7 @@ void QgsProcessingExtentWidgetWrapper::setWidgetValue( const QVariant &value, Qg
 {
   if ( mExtentWidget )
   {
-    if ( !value.isValid() || ( value.type() == QVariant::String && value.toString().isEmpty() ) )
+    if ( !value.isValid() || ( value.userType() == QMetaType::Type::QString && value.toString().isEmpty() ) )
       mExtentWidget->clear();
     else
     {
@@ -6079,7 +6752,6 @@ QStringList QgsProcessingExtentWidgetWrapper::compatibleParameterTypes() const
   return QStringList()
          << QgsProcessingParameterExtent::typeName()
          << QgsProcessingParameterString::typeName()
-         << QgsProcessingOutputVariant::typeName()
          << QgsProcessingParameterMapLayer::typeName()
          << QgsProcessingParameterFeatureSource::typeName()
          << QgsProcessingParameterRasterLayer::typeName()
@@ -6095,7 +6767,8 @@ QStringList QgsProcessingExtentWidgetWrapper::compatibleOutputTypes() const
          << QgsProcessingOutputString::typeName()
          << QgsProcessingOutputRasterLayer::typeName()
          << QgsProcessingOutputVectorLayer::typeName()
-         << QgsProcessingOutputMapLayer::typeName();
+         << QgsProcessingOutputMapLayer::typeName()
+         << QgsProcessingOutputVariant::typeName();
 }
 
 QString QgsProcessingExtentWidgetWrapper::modelerExpressionFormatString() const
@@ -6239,7 +6912,6 @@ QStringList QgsProcessingMapLayerWidgetWrapper::compatibleParameterTypes() const
          << QgsProcessingParameterPointCloudLayer::typeName()
          << QgsProcessingParameterAnnotationLayer::typeName()
          << QgsProcessingParameterString::typeName()
-         << QgsProcessingOutputVariant::typeName()
          << QgsProcessingParameterExpression::typeName();
 }
 
@@ -6250,7 +6922,8 @@ QStringList QgsProcessingMapLayerWidgetWrapper::compatibleOutputTypes() const
          << QgsProcessingOutputRasterLayer::typeName()
          << QgsProcessingOutputVectorLayer::typeName()
          << QgsProcessingOutputMapLayer::typeName()
-         << QgsProcessingOutputFile::typeName();
+         << QgsProcessingOutputFile::typeName()
+         << QgsProcessingOutputVariant::typeName();
 }
 
 QString QgsProcessingMapLayerWidgetWrapper::modelerExpressionFormatString() const
@@ -6639,7 +7312,7 @@ void QgsProcessingRasterBandPanelWidget::setBandNames( const QHash<int, QString>
 void QgsProcessingRasterBandPanelWidget::setValue( const QVariant &value )
 {
   if ( value.isValid() )
-    mValue = value.type() == QVariant::List ? value.toList() : QVariantList() << value;
+    mValue = value.userType() == QMetaType::Type::QVariantList ? value.toList() : QVariantList() << value;
   else
     mValue.clear();
 
@@ -7010,14 +7683,14 @@ QStringList QgsProcessingBandWidgetWrapper::compatibleParameterTypes() const
 {
   return QStringList()
          << QgsProcessingParameterBand::typeName()
-         << QgsProcessingOutputVariant::typeName()
          << QgsProcessingParameterNumber::typeName();
 }
 
 QStringList QgsProcessingBandWidgetWrapper::compatibleOutputTypes() const
 {
   return QStringList()
-         << QgsProcessingOutputNumber::typeName();
+         << QgsProcessingOutputNumber::typeName()
+         << QgsProcessingOutputVariant::typeName();
 }
 
 QString QgsProcessingBandWidgetWrapper::modelerExpressionFormatString() const
@@ -7040,7 +7713,54 @@ QgsProcessingAbstractParameterDefinitionWidget *QgsProcessingBandWidgetWrapper::
   return new QgsProcessingBandParameterDefinitionWidget( context, widgetContext, definition, algorithm );
 }
 
+//
+// QgsProcessingMultipleLayerLineEdit
+//
 
+QgsProcessingMultipleLayerLineEdit::QgsProcessingMultipleLayerLineEdit( QWidget *parent, const QgsProcessingParameterMultipleLayers *param )
+  : QgsHighlightableLineEdit( parent )
+  , mParam( param )
+{
+  setAcceptDrops( true );
+}
+
+void QgsProcessingMultipleLayerLineEdit::dragEnterEvent( QDragEnterEvent *event )
+{
+  const QStringList uris = QgsProcessingMultipleInputPanelWidget::compatibleUrisFromMimeData( mParam, event->mimeData(), {} );
+  if ( !uris.isEmpty() )
+  {
+    event->setDropAction( Qt::CopyAction );
+    event->accept();
+    setHighlighted( true );
+  }
+  else
+  {
+    event->ignore();
+  }
+}
+
+void QgsProcessingMultipleLayerLineEdit::dragLeaveEvent( QDragLeaveEvent *event )
+{
+  QgsHighlightableLineEdit::dragLeaveEvent( event );
+  event->accept();
+  setHighlighted( false );
+}
+
+void QgsProcessingMultipleLayerLineEdit::dropEvent( QDropEvent *event )
+{
+  const QStringList uris = QgsProcessingMultipleInputPanelWidget::compatibleUrisFromMimeData( mParam, event->mimeData(), {} );
+  if ( !uris.isEmpty() )
+  {
+    event->acceptProposedAction();
+    QVariantList uriList;
+    uriList.reserve( uris.size() );
+    for ( const QString &uri : uris )
+      uriList.append( QVariant( uri ) );
+    emit layersDropped( uriList );
+  }
+
+  setHighlighted( false );
+}
 
 //
 // QgsProcessingMultipleLayerPanelWidget
@@ -7053,9 +7773,12 @@ QgsProcessingMultipleLayerPanelWidget::QgsProcessingMultipleLayerPanelWidget( QW
   QHBoxLayout *hl = new QHBoxLayout();
   hl->setContentsMargins( 0, 0, 0, 0 );
 
-  mLineEdit = new QLineEdit();
-  mLineEdit->setEnabled( false );
+  mLineEdit = new QgsProcessingMultipleLayerLineEdit( nullptr, param );
+  mLineEdit->setEnabled( true );
+  mLineEdit->setReadOnly( true );
+
   hl->addWidget( mLineEdit, 1 );
+  connect( mLineEdit, &QgsProcessingMultipleLayerLineEdit::layersDropped, this, &QgsProcessingMultipleLayerPanelWidget::setValue );
 
   mToolButton = new QToolButton();
   mToolButton->setText( QString( QChar( 0x2026 ) ) );
@@ -7074,7 +7797,7 @@ QgsProcessingMultipleLayerPanelWidget::QgsProcessingMultipleLayerPanelWidget( QW
 void QgsProcessingMultipleLayerPanelWidget::setValue( const QVariant &value )
 {
   if ( value.isValid() )
-    mValue = value.type() == QVariant::List ? value.toList() : QVariantList() << value;
+    mValue = value.userType() == QMetaType::Type::QVariantList ? value.toList() : QVariantList() << value;
   else
     mValue.clear();
 
@@ -7380,7 +8103,7 @@ void QgsProcessingMultipleLayerWidgetWrapper::setWidgetValue( const QVariant &va
 
     for ( const QVariant &v : value.toList() )
     {
-      if ( v.userType() == QMetaType::type( "QgsProcessingModelChildParameterSource" ) )
+      if ( v.userType() == qMetaTypeId<QgsProcessingModelChildParameterSource>() )
       {
         const QgsProcessingModelChildParameterSource source = v.value< QgsProcessingModelChildParameterSource >();
         opts << QVariant::fromValue( source );
@@ -7410,7 +8133,6 @@ QStringList QgsProcessingMultipleLayerWidgetWrapper::compatibleParameterTypes() 
          << QgsProcessingParameterFeatureSource::typeName()
          << QgsProcessingParameterRasterLayer::typeName()
          << QgsProcessingParameterFile::typeName()
-         << QgsProcessingOutputVariant::typeName()
          << QgsProcessingParameterString::typeName();
 }
 
@@ -7422,7 +8144,8 @@ QStringList QgsProcessingMultipleLayerWidgetWrapper::compatibleOutputTypes() con
          << QgsProcessingOutputVectorLayer::typeName()
          << QgsProcessingOutputMultipleLayers::typeName()
          << QgsProcessingOutputFile::typeName()
-         << QgsProcessingOutputString::typeName();
+         << QgsProcessingOutputString::typeName()
+         << QgsProcessingOutputVariant::typeName();
 }
 
 QString QgsProcessingMultipleLayerWidgetWrapper::modelerExpressionFormatString() const
@@ -7517,7 +8240,6 @@ QStringList QgsProcessingAnnotationLayerWidgetWrapper::compatibleParameterTypes(
          << QgsProcessingParameterAnnotationLayer::typeName()
          << QgsProcessingParameterMapLayer::typeName()
          << QgsProcessingParameterString::typeName()
-         << QgsProcessingOutputVariant::typeName()
          << QgsProcessingParameterExpression::typeName();
 }
 
@@ -7525,7 +8247,8 @@ QStringList QgsProcessingAnnotationLayerWidgetWrapper::compatibleOutputTypes() c
 {
   return QStringList()
          << QgsProcessingOutputString::typeName()
-         << QgsProcessingOutputMapLayer::typeName();
+         << QgsProcessingOutputMapLayer::typeName()
+         << QgsProcessingOutputVariant::typeName();
 }
 
 QString QgsProcessingAnnotationLayerWidgetWrapper::modelerExpressionFormatString() const
@@ -7609,7 +8332,7 @@ void QgsProcessingAnnotationLayerWidgetWrapper::setWidgetValue( const QVariant &
     }
 
     QVariant val = value;
-    if ( val.userType() == QMetaType::type( "QgsProperty" ) )
+    if ( val.userType() == qMetaTypeId<QgsProperty>() )
     {
       if ( val.value< QgsProperty >().propertyType() == Qgis::PropertyType::Static )
       {
@@ -7622,7 +8345,7 @@ void QgsProcessingAnnotationLayerWidgetWrapper::setWidgetValue( const QVariant &
     }
 
     QgsMapLayer *layer = qobject_cast< QgsMapLayer * >( val.value< QObject * >() );
-    if ( !layer && val.type() == QVariant::String )
+    if ( !layer && val.userType() == QMetaType::Type::QString )
     {
       layer = QgsProcessingUtils::mapLayerFromString( val.toString(), context, false, QgsProcessingUtils::LayerHint::Annotation );
     }
@@ -7679,7 +8402,7 @@ void QgsProcessingPointCloudAttributePanelWidget::setAttributes( const QgsPointC
 void QgsProcessingPointCloudAttributePanelWidget::setValue( const QVariant &value )
 {
   if ( value.isValid() )
-    mValue = value.type() == QVariant::List ? value.toList() : QVariantList() << value;
+    mValue = value.userType() == QMetaType::Type::QVariantList ? value.toList() : QVariantList() << value;
   else
     mValue.clear();
 
@@ -8168,7 +8891,6 @@ QStringList QgsProcessingOutputWidgetWrapper::compatibleParameterTypes() const
          << QgsProcessingParameterVectorLayer::typeName()
          << QgsProcessingParameterMapLayer::typeName()
          << QgsProcessingParameterString::typeName()
-         << QgsProcessingOutputVariant::typeName()
          << QgsProcessingParameterExpression::typeName();
 }
 
@@ -8177,7 +8899,8 @@ QStringList QgsProcessingOutputWidgetWrapper::compatibleOutputTypes() const
   return QStringList()
          << QgsProcessingOutputString::typeName()
          << QgsProcessingOutputFolder::typeName()
-         << QgsProcessingOutputFile::typeName();
+         << QgsProcessingOutputFile::typeName()
+         << QgsProcessingOutputVariant::typeName();
 }
 
 //
@@ -8300,6 +9023,23 @@ QgsAbstractProcessingParameterWidgetWrapper *QgsProcessingFileDestinationWidgetW
   return new QgsProcessingFileDestinationWidgetWrapper( parameter, type );
 }
 
+QStringList QgsProcessingFileDestinationWidgetWrapper::compatibleParameterTypes() const
+{
+  return QStringList()
+         << QgsProcessingParameterString::typeName()
+         << QgsProcessingParameterFile::typeName();
+}
+
+QStringList QgsProcessingFileDestinationWidgetWrapper::compatibleOutputTypes() const
+{
+  return QStringList() << QgsProcessingOutputFile::typeName()
+         << QgsProcessingOutputString::typeName()
+         << QgsProcessingOutputVariant::typeName()
+         << QgsProcessingOutputRasterLayer::typeName()
+         << QgsProcessingOutputVectorLayer::typeName()
+         << QgsProcessingOutputMapLayer::typeName();
+}
+
 QString QgsProcessingFileDestinationWidgetWrapper::modelerExpressionFormatString() const
 {
   return tr( "path to file destination" );
@@ -8323,6 +9063,21 @@ QString QgsProcessingFolderDestinationWidgetWrapper::parameterType() const
 QgsAbstractProcessingParameterWidgetWrapper *QgsProcessingFolderDestinationWidgetWrapper::createWidgetWrapper( const QgsProcessingParameterDefinition *parameter, QgsProcessingGui::WidgetType type )
 {
   return new QgsProcessingFolderDestinationWidgetWrapper( parameter, type );
+}
+
+QStringList QgsProcessingFolderDestinationWidgetWrapper::compatibleParameterTypes() const
+{
+  return QStringList()
+         << QgsProcessingParameterString::typeName()
+         << QgsProcessingParameterFile::typeName();
+}
+
+QStringList QgsProcessingFolderDestinationWidgetWrapper::compatibleOutputTypes() const
+{
+  return QStringList() << QgsProcessingOutputFile::typeName()
+         << QgsProcessingOutputFolder::typeName()
+         << QgsProcessingOutputString::typeName()
+         << QgsProcessingOutputVariant::typeName();
 }
 
 QString QgsProcessingFolderDestinationWidgetWrapper::modelerExpressionFormatString() const

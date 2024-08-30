@@ -29,12 +29,10 @@
 #include "qgscoordinatetransform.h"
 #include "qgsellipsoidutils.h"
 #include "qgsunittypes.h"
-
-Q_GUI_EXPORT extern int qt_defaultDpiX();
-
+#include "qgspainting.h"
 
 QgsMapSettings::QgsMapSettings()
-  : mDpi( qt_defaultDpiX() ) // DPI that will be used by default for QImage instances
+  : mDpi( QgsPainting::qtDefaultDpiX() ) // DPI that will be used by default for QImage instances
   , mSize( QSize( 0, 0 ) )
   , mBackgroundColor( Qt::white )
   , mSelectionColor( Qt::yellow )
@@ -42,7 +40,7 @@ QgsMapSettings::QgsMapSettings()
   , mSegmentationTolerance( M_PI_2 / 90 )
 {
   mScaleCalculator.setMapUnits( Qgis::DistanceUnit::Unknown );
-  mSimplifyMethod.setSimplifyHints( QgsVectorSimplifyMethod::NoSimplification );
+  mSimplifyMethod.setSimplifyHints( Qgis::VectorRenderingSimplificationFlag::NoSimplification );
 
   updateDerived();
 }
@@ -834,6 +832,11 @@ void QgsMapSettings::setClippingRegions( const QList<QgsMapClippingRegion> &regi
 QList<QgsMapClippingRegion> QgsMapSettings::clippingRegions() const
 {
   return mClippingRegions;
+}
+
+void QgsMapSettings::setMaskSettings( const QgsMaskRenderSettings &settings )
+{
+  mMaskRenderSettings = settings;
 }
 
 void QgsMapSettings::addRenderedFeatureHandler( QgsRenderedFeatureHandlerInterface *handler )

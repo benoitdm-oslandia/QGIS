@@ -40,7 +40,7 @@ QVariant QgsGeometryWidgetWrapper::value() const
 
   const QgsReferencedGeometry geomValue = mWidget->geometryValue();
   if ( geomValue.isNull() )
-    return QVariant( QVariant::UserType );
+    return QgsVariantUtils::createNullVariant( QMetaType::Type::User );
 
   return QVariant::fromValue( geomValue );
 }
@@ -78,11 +78,11 @@ void QgsGeometryWidgetWrapper::updateValues( const QVariant &value, const QVaria
   QgsReferencedGeometry geom;
   if ( !QgsVariantUtils::isNull( value ) )
   {
-    if ( value.userType() == QMetaType::type( "QgsReferencedGeometry" ) )
+    if ( value.userType() == qMetaTypeId<QgsReferencedGeometry>() )
     {
       geom = value.value< QgsReferencedGeometry >();
     }
-    else if ( value.userType() == QMetaType::type( "QgsGeometry" ) )
+    else if ( value.userType() == qMetaTypeId< QgsGeometry>() )
     {
       geom = QgsReferencedGeometry( value.value< QgsGeometry >(), QgsCoordinateReferenceSystem() );
     }

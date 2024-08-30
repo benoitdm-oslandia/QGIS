@@ -55,6 +55,7 @@ class QgsSymbolLayerId;
 /**
  * \ingroup core
  * \class QgsSymbolLayerUtils
+ * \brief Contains utility functions for working with symbols and symbol layers.
  */
 class CORE_EXPORT QgsSymbolLayerUtils
 {
@@ -743,6 +744,15 @@ class CORE_EXPORT QgsSymbolLayerUtils
      */
     static QString svgSymbolPathToName( const QString &path, const QgsPathResolver &pathResolver );
 
+    /**
+     * Converts a \a geometry to a set of QPolygonF objects representing
+     * how the geometry should be drawn for a symbol of the given \a type,
+     * as a list of geometry parts and rings.
+     *
+     * \since QGIS 3.40
+     */
+    static QList< QList< QPolygonF > > toQPolygonF( const QgsGeometry &geometry, Qgis::SymbolType type );
+
     //! Calculate the centroid point of a QPolygonF
     static QPointF polygonCentroid( const QPolygonF &points );
 
@@ -928,6 +938,18 @@ class CORE_EXPORT QgsSymbolLayerUtils
      * \since QGIS 3.30
      */
     static void resetSymbolLayerIds( QgsSymbolLayer *symbolLayer );
+
+    /**
+     * Returns a list of the symbol layer clip geometries to be used for the symbol layer with the specified
+     * ID.
+     *
+     * The \a bounds argument specifies the target bounds (in painter coordinates) for matching geometries. Only mask
+     * geometries which intersect \a bounds will be returned. If \a bounds is a null QRectF then all clip geometries
+     * for the symbol layer will be returned.
+     *
+     * \since QGIS 3.38
+     */
+    static QVector< QgsGeometry > collectSymbolLayerClipGeometries( const QgsRenderContext &context, const QString &symbolLayerId, const QRectF &bounds );
 
     ///@cond PRIVATE
 #ifndef SIP_RUN

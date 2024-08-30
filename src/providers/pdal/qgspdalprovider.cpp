@@ -21,7 +21,7 @@
 #include "qgsapplication.h"
 #include "qgslogger.h"
 #include "qgsjsonutils.h"
-#include "json.hpp"
+#include <nlohmann/json.hpp>
 #include "qgspdalindexingtask.h"
 #include "qgseptpointcloudindex.h"
 #include "qgstaskmanager.h"
@@ -46,7 +46,7 @@ QQueue<QgsPdalProvider *> QgsPdalProvider::sIndexingQueue;
 QgsPdalProvider::QgsPdalProvider(
   const QString &uri,
   const QgsDataProvider::ProviderOptions &options,
-  QgsDataProvider::ReadFlags flags )
+  Qgis::DataProviderReadFlags flags )
   : QgsPointCloudDataProvider( uri, options, flags )
   , mIndex( nullptr )
 {
@@ -358,7 +358,7 @@ QIcon QgsPdalProviderMetadata::icon() const
   return QgsApplication::getThemeIcon( QStringLiteral( "mIconPointCloudLayer.svg" ) );
 }
 
-QgsPdalProvider *QgsPdalProviderMetadata::createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, QgsDataProvider::ReadFlags flags )
+QgsPdalProvider *QgsPdalProviderMetadata::createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, Qgis::DataProviderReadFlags flags )
 {
   return new QgsPdalProvider( uri, options, flags );
 }

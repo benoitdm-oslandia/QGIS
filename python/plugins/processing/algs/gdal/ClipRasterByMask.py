@@ -121,9 +121,7 @@ class ClipRasterByMask(GdalAlgorithm):
                                                      defaultValue='',
                                                      optional=True)
         options_param.setFlags(options_param.flags() | QgsProcessingParameterDefinition.Flag.FlagAdvanced)
-        options_param.setMetadata({
-            'widget_wrapper': {
-                'class': 'processing.algs.gdal.ui.RasterOptionsWidget.RasterOptionsWidgetWrapper'}})
+        options_param.setMetadata({'widget_wrapper': {'widget_type': 'rasteroptions'}})
         self.addParameter(options_param)
 
         dataType_param = QgsProcessingParameterEnum(self.DATA_TYPE,
@@ -166,8 +164,9 @@ class ClipRasterByMask(GdalAlgorithm):
         inLayer = self.parameterAsRasterLayer(parameters, self.INPUT, context)
         if inLayer is None:
             raise QgsProcessingException(self.invalidRasterError(parameters, self.INPUT))
+        input_details = GdalUtils.gdal_connection_details_from_layer(inLayer)
 
-        maskLayer, maskLayerName = self.getOgrCompatibleSource(self.MASK, parameters, context, feedback, executing)
+        mask_details = self.getOgrCompatibleSource(self.MASK, parameters, context, feedback, executing)
 
         sourceCrs = self.parameterAsCrs(parameters, self.SOURCE_CRS, context)
         targetCrs = self.parameterAsCrs(parameters, self.TARGET_CRS, context)
@@ -237,9 +236,9 @@ class ClipRasterByMask(GdalAlgorithm):
             arguments.append('-tap')
 
         arguments.append('-cutline')
-        arguments.append(maskLayer)
+        arguments.append(mask_details.connection_string)
         arguments.append('-cl')
-        arguments.append(maskLayerName)
+        arguments.append(mask_details.layer_name)
 
         if self.parameterAsBoolean(parameters, self.CROP_TO_CUTLINE, context):
             arguments.append('-crop_to_cutline')
@@ -260,7 +259,13 @@ class ClipRasterByMask(GdalAlgorithm):
             extra = self.parameterAsString(parameters, self.EXTRA, context)
             arguments.append(extra)
 
-        arguments.append(inLayer.source())
+        arguments.append(input_details.connection_string)
         arguments.append(out)
+
+        if input_details.open_options:
+            arguments.extend(input_details.open_options_as_arguments())
+
+        if input_details.credential_options:
+            arguments.extend(input_details.credential_options_as_arguments())
 
         return [self.commandName(), GdalUtils.escapeAndJoin(arguments)]

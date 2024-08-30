@@ -23,13 +23,14 @@
 #include "qgsbrowsertreeview.h"
 #include "qgsguiutils.h"
 #include "qgsvectorlayer.h"
+#include "qgsdataitemguiproviderutils.h"
 
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QMessageBox>
 
 
-void QgsArcGisRestDataItemGuiProvider::populateContextMenu( QgsDataItem *item, QMenu *menu, const QList<QgsDataItem *> &, QgsDataItemGuiContext context )
+void QgsArcGisRestDataItemGuiProvider::populateContextMenu( QgsDataItem *item, QMenu *menu, const QList<QgsDataItem *> &selection, QgsDataItemGuiContext context )
 {
   if ( QgsArcGisRestRootItem *rootItem = qobject_cast< QgsArcGisRestRootItem * >( item ) )
   {
@@ -57,8 +58,19 @@ void QgsArcGisRestDataItemGuiProvider::populateContextMenu( QgsDataItem *item, Q
     connect( actionEdit, &QAction::triggered, this, [connectionItem] { editConnection( connectionItem ); } );
     menu->addAction( actionEdit );
 
-    QAction *actionDelete = new QAction( tr( "Remove Connection…" ), menu );
-    connect( actionDelete, &QAction::triggered, this, [connectionItem] { deleteConnection( connectionItem ); } );
+    QAction *actionDuplicate = new QAction( tr( "Duplicate Connection" ), menu );
+    connect( actionDuplicate, &QAction::triggered, this, [connectionItem] { duplicateConnection( connectionItem ); } );
+    menu->addAction( actionDuplicate );
+
+    const QList< QgsArcGisRestConnectionItem * > arcgisConnectionItems = QgsDataItem::filteredItems<QgsArcGisRestConnectionItem>( selection );
+    QAction *actionDelete = new QAction( arcgisConnectionItems.size() > 1 ? tr( "Remove Connections…" ) : tr( "Remove Connection…" ), menu );
+    connect( actionDelete, &QAction::triggered, this, [arcgisConnectionItems, context]
+    {
+      QgsDataItemGuiProviderUtils::deleteConnections( arcgisConnectionItems, []( const QString & connectionName )
+      {
+        QgsArcGisConnectionSettings::sTreeConnectionArcgis->deleteItem( connectionName );
+      }, context );
+    } );
     menu->addAction( actionDelete );
 
     QAction *viewInfo = new QAction( tr( "View Service Info" ), menu );
@@ -162,16 +174,25 @@ void QgsArcGisRestDataItemGuiProvider::editConnection( QgsDataItem *item )
   }
 }
 
-void QgsArcGisRestDataItemGuiProvider::deleteConnection( QgsDataItem *item )
+void QgsArcGisRestDataItemGuiProvider::duplicateConnection( QgsDataItem *item )
 {
-  if ( QMessageBox::question( nullptr, QObject::tr( "Remove Connection" ),
-                              QObject::tr( "Are you sure you want to remove the connection to %1?" ).arg( item->name() ),
-                              QMessageBox::Yes | QMessageBox::No, QMessageBox::No ) != QMessageBox::Yes )
-    return;
+  const QString connectionName = item->name();
+  const QStringList connections = QgsArcGisConnectionSettings::sTreeConnectionArcgis->items();
 
-  QgsArcGisConnectionSettings::sTreeConnectionArcgis->deleteItem( item->name() );
+  const QString newConnectionName = QgsDataItemGuiProviderUtils::uniqueName( connectionName, connections );
 
-  // the parent should be updated
+  QgsArcGisConnectionSettings::settingsUrl->setValue( QgsArcGisConnectionSettings::settingsUrl->value( connectionName ), newConnectionName );
+
+  QgsArcGisConnectionSettings::settingsContentEndpoint->setValue( QgsArcGisConnectionSettings::settingsContentEndpoint->value( connectionName ), newConnectionName );
+  QgsArcGisConnectionSettings::settingsCommunityEndpoint->setValue( QgsArcGisConnectionSettings::settingsCommunityEndpoint->value( connectionName ), newConnectionName );
+
+  QgsArcGisConnectionSettings::settingsUsername->setValue( QgsArcGisConnectionSettings::settingsUsername->value( connectionName ), newConnectionName );
+  QgsArcGisConnectionSettings::settingsPassword->setValue( QgsArcGisConnectionSettings::settingsPassword->value( connectionName ), newConnectionName );
+  QgsArcGisConnectionSettings::settingsAuthcfg->setValue( QgsArcGisConnectionSettings::settingsAuthcfg->value( connectionName ), newConnectionName );
+
+  QgsArcGisConnectionSettings::settingsHeaders->setValue( QgsArcGisConnectionSettings::settingsHeaders->value( connectionName ), newConnectionName );
+  QgsArcGisConnectionSettings::settingsUrlPrefix->setValue( QgsArcGisConnectionSettings::settingsUrlPrefix->value( connectionName ), newConnectionName );
+
   if ( item->parent() )
     item->parent()->refreshConnections();
 }

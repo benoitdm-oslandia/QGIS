@@ -103,6 +103,8 @@
 #include "qgsannotationlayer.h"
 #include "qgsprocessingparameteralignrasterlayers.h"
 #include "qgsprocessingalignrasterlayerswidgetwrapper.h"
+#include "qgsprocessingrasteroptionswidgetwrapper.h"
+#include "qgsrasterformatsaveoptionswidget.h"
 
 
 class TestParamType : public QgsProcessingParameterDefinition
@@ -261,6 +263,8 @@ class TestProcessingGui : public QObject
     void testNumericWrapperDouble();
     void testNumericWrapperInt();
     void testDistanceWrapper();
+    void testAreaWrapper();
+    void testVolumeWrapper();
     void testDurationWrapper();
     void testScaleWrapper();
     void testRangeWrapper();
@@ -319,6 +323,7 @@ class TestProcessingGui : public QObject
     void testTinInputLayerWrapper();
     void testDxfLayersWrapper();
     void testAlignRasterLayersWrapper();
+    void testRasterOptionsWrapper();
     void testMeshDatasetWrapperLayerInProject();
     void testMeshDatasetWrapperLayerOutsideProject();
     void testModelGraphicsView();
@@ -522,6 +527,21 @@ void TestProcessingGui::testWrapperFactoryRegistry()
   wrapper = registry.createParameterWidgetWrapper( &numParam, QgsProcessingGui::Standard );
   QVERIFY( wrapper );
   QCOMPARE( wrapper->parameterDefinition()->type(), QStringLiteral( "num" ) );
+  delete wrapper;
+
+  // creating wrapper using metadata
+  TestParamType customParam( QStringLiteral( "custom" ), QStringLiteral( "custom" ) );
+  wrapper = registry.createParameterWidgetWrapper( &customParam, QgsProcessingGui::Standard );
+  QVERIFY( !wrapper );
+  customParam.setMetadata( {{
+      QStringLiteral( "widget_wrapper" ), QVariantMap(
+      {{QStringLiteral( "widget_type" ), QStringLiteral( "str" ) }}
+      )
+    }
+  } );
+  wrapper = registry.createParameterWidgetWrapper( &customParam, QgsProcessingGui::Standard );
+  QVERIFY( wrapper );
+  QCOMPARE( wrapper->parameterDefinition()->type(), QStringLiteral( "custom" ) );
   delete wrapper;
 
   // removing
@@ -2330,6 +2350,452 @@ void TestProcessingGui::testDistanceWrapper()
   QVERIFY( static_cast< QgsProcessingParameterDistance * >( def.get() )->parentParameterName().isEmpty() );
 }
 
+void TestProcessingGui::testAreaWrapper()
+{
+  QgsProcessingParameterArea param( QStringLiteral( "area" ), QStringLiteral( "area" ) );
+
+  // standard wrapper
+  QgsProcessingAreaWidgetWrapper wrapper( &param );
+
+  QgsProcessingContext context;
+  QWidget *w = wrapper.createWrappedWidget( context );
+
+  QSignalSpy spy( &wrapper, &QgsProcessingAreaWidgetWrapper::widgetValueHasChanged );
+  wrapper.setWidgetValue( 55.5, context );
+  QCOMPARE( spy.count(), 1 );
+  QCOMPARE( wrapper.widgetValue().toDouble(), 55.5 );
+  QCOMPARE( wrapper.mDoubleSpinBox->value(), 55.5 );
+  wrapper.setWidgetValue( 3.0, context );
+  QCOMPARE( spy.count(), 2 );
+  QCOMPARE( wrapper.widgetValue().toDouble(), 3.0 );
+  QCOMPARE( wrapper.mDoubleSpinBox->value(), 3.0 );
+
+  QLabel *l = wrapper.createWrappedLabel();
+  QVERIFY( l );
+  QCOMPARE( l->text(), QStringLiteral( "area" ) );
+  QCOMPARE( l->toolTip(), param.toolTip() );
+  delete l;
+
+  // check signal
+  wrapper.mDoubleSpinBox->setValue( 43.0 );
+  QCOMPARE( spy.count(), 3 );
+
+  // test unit handling
+  w->show();
+
+  QCOMPARE( wrapper.mLabel->text(), QStringLiteral( "<unknown>" ) );
+
+  // crs values
+  wrapper.setUnitParameterValue( QStringLiteral( "EPSG:3111" ) );
+  QCOMPARE( wrapper.mLabel->text(), QStringLiteral( "square meters" ) );
+  QVERIFY( !wrapper.mWarningLabel->isVisible() );
+  QVERIFY( wrapper.mUnitsCombo->isVisible() );
+  QVERIFY( !wrapper.mLabel->isVisible() );
+  QCOMPARE( wrapper.mUnitsCombo->currentData().value< Qgis::AreaUnit >(), Qgis::AreaUnit::SquareMeters );
+
+  wrapper.setUnitParameterValue( QStringLiteral( "EPSG:4326" ) );
+  QCOMPARE( wrapper.mLabel->text(), QStringLiteral( "square degrees" ) );
+  QVERIFY( wrapper.mWarningLabel->isVisible() );
+  QVERIFY( !wrapper.mUnitsCombo->isVisible() );
+  QVERIFY( wrapper.mLabel->isVisible() );
+
+  wrapper.setUnitParameterValue( QgsCoordinateReferenceSystem( QStringLiteral( "EPSG:3111" ) ) );
+  QCOMPARE( wrapper.mLabel->text(), QStringLiteral( "square meters" ) );
+  QVERIFY( !wrapper.mWarningLabel->isVisible() );
+  QVERIFY( wrapper.mUnitsCombo->isVisible() );
+  QVERIFY( !wrapper.mLabel->isVisible() );
+  QCOMPARE( wrapper.mUnitsCombo->currentData().value< Qgis::AreaUnit >(), Qgis::AreaUnit::SquareMeters );
+
+  wrapper.setUnitParameterValue( QgsCoordinateReferenceSystem( QStringLiteral( "EPSG:4326" ) ) );
+  QCOMPARE( wrapper.mLabel->text(), QStringLiteral( "square degrees" ) );
+  QVERIFY( wrapper.mWarningLabel->isVisible() );
+  QVERIFY( !wrapper.mUnitsCombo->isVisible() );
+  QVERIFY( wrapper.mLabel->isVisible() );
+
+  // layer values
+  std::unique_ptr< QgsVectorLayer > vl = std::make_unique< QgsVectorLayer >( QStringLiteral( "Polygon?crs=epsg:3111&field=pk:int" ), QStringLiteral( "vl" ), QStringLiteral( "memory" ) );
+  wrapper.setUnitParameterValue( QVariant::fromValue( vl.get() ) );
+  QCOMPARE( wrapper.mLabel->text(), QStringLiteral( "square meters" ) );
+  QVERIFY( !wrapper.mWarningLabel->isVisible() );
+  QVERIFY( wrapper.mUnitsCombo->isVisible() );
+  QVERIFY( !wrapper.mLabel->isVisible() );
+  QCOMPARE( wrapper.mUnitsCombo->currentData().value< Qgis::AreaUnit >(), Qgis::AreaUnit::SquareMeters );
+
+  std::unique_ptr< QgsVectorLayer > vl2 = std::make_unique< QgsVectorLayer >( QStringLiteral( "Polygon?crs=epsg:4326&field=pk:int" ), QStringLiteral( "vl" ), QStringLiteral( "memory" ) );
+  wrapper.setUnitParameterValue( QVariant::fromValue( vl2.get() ) );
+  QCOMPARE( wrapper.mLabel->text(), QStringLiteral( "square degrees" ) );
+  QVERIFY( wrapper.mWarningLabel->isVisible() );
+  QVERIFY( !wrapper.mUnitsCombo->isVisible() );
+  QVERIFY( wrapper.mLabel->isVisible() );
+
+  // unresolvable values
+  wrapper.setUnitParameterValue( QStringLiteral( "blah" ) );
+  QCOMPARE( wrapper.mLabel->text(), QStringLiteral( "<unknown>" ) );
+  QVERIFY( !wrapper.mWarningLabel->isVisible() );
+  QVERIFY( !wrapper.mUnitsCombo->isVisible() );
+  QVERIFY( wrapper.mLabel->isVisible() );
+
+  // resolvable text value
+  const QString id = vl->id();
+  QgsProject::instance()->addMapLayer( vl.release() );
+  context.setProject( QgsProject::instance() );
+
+  TestProcessingContextGenerator generator( context );
+  wrapper.registerProcessingContextGenerator( &generator );
+  wrapper.setUnitParameterValue( id );
+  QCOMPARE( wrapper.mLabel->text(), QStringLiteral( "square meters" ) );
+  QVERIFY( !wrapper.mWarningLabel->isVisible() );
+  QVERIFY( wrapper.mUnitsCombo->isVisible() );
+  QVERIFY( !wrapper.mLabel->isVisible() );
+  QCOMPARE( wrapper.mUnitsCombo->currentData().value< Qgis::AreaUnit >(), Qgis::AreaUnit::SquareMeters );
+
+  // using unit choice
+  wrapper.setParameterValue( 5, context );
+  QCOMPARE( wrapper.parameterValue().toDouble(), 5.0 );
+  wrapper.mUnitsCombo->setCurrentIndex( wrapper.mUnitsCombo->findData( QVariant::fromValue( Qgis::AreaUnit::Hectares ) ) );
+  QCOMPARE( wrapper.parameterValue().toDouble(), 50000.0 );
+  wrapper.setParameterValue( 2, context );
+  QCOMPARE( wrapper.parameterValue().toDouble(), 20000.0 );
+
+  wrapper.setUnitParameterValue( id );
+  QCOMPARE( wrapper.parameterValue().toDouble(), 2.0 );
+  wrapper.setParameterValue( 5, context );
+  QCOMPARE( wrapper.parameterValue().toDouble(), 5.0 );
+
+  delete w;
+
+  // with default unit
+  QgsProcessingParameterArea paramDefaultUnit( QStringLiteral( "num" ), QStringLiteral( "num" ) );
+  paramDefaultUnit.setDefaultUnit( Qgis::AreaUnit::SquareFeet );
+  QgsProcessingAreaWidgetWrapper wrapperDefaultUnit( &paramDefaultUnit, QgsProcessingGui::Standard );
+  w = wrapperDefaultUnit.createWrappedWidget( context );
+  w->show();
+  QCOMPARE( wrapperDefaultUnit.mLabel->text(), QStringLiteral( "square feet" ) );
+  delete w;
+
+  // with decimals
+  QgsProcessingParameterArea paramDecimals( QStringLiteral( "num" ), QStringLiteral( "num" ), QVariant(), QString(), true, 1, 1.02 );
+  QVariantMap metadata;
+  QVariantMap wrapperMetadata;
+  wrapperMetadata.insert( QStringLiteral( "decimals" ), 2 );
+  metadata.insert( QStringLiteral( "widget_wrapper" ), wrapperMetadata );
+  paramDecimals.setMetadata( metadata );
+  QgsProcessingAreaWidgetWrapper wrapperDecimals( &paramDecimals, QgsProcessingGui::Standard );
+  w = wrapperDecimals.createWrappedWidget( context );
+  QCOMPARE( wrapperDecimals.mDoubleSpinBox->decimals(), 2 );
+  QCOMPARE( wrapperDecimals.mDoubleSpinBox->singleStep(), 0.01 ); // single step should never be less than set number of decimals
+  delete w;
+
+  // batch wrapper
+  QgsProcessingAreaWidgetWrapper wrapperB( &param, QgsProcessingGui::Batch );
+
+  w = wrapperB.createWrappedWidget( context );
+  QSignalSpy spy2( &wrapperB, &QgsProcessingAreaWidgetWrapper::widgetValueHasChanged );
+  wrapperB.setWidgetValue( 34, context );
+  QCOMPARE( spy2.count(), 1 );
+  QCOMPARE( wrapperB.widgetValue().toDouble(), 34.0 );
+  QCOMPARE( wrapperB.mDoubleSpinBox->value(), 34.0 );
+  wrapperB.setWidgetValue( 5, context );
+  QCOMPARE( spy2.count(), 2 );
+  QCOMPARE( wrapperB.widgetValue().toDouble(), 5.0 );
+  QCOMPARE( wrapperB.mDoubleSpinBox->value(), 5.0 );
+
+  // check signal
+  static_cast< QgsDoubleSpinBox * >( w )->setValue( 29 );
+  QCOMPARE( spy2.count(), 3 );
+
+  // should be no label in batch mode
+  QVERIFY( !wrapperB.createWrappedLabel() );
+  delete w;
+
+  // modeler wrapper
+  QgsProcessingAreaWidgetWrapper wrapperM( &param, QgsProcessingGui::Modeler );
+
+  w = wrapperM.createWrappedWidget( context );
+  QSignalSpy spy3( &wrapperM, &QgsProcessingAreaWidgetWrapper::widgetValueHasChanged );
+  wrapperM.setWidgetValue( 29, context );
+  QCOMPARE( wrapperM.widgetValue().toDouble(), 29.0 );
+  QCOMPARE( spy3.count(), 1 );
+  QCOMPARE( wrapperM.mDoubleSpinBox->value(), 29.0 );
+  wrapperM.setWidgetValue( 4, context );
+  QCOMPARE( wrapperM.widgetValue().toDouble(), 4.0 );
+  QCOMPARE( spy3.count(), 2 );
+  QCOMPARE( wrapperM.mDoubleSpinBox->value(), 4.0 );
+
+  // check signal
+  wrapperM.mDoubleSpinBox->setValue( 33 );
+  QCOMPARE( spy3.count(), 3 );
+
+  // should be a label in modeler mode
+  l = wrapperM.createWrappedLabel();
+  QVERIFY( l );
+  QCOMPARE( l->text(), QStringLiteral( "area" ) );
+  QCOMPARE( l->toolTip(), param.toolTip() );
+  delete w;
+  delete l;
+
+  // config widget
+  QgsProcessingParameterWidgetContext widgetContext;
+  std::unique_ptr< QgsProcessingParameterDefinitionWidget > widget = std::make_unique< QgsProcessingParameterDefinitionWidget >( QStringLiteral( "area" ), context, widgetContext );
+  std::unique_ptr< QgsProcessingParameterDefinition > def( widget->createParameter( QStringLiteral( "param_name" ) ) );
+  QCOMPARE( def->name(), QStringLiteral( "param_name" ) );
+  QVERIFY( !( def->flags() & Qgis::ProcessingParameterFlag::Optional ) ); // should default to mandatory
+  QVERIFY( !( def->flags() & Qgis::ProcessingParameterFlag::Advanced ) );
+
+  // using a parameter definition as initial values
+  QgsProcessingParameterArea distParam( QStringLiteral( "n" ), QStringLiteral( "test desc" ), 1, QStringLiteral( "parent" ) );
+  distParam.setMinimum( 1 );
+  distParam.setMaximum( 100 );
+  widget = std::make_unique< QgsProcessingParameterDefinitionWidget >( QStringLiteral( "area" ), context, widgetContext, &distParam );
+  def.reset( widget->createParameter( QStringLiteral( "param_name" ) ) );
+  QCOMPARE( def->name(), QStringLiteral( "param_name" ) );
+  QCOMPARE( def->description(), QStringLiteral( "test desc" ) );
+  QVERIFY( !( def->flags() & Qgis::ProcessingParameterFlag::Optional ) );
+  QVERIFY( !( def->flags() & Qgis::ProcessingParameterFlag::Advanced ) );
+  QCOMPARE( static_cast< QgsProcessingParameterArea * >( def.get() )->defaultValue().toDouble(), 1.0 );
+  QCOMPARE( static_cast< QgsProcessingParameterArea * >( def.get() )->minimum(), 1.0 );
+  QCOMPARE( static_cast< QgsProcessingParameterArea * >( def.get() )->maximum(), 100.0 );
+  QCOMPARE( static_cast< QgsProcessingParameterArea * >( def.get() )->parentParameterName(), QStringLiteral( "parent" ) );
+  distParam.setFlags( Qgis::ProcessingParameterFlag::Advanced | Qgis::ProcessingParameterFlag::Optional );
+  distParam.setParentParameterName( QString() );
+  distParam.setMinimum( 10 );
+  distParam.setMaximum( 12 );
+  distParam.setDefaultValue( 11.5 );
+  widget = std::make_unique< QgsProcessingParameterDefinitionWidget >( QStringLiteral( "area" ), context, widgetContext, &distParam );
+  def.reset( widget->createParameter( QStringLiteral( "param_name" ) ) );
+  QCOMPARE( def->name(), QStringLiteral( "param_name" ) );
+  QCOMPARE( def->description(), QStringLiteral( "test desc" ) );
+  QVERIFY( def->flags() & Qgis::ProcessingParameterFlag::Optional );
+  QVERIFY( def->flags() & Qgis::ProcessingParameterFlag::Advanced );
+  QCOMPARE( static_cast< QgsProcessingParameterArea * >( def.get() )->defaultValue().toDouble(), 11.5 );
+  QCOMPARE( static_cast< QgsProcessingParameterArea * >( def.get() )->minimum(), 10.0 );
+  QCOMPARE( static_cast< QgsProcessingParameterArea * >( def.get() )->maximum(), 12.0 );
+  QVERIFY( static_cast< QgsProcessingParameterArea * >( def.get() )->parentParameterName().isEmpty() );
+}
+
+void TestProcessingGui::testVolumeWrapper()
+{
+  QgsProcessingParameterVolume param( QStringLiteral( "volume" ), QStringLiteral( "volume" ) );
+
+  // standard wrapper
+  QgsProcessingVolumeWidgetWrapper wrapper( &param );
+
+  QgsProcessingContext context;
+  QWidget *w = wrapper.createWrappedWidget( context );
+
+  QSignalSpy spy( &wrapper, &QgsProcessingVolumeWidgetWrapper::widgetValueHasChanged );
+  wrapper.setWidgetValue( 55.5, context );
+  QCOMPARE( spy.count(), 1 );
+  QCOMPARE( wrapper.widgetValue().toDouble(), 55.5 );
+  QCOMPARE( wrapper.mDoubleSpinBox->value(), 55.5 );
+  wrapper.setWidgetValue( 3.0, context );
+  QCOMPARE( spy.count(), 2 );
+  QCOMPARE( wrapper.widgetValue().toDouble(), 3.0 );
+  QCOMPARE( wrapper.mDoubleSpinBox->value(), 3.0 );
+
+  QLabel *l = wrapper.createWrappedLabel();
+  QVERIFY( l );
+  QCOMPARE( l->text(), QStringLiteral( "volume" ) );
+  QCOMPARE( l->toolTip(), param.toolTip() );
+  delete l;
+
+  // check signal
+  wrapper.mDoubleSpinBox->setValue( 43.0 );
+  QCOMPARE( spy.count(), 3 );
+
+  // test unit handling
+  w->show();
+
+  QCOMPARE( wrapper.mLabel->text(), QStringLiteral( "<unknown>" ) );
+
+  // crs values
+  wrapper.setUnitParameterValue( QStringLiteral( "EPSG:3111" ) );
+  QCOMPARE( wrapper.mLabel->text(), QStringLiteral( "cubic meters" ) );
+  QVERIFY( !wrapper.mWarningLabel->isVisible() );
+  QVERIFY( wrapper.mUnitsCombo->isVisible() );
+  QVERIFY( !wrapper.mLabel->isVisible() );
+  QCOMPARE( wrapper.mUnitsCombo->currentData().value< Qgis::VolumeUnit >(), Qgis::VolumeUnit::CubicMeters );
+
+  wrapper.setUnitParameterValue( QStringLiteral( "EPSG:4326" ) );
+  QCOMPARE( wrapper.mLabel->text(), QStringLiteral( "cubic degrees" ) );
+  QVERIFY( wrapper.mWarningLabel->isVisible() );
+  QVERIFY( !wrapper.mUnitsCombo->isVisible() );
+  QVERIFY( wrapper.mLabel->isVisible() );
+
+  wrapper.setUnitParameterValue( QgsCoordinateReferenceSystem( QStringLiteral( "EPSG:3111" ) ) );
+  QCOMPARE( wrapper.mLabel->text(), QStringLiteral( "cubic meters" ) );
+  QVERIFY( !wrapper.mWarningLabel->isVisible() );
+  QVERIFY( wrapper.mUnitsCombo->isVisible() );
+  QVERIFY( !wrapper.mLabel->isVisible() );
+  QCOMPARE( wrapper.mUnitsCombo->currentData().value< Qgis::VolumeUnit >(), Qgis::VolumeUnit::CubicMeters );
+
+  wrapper.setUnitParameterValue( QgsCoordinateReferenceSystem( QStringLiteral( "EPSG:4326" ) ) );
+  QCOMPARE( wrapper.mLabel->text(), QStringLiteral( "cubic degrees" ) );
+  QVERIFY( wrapper.mWarningLabel->isVisible() );
+  QVERIFY( !wrapper.mUnitsCombo->isVisible() );
+  QVERIFY( wrapper.mLabel->isVisible() );
+
+  // layer values
+  std::unique_ptr< QgsVectorLayer > vl = std::make_unique< QgsVectorLayer >( QStringLiteral( "Polygon?crs=epsg:3111&field=pk:int" ), QStringLiteral( "vl" ), QStringLiteral( "memory" ) );
+  wrapper.setUnitParameterValue( QVariant::fromValue( vl.get() ) );
+  QCOMPARE( wrapper.mLabel->text(), QStringLiteral( "cubic meters" ) );
+  QVERIFY( !wrapper.mWarningLabel->isVisible() );
+  QVERIFY( wrapper.mUnitsCombo->isVisible() );
+  QVERIFY( !wrapper.mLabel->isVisible() );
+  QCOMPARE( wrapper.mUnitsCombo->currentData().value< Qgis::VolumeUnit >(), Qgis::VolumeUnit::CubicMeters );
+
+  std::unique_ptr< QgsVectorLayer > vl2 = std::make_unique< QgsVectorLayer >( QStringLiteral( "Polygon?crs=epsg:4326&field=pk:int" ), QStringLiteral( "vl" ), QStringLiteral( "memory" ) );
+  wrapper.setUnitParameterValue( QVariant::fromValue( vl2.get() ) );
+  QCOMPARE( wrapper.mLabel->text(), QStringLiteral( "cubic degrees" ) );
+  QVERIFY( wrapper.mWarningLabel->isVisible() );
+  QVERIFY( !wrapper.mUnitsCombo->isVisible() );
+  QVERIFY( wrapper.mLabel->isVisible() );
+
+  // unresolvable values
+  wrapper.setUnitParameterValue( QStringLiteral( "blah" ) );
+  QCOMPARE( wrapper.mLabel->text(), QStringLiteral( "<unknown>" ) );
+  QVERIFY( !wrapper.mWarningLabel->isVisible() );
+  QVERIFY( !wrapper.mUnitsCombo->isVisible() );
+  QVERIFY( wrapper.mLabel->isVisible() );
+
+  // resolvable text value
+  const QString id = vl->id();
+  QgsProject::instance()->addMapLayer( vl.release() );
+  context.setProject( QgsProject::instance() );
+
+  TestProcessingContextGenerator generator( context );
+  wrapper.registerProcessingContextGenerator( &generator );
+  wrapper.setUnitParameterValue( id );
+  QCOMPARE( wrapper.mLabel->text(), QStringLiteral( "cubic meters" ) );
+  QVERIFY( !wrapper.mWarningLabel->isVisible() );
+  QVERIFY( wrapper.mUnitsCombo->isVisible() );
+  QVERIFY( !wrapper.mLabel->isVisible() );
+  QCOMPARE( wrapper.mUnitsCombo->currentData().value< Qgis::VolumeUnit >(), Qgis::VolumeUnit::CubicMeters );
+
+  // using unit choice
+  wrapper.setParameterValue( 5, context );
+  QCOMPARE( wrapper.parameterValue().toDouble(), 5.0 );
+  wrapper.mUnitsCombo->setCurrentIndex( wrapper.mUnitsCombo->findData( QVariant::fromValue( Qgis::VolumeUnit::Liters ) ) );
+  QCOMPARE( wrapper.parameterValue().toDouble(), 0.005 );
+  wrapper.setParameterValue( 2, context );
+  QCOMPARE( wrapper.parameterValue().toDouble(), 0.002 );
+
+  wrapper.setUnitParameterValue( id );
+  QCOMPARE( wrapper.parameterValue().toDouble(), 2.0 );
+  wrapper.setParameterValue( 5, context );
+  QCOMPARE( wrapper.parameterValue().toDouble(), 5.0 );
+
+  delete w;
+
+  // with default unit
+  QgsProcessingParameterVolume paramDefaultUnit( QStringLiteral( "num" ), QStringLiteral( "num" ) );
+  paramDefaultUnit.setDefaultUnit( Qgis::VolumeUnit::CubicFeet );
+  QgsProcessingVolumeWidgetWrapper wrapperDefaultUnit( &paramDefaultUnit, QgsProcessingGui::Standard );
+  w = wrapperDefaultUnit.createWrappedWidget( context );
+  w->show();
+  QCOMPARE( wrapperDefaultUnit.mLabel->text(), QStringLiteral( "cubic feet" ) );
+  delete w;
+
+  // with decimals
+  QgsProcessingParameterVolume paramDecimals( QStringLiteral( "num" ), QStringLiteral( "num" ), QVariant(), QString(), true, 1, 1.02 );
+  QVariantMap metadata;
+  QVariantMap wrapperMetadata;
+  wrapperMetadata.insert( QStringLiteral( "decimals" ), 2 );
+  metadata.insert( QStringLiteral( "widget_wrapper" ), wrapperMetadata );
+  paramDecimals.setMetadata( metadata );
+  QgsProcessingVolumeWidgetWrapper wrapperDecimals( &paramDecimals, QgsProcessingGui::Standard );
+  w = wrapperDecimals.createWrappedWidget( context );
+  QCOMPARE( wrapperDecimals.mDoubleSpinBox->decimals(), 2 );
+  QCOMPARE( wrapperDecimals.mDoubleSpinBox->singleStep(), 0.01 ); // single step should never be less than set number of decimals
+  delete w;
+
+  // batch wrapper
+  QgsProcessingVolumeWidgetWrapper wrapperB( &param, QgsProcessingGui::Batch );
+
+  w = wrapperB.createWrappedWidget( context );
+  QSignalSpy spy2( &wrapperB, &QgsProcessingVolumeWidgetWrapper::widgetValueHasChanged );
+  wrapperB.setWidgetValue( 34, context );
+  QCOMPARE( spy2.count(), 1 );
+  QCOMPARE( wrapperB.widgetValue().toDouble(), 34.0 );
+  QCOMPARE( wrapperB.mDoubleSpinBox->value(), 34.0 );
+  wrapperB.setWidgetValue( 5, context );
+  QCOMPARE( spy2.count(), 2 );
+  QCOMPARE( wrapperB.widgetValue().toDouble(), 5.0 );
+  QCOMPARE( wrapperB.mDoubleSpinBox->value(), 5.0 );
+
+  // check signal
+  static_cast< QgsDoubleSpinBox * >( w )->setValue( 29 );
+  QCOMPARE( spy2.count(), 3 );
+
+  // should be no label in batch mode
+  QVERIFY( !wrapperB.createWrappedLabel() );
+  delete w;
+
+  // modeler wrapper
+  QgsProcessingVolumeWidgetWrapper wrapperM( &param, QgsProcessingGui::Modeler );
+
+  w = wrapperM.createWrappedWidget( context );
+  QSignalSpy spy3( &wrapperM, &QgsProcessingVolumeWidgetWrapper::widgetValueHasChanged );
+  wrapperM.setWidgetValue( 29, context );
+  QCOMPARE( wrapperM.widgetValue().toDouble(), 29.0 );
+  QCOMPARE( spy3.count(), 1 );
+  QCOMPARE( wrapperM.mDoubleSpinBox->value(), 29.0 );
+  wrapperM.setWidgetValue( 3, context );
+  QCOMPARE( wrapperM.widgetValue().toDouble(), 3.0 );
+  QCOMPARE( spy3.count(), 2 );
+  QCOMPARE( wrapperM.mDoubleSpinBox->value(), 3.0 );
+
+  // check signal
+  wrapperM.mDoubleSpinBox->setValue( 33 );
+  QCOMPARE( spy3.count(), 3 );
+
+  // should be a label in modeler mode
+  l = wrapperM.createWrappedLabel();
+  QVERIFY( l );
+  QCOMPARE( l->text(), QStringLiteral( "volume" ) );
+  QCOMPARE( l->toolTip(), param.toolTip() );
+  delete w;
+  delete l;
+
+  // config widget
+  QgsProcessingParameterWidgetContext widgetContext;
+  std::unique_ptr< QgsProcessingParameterDefinitionWidget > widget = std::make_unique< QgsProcessingParameterDefinitionWidget >( QStringLiteral( "volume" ), context, widgetContext );
+  std::unique_ptr< QgsProcessingParameterDefinition > def( widget->createParameter( QStringLiteral( "param_name" ) ) );
+  QCOMPARE( def->name(), QStringLiteral( "param_name" ) );
+  QVERIFY( !( def->flags() & Qgis::ProcessingParameterFlag::Optional ) ); // should default to mandatory
+  QVERIFY( !( def->flags() & Qgis::ProcessingParameterFlag::Advanced ) );
+
+  // using a parameter definition as initial values
+  QgsProcessingParameterVolume distParam( QStringLiteral( "n" ), QStringLiteral( "test desc" ), 1, QStringLiteral( "parent" ) );
+  distParam.setMinimum( 1 );
+  distParam.setMaximum( 100 );
+  widget = std::make_unique< QgsProcessingParameterDefinitionWidget >( QStringLiteral( "volume" ), context, widgetContext, &distParam );
+  def.reset( widget->createParameter( QStringLiteral( "param_name" ) ) );
+  QCOMPARE( def->name(), QStringLiteral( "param_name" ) );
+  QCOMPARE( def->description(), QStringLiteral( "test desc" ) );
+  QVERIFY( !( def->flags() & Qgis::ProcessingParameterFlag::Optional ) );
+  QVERIFY( !( def->flags() & Qgis::ProcessingParameterFlag::Advanced ) );
+  QCOMPARE( static_cast< QgsProcessingParameterVolume * >( def.get() )->defaultValue().toDouble(), 1.0 );
+  QCOMPARE( static_cast< QgsProcessingParameterVolume * >( def.get() )->minimum(), 1.0 );
+  QCOMPARE( static_cast< QgsProcessingParameterVolume * >( def.get() )->maximum(), 100.0 );
+  QCOMPARE( static_cast< QgsProcessingParameterVolume * >( def.get() )->parentParameterName(), QStringLiteral( "parent" ) );
+  distParam.setFlags( Qgis::ProcessingParameterFlag::Advanced | Qgis::ProcessingParameterFlag::Optional );
+  distParam.setParentParameterName( QString() );
+  distParam.setMinimum( 10 );
+  distParam.setMaximum( 12 );
+  distParam.setDefaultValue( 11.5 );
+  widget = std::make_unique< QgsProcessingParameterDefinitionWidget >( QStringLiteral( "volume" ), context, widgetContext, &distParam );
+  def.reset( widget->createParameter( QStringLiteral( "param_name" ) ) );
+  QCOMPARE( def->name(), QStringLiteral( "param_name" ) );
+  QCOMPARE( def->description(), QStringLiteral( "test desc" ) );
+  QVERIFY( def->flags() & Qgis::ProcessingParameterFlag::Optional );
+  QVERIFY( def->flags() & Qgis::ProcessingParameterFlag::Advanced );
+  QCOMPARE( static_cast< QgsProcessingParameterVolume * >( def.get() )->defaultValue().toDouble(), 11.5 );
+  QCOMPARE( static_cast< QgsProcessingParameterVolume * >( def.get() )->minimum(), 10.0 );
+  QCOMPARE( static_cast< QgsProcessingParameterVolume * >( def.get() )->maximum(), 12.0 );
+  QVERIFY( static_cast< QgsProcessingParameterVolume * >( def.get() )->parentParameterName().isEmpty() );
+}
+
 void TestProcessingGui::testDurationWrapper()
 {
   QgsProcessingParameterDuration param( QStringLiteral( "duration" ), QStringLiteral( "duration" ) );
@@ -3320,14 +3786,14 @@ void TestProcessingGui::testFieldWrapper()
 
     // filtering fields
     QgsFields f;
-    f.append( QgsField( QStringLiteral( "string" ), QVariant::String ) );
-    f.append( QgsField( QStringLiteral( "double" ), QVariant::Double ) );
-    f.append( QgsField( QStringLiteral( "int" ), QVariant::Int ) );
-    f.append( QgsField( QStringLiteral( "date" ), QVariant::Date ) );
-    f.append( QgsField( QStringLiteral( "time" ), QVariant::Time ) );
-    f.append( QgsField( QStringLiteral( "datetime" ), QVariant::DateTime ) );
-    f.append( QgsField( QStringLiteral( "binary" ), QVariant::ByteArray ) );
-    f.append( QgsField( QStringLiteral( "boolean" ), QVariant::Bool ) );
+    f.append( QgsField( QStringLiteral( "string" ), QMetaType::Type::QString ) );
+    f.append( QgsField( QStringLiteral( "double" ), QMetaType::Type::Double ) );
+    f.append( QgsField( QStringLiteral( "int" ), QMetaType::Type::Int ) );
+    f.append( QgsField( QStringLiteral( "date" ), QMetaType::Type::QDate ) );
+    f.append( QgsField( QStringLiteral( "time" ), QMetaType::Type::QTime ) );
+    f.append( QgsField( QStringLiteral( "datetime" ), QMetaType::Type::QDateTime ) );
+    f.append( QgsField( QStringLiteral( "binary" ), QMetaType::Type::QByteArray ) );
+    f.append( QgsField( QStringLiteral( "boolean" ), QMetaType::Type::Bool ) );
 
     QgsFields f2 = wrapper3.filterFields( f );
     QCOMPARE( f2, f );
@@ -6135,7 +6601,7 @@ void TestProcessingGui::mapLayerComboBox()
   // now make a selection in the layer, and repeat
   vl2->selectAll();
   combo->setValue( sourceDef, context );
-  QCOMPARE( combo->value().userType(), QMetaType::type( "QgsProcessingFeatureSourceDefinition" ) );
+  QCOMPARE( combo->value().userType(), qMetaTypeId<QgsProcessingFeatureSourceDefinition>() );
   QCOMPARE( combo->value().value< QgsProcessingFeatureSourceDefinition >().source.staticValue().toString(), vl2->id() );
   QVERIFY( combo->value().value< QgsProcessingFeatureSourceDefinition >().selectedFeaturesOnly );
   QVERIFY( combo->currentText().startsWith( vl2->name() ) );
@@ -6150,7 +6616,7 @@ void TestProcessingGui::mapLayerComboBox()
   // phew, nearly there. Let's check another variation
   vl2->selectAll();
   combo->setValue( sourceDef, context );
-  QCOMPARE( combo->value().userType(), QMetaType::type( "QgsProcessingFeatureSourceDefinition" ) );
+  QCOMPARE( combo->value().userType(), qMetaTypeId<QgsProcessingFeatureSourceDefinition>() );
   QCOMPARE( spy.count(), 10 );
   combo->setValue( QVariant::fromValue( vl ), context );
   QCOMPARE( combo->value().toString(), vl->id() );
@@ -6165,7 +6631,7 @@ void TestProcessingGui::mapLayerComboBox()
   sourceDef = QgsProcessingFeatureSourceDefinition( vl->id(), true );
   combo->setValue( sourceDef, context );
   // expect "selected only" state to remain
-  QCOMPARE( combo->value().userType(), QMetaType::type( "QgsProcessingFeatureSourceDefinition" ) );
+  QCOMPARE( combo->value().userType(), qMetaTypeId<QgsProcessingFeatureSourceDefinition>() );
   QCOMPARE( combo->value().value< QgsProcessingFeatureSourceDefinition >().source.staticValue().toString(), vl->id() );
   QVERIFY( combo->value().value< QgsProcessingFeatureSourceDefinition >().selectedFeaturesOnly );
   QVERIFY( combo->currentText().startsWith( vl->name() ) );
@@ -8340,12 +8806,12 @@ void TestProcessingGui::testFieldMapWidget()
 
   QVariantMap map;
   map.insert( QStringLiteral( "name" ), QStringLiteral( "n" ) );
-  map.insert( QStringLiteral( "type" ), static_cast< int >( QVariant::Double ) );
+  map.insert( QStringLiteral( "type" ), static_cast< int >( QMetaType::Type::Double ) );
   map.insert( QStringLiteral( "length" ), 8 );
   map.insert( QStringLiteral( "precision" ), 5 );
   QVariantMap map2;
   map2.insert( QStringLiteral( "name" ), QStringLiteral( "n2" ) );
-  map2.insert( QStringLiteral( "type" ), static_cast< int >( QVariant::String ) );
+  map2.insert( QStringLiteral( "type" ), static_cast< int >( QMetaType::Type::QString ) );
   map2.insert( QStringLiteral( "expression" ), QStringLiteral( "'abc' || \"def\"" ) );
   map2.insert( QStringLiteral( "alias" ), QStringLiteral( "my alias" ) );
   map2.insert( QStringLiteral( "comment" ), QStringLiteral( "my comment" ) );
@@ -8356,12 +8822,12 @@ void TestProcessingGui::testFieldMapWidget()
 
   QCOMPARE( widget.value().toList().size(), 2 );
   QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "name" ) ).toString(), QStringLiteral( "n" ) );
-  QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QVariant::Double ) );
+  QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QMetaType::Type::Double ) );
   QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "length" ) ).toInt(), 8 );
   QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "precision" ) ).toInt(), 5 );
   QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "expression" ) ).toString(), QString() );
   QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "name" ) ).toString(), QStringLiteral( "n2" ) );
-  QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QVariant::String ) );
+  QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QMetaType::Type::QString ) );
   QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "expression" ) ).toString(), QStringLiteral( "'abc' || \"def\"" ) );
   QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "alias" ) ).toString(), QStringLiteral( "my alias" ) );
   QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "comment" ) ).toString(), QStringLiteral( "my comment" ) );
@@ -8383,12 +8849,12 @@ void TestProcessingGui::testFieldMapWrapper()
 
     QVariantMap map;
     map.insert( QStringLiteral( "name" ), QStringLiteral( "n" ) );
-    map.insert( QStringLiteral( "type" ), static_cast< int >( QVariant::Double ) );
+    map.insert( QStringLiteral( "type" ), static_cast< int >( QMetaType::Type::Double ) );
     map.insert( QStringLiteral( "length" ), 8 );
     map.insert( QStringLiteral( "precision" ), 5 );
     QVariantMap map2;
     map2.insert( QStringLiteral( "name" ), QStringLiteral( "n2" ) );
-    map2.insert( QStringLiteral( "type" ), static_cast< int >( QVariant::String ) );
+    map2.insert( QStringLiteral( "type" ), static_cast< int >( QMetaType::Type::QString ) );
     map2.insert( QStringLiteral( "expression" ), QStringLiteral( "'abc' || \"def\"" ) );
     map2.insert( QStringLiteral( "alias" ), QStringLiteral( "my alias" ) );
     map2.insert( QStringLiteral( "comment" ), QStringLiteral( "my comment" ) );
@@ -8397,12 +8863,12 @@ void TestProcessingGui::testFieldMapWrapper()
     wrapper.setWidgetValue( QVariantList() << map << map2, context );
     QCOMPARE( spy.count(), 1 );
     QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "name" ) ).toString(), QStringLiteral( "n" ) );
-    QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QVariant::Double ) );
+    QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QMetaType::Type::Double ) );
     QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "length" ) ).toInt(), 8 );
     QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "precision" ) ).toInt(), 5 );
     QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "expression" ) ).toString(), QString() );
     QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "name" ) ).toString(), QStringLiteral( "n2" ) );
-    QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QVariant::String ) );
+    QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QMetaType::Type::QString ) );
     QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "expression" ) ).toString(), QStringLiteral( "'abc' || \"def\"" ) );
     QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "alias" ) ).toString(), QStringLiteral( "my alias" ) );
     QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "comment" ) ).toString(), QStringLiteral( "my comment" ) );
@@ -8540,12 +9006,12 @@ void TestProcessingGui::testAggregateWidget()
 
   QVariantMap map;
   map.insert( QStringLiteral( "name" ), QStringLiteral( "n" ) );
-  map.insert( QStringLiteral( "type" ), static_cast< int >( QVariant::Double ) );
+  map.insert( QStringLiteral( "type" ), static_cast< int >( QMetaType::Type::Double ) );
   map.insert( QStringLiteral( "length" ), 8 );
   map.insert( QStringLiteral( "precision" ), 5 );
   QVariantMap map2;
   map2.insert( QStringLiteral( "name" ), QStringLiteral( "n2" ) );
-  map2.insert( QStringLiteral( "type" ), static_cast< int >( QVariant::String ) );
+  map2.insert( QStringLiteral( "type" ), static_cast< int >( QMetaType::Type::QString ) );
   map2.insert( QStringLiteral( "input" ), QStringLiteral( "'abc' || \"def\"" ) );
   map2.insert( QStringLiteral( "aggregate" ), QStringLiteral( "concatenate" ) );
   map2.insert( QStringLiteral( "delimiter" ), QStringLiteral( "|" ) );
@@ -8556,14 +9022,14 @@ void TestProcessingGui::testAggregateWidget()
 
   QCOMPARE( widget.value().toList().size(), 2 );
   QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "name" ) ).toString(), QStringLiteral( "n" ) );
-  QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QVariant::Double ) );
+  QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QMetaType::Type::Double ) );
   QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "length" ) ).toInt(), 8 );
   QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "precision" ) ).toInt(), 5 );
   QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "input" ) ).toString(), QString() );
   QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "aggregate" ) ).toString(), QString() );
   QCOMPARE( widget.value().toList().at( 0 ).toMap().value( QStringLiteral( "delimiter" ) ).toString(), QString() );
   QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "name" ) ).toString(), QStringLiteral( "n2" ) );
-  QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QVariant::String ) );
+  QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QMetaType::Type::QString ) );
   QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "input" ) ).toString(), QStringLiteral( "'abc' || \"def\"" ) );
   QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "aggregate" ) ).toString(), QStringLiteral( "concatenate" ) );
   QCOMPARE( widget.value().toList().at( 1 ).toMap().value( QStringLiteral( "delimiter" ) ).toString(), QStringLiteral( "|" ) );
@@ -8585,12 +9051,12 @@ void TestProcessingGui::testAggregateWrapper()
 
     QVariantMap map;
     map.insert( QStringLiteral( "name" ), QStringLiteral( "n" ) );
-    map.insert( QStringLiteral( "type" ), static_cast< int >( QVariant::Double ) );
+    map.insert( QStringLiteral( "type" ), static_cast< int >( QMetaType::Type::Double ) );
     map.insert( QStringLiteral( "length" ), 8 );
     map.insert( QStringLiteral( "precision" ), 5 );
     QVariantMap map2;
     map2.insert( QStringLiteral( "name" ), QStringLiteral( "n2" ) );
-    map2.insert( QStringLiteral( "type" ), static_cast< int >( QVariant::String ) );
+    map2.insert( QStringLiteral( "type" ), static_cast< int >( QMetaType::Type::QString ) );
     map2.insert( QStringLiteral( "input" ), QStringLiteral( "'abc' || \"def\"" ) );
     map2.insert( QStringLiteral( "aggregate" ), QStringLiteral( "concatenate" ) );
     map2.insert( QStringLiteral( "delimiter" ), QStringLiteral( "|" ) );
@@ -8599,14 +9065,14 @@ void TestProcessingGui::testAggregateWrapper()
     wrapper.setWidgetValue( QVariantList() << map << map2, context );
     QCOMPARE( spy.count(), 1 );
     QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "name" ) ).toString(), QStringLiteral( "n" ) );
-    QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QVariant::Double ) );
+    QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QMetaType::Type::Double ) );
     QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "length" ) ).toInt(), 8 );
     QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "precision" ) ).toInt(), 5 );
     QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "input" ) ).toString(), QString() );
     QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "aggregate" ) ).toString(), QString() );
     QCOMPARE( wrapper.widgetValue().toList().at( 0 ).toMap().value( QStringLiteral( "delimiter" ) ).toString(), QString() );
     QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "name" ) ).toString(), QStringLiteral( "n2" ) );
-    QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QVariant::String ) );
+    QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "type" ) ).toInt(), static_cast< int >( QMetaType::Type::QString ) );
     QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "input" ) ).toString(), QStringLiteral( "'abc' || \"def\"" ) );
     QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "aggregate" ) ).toString(), QStringLiteral( "concatenate" ) );
     QCOMPARE( wrapper.widgetValue().toList().at( 1 ).toMap().value( QStringLiteral( "delimiter" ) ).toString(), QStringLiteral( "|" ) );
@@ -8748,13 +9214,13 @@ void TestProcessingGui::testOutputDefinitionWidget()
   QSignalSpy changedSpy( &panel, &QgsProcessingLayerOutputDestinationWidget::destinationChanged );
 
   QVariant v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
   QVERIFY( !panel.outputIsSkipped() );
 
   panel.setValue( QgsProcessing::TEMPORARY_OUTPUT );
   v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "UTF-8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
   QVERIFY( !panel.outputIsSkipped() );
@@ -8771,13 +9237,13 @@ void TestProcessingGui::testOutputDefinitionWidget()
   QCOMPARE( skipSpy.count(), 0 );
   QCOMPARE( changedSpy.count(), 0 );
   v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "utf8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
 
   panel.setValue( QStringLiteral( "memory:" ) );
   v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "utf8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
   QVERIFY( !panel.outputIsSkipped() );
@@ -8792,7 +9258,7 @@ void TestProcessingGui::testOutputDefinitionWidget()
   QCOMPARE( skipSpy.count(), 0 );
   QCOMPARE( changedSpy.count(), 0 );
   v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "utf8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
 
@@ -8800,7 +9266,7 @@ void TestProcessingGui::testOutputDefinitionWidget()
   QCOMPARE( skipSpy.count(), 0 );
   QCOMPARE( changedSpy.count(), 1 );
   v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "utf8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QStringLiteral( "ogr:dbname='/me/a.gpkg' table=\"d\" (geom) sql=''" ) );
   QVERIFY( !panel.outputIsSkipped() );
@@ -8810,7 +9276,7 @@ void TestProcessingGui::testOutputDefinitionWidget()
 
   panel.setValue( QStringLiteral( "postgis:dbname='oraclesux' host=10.1.1.221 port=5432 user='qgis' password='qgis' table=\"stufff\".\"output\" (the_geom) sql=" ) );
   v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "utf8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QStringLiteral( "postgis:dbname='oraclesux' host=10.1.1.221 port=5432 user='qgis' password='qgis' table=\"stufff\".\"output\" (the_geom) sql=" ) );
   QVERIFY( !panel.outputIsSkipped() );
@@ -8822,7 +9288,7 @@ void TestProcessingGui::testOutputDefinitionWidget()
 
   panel.setValue( QStringLiteral( "/home/me/test.shp" ) );
   v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "utf8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QStringLiteral( "/home/me/test.shp" ) );
   QVERIFY( !panel.outputIsSkipped() );
@@ -8839,7 +9305,7 @@ void TestProcessingGui::testOutputDefinitionWidget()
   settings.setValue( QStringLiteral( "/Processing/Configuration/OUTPUTS_FOLDER" ), TEST_DATA_DIR );
   panel.setValue( QStringLiteral( "test.shp" ) );
   v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "utf8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QString( TEST_DATA_DIR + QStringLiteral( "/test.shp" ) ) );
 
@@ -8852,13 +9318,13 @@ void TestProcessingGui::testOutputDefinitionWidget()
   QSignalSpy changedSpy2( &panel2, &QgsProcessingLayerOutputDestinationWidget::destinationChanged );
 
   v = panel2.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
   QVERIFY( !panel2.outputIsSkipped() );
 
   panel2.setValue( QgsProcessing::TEMPORARY_OUTPUT );
   v = panel2.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "UTF-8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
   QVERIFY( !panel2.outputIsSkipped() );
@@ -8890,7 +9356,7 @@ void TestProcessingGui::testOutputDefinitionWidget()
 
   panel3.setValue( QgsProcessing::TEMPORARY_OUTPUT );
   v = panel3.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "UTF-8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
   QVERIFY( !panel3.outputIsSkipped() );
@@ -8921,7 +9387,7 @@ void TestProcessingGui::testOutputDefinitionWidget()
 
   panel3.setValue( def );
   v = panel3.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QVERIFY( v.value< QgsProcessingOutputLayerDefinition>().useRemapping() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().remappingDefinition().fieldMap().size(), 2 );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().remappingDefinition().fieldMap().value( QStringLiteral( "field1" ) ), QgsProperty::fromField( QStringLiteral( "source1" ) ) );
@@ -8929,7 +9395,7 @@ void TestProcessingGui::testOutputDefinitionWidget()
 
   panel3.setValue( QStringLiteral( "other.shp" ) );
   v = panel3.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QVERIFY( !v.value< QgsProcessingOutputLayerDefinition>().useRemapping() );
 }
 
@@ -8942,13 +9408,13 @@ void TestProcessingGui::testOutputDefinitionWidgetVectorOut()
   QSignalSpy changedSpy( &panel, &QgsProcessingLayerOutputDestinationWidget::destinationChanged );
 
   QVariant v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
   QVERIFY( !panel.outputIsSkipped() );
 
   panel.setValue( QgsProcessing::TEMPORARY_OUTPUT );
   v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "UTF-8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
   QVERIFY( !panel.outputIsSkipped() );
@@ -8960,7 +9426,7 @@ void TestProcessingGui::testOutputDefinitionWidgetVectorOut()
 
   panel.setValue( QStringLiteral( "memory:" ) );
   v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "UTF-8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
   QVERIFY( !panel.outputIsSkipped() );
@@ -8975,7 +9441,7 @@ void TestProcessingGui::testOutputDefinitionWidgetVectorOut()
   QCOMPARE( skipSpy.count(), 0 );
   QCOMPARE( changedSpy.count(), 1 );
   v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "UTF-8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QStringLiteral( "ogr:dbname='/me/a.gpkg' table=\"d\" (geom) sql=''" ) );
   QVERIFY( !panel.outputIsSkipped() );
@@ -8985,7 +9451,7 @@ void TestProcessingGui::testOutputDefinitionWidgetVectorOut()
 
   panel.setValue( QStringLiteral( "postgis:dbname='oraclesux' host=10.1.1.221 port=5432 user='qgis' password='qgis' table=\"stufff\".\"output\" (the_geom) sql=" ) );
   v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "UTF-8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QStringLiteral( "postgis:dbname='oraclesux' host=10.1.1.221 port=5432 user='qgis' password='qgis' table=\"stufff\".\"output\" (the_geom) sql=" ) );
   QVERIFY( !panel.outputIsSkipped() );
@@ -8997,7 +9463,7 @@ void TestProcessingGui::testOutputDefinitionWidgetVectorOut()
 
   panel.setValue( QStringLiteral( "/home/me/test.shp" ) );
   v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "UTF-8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QStringLiteral( "/home/me/test.shp" ) );
   QVERIFY( !panel.outputIsSkipped() );
@@ -9014,7 +9480,7 @@ void TestProcessingGui::testOutputDefinitionWidgetVectorOut()
   settings.setValue( QStringLiteral( "/Processing/Configuration/OUTPUTS_FOLDER" ), TEST_DATA_DIR );
   panel.setValue( QStringLiteral( "test.shp" ) );
   v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "UTF-8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QString( TEST_DATA_DIR + QStringLiteral( "/test.shp" ) ) );
 
@@ -9027,13 +9493,13 @@ void TestProcessingGui::testOutputDefinitionWidgetVectorOut()
   QSignalSpy changedSpy2( &panel2, &QgsProcessingLayerOutputDestinationWidget::destinationChanged );
 
   v = panel2.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
   QVERIFY( !panel2.outputIsSkipped() );
 
   panel2.setValue( QgsProcessing::TEMPORARY_OUTPUT );
   v = panel2.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "UTF-8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
   QVERIFY( !panel2.outputIsSkipped() );
@@ -9065,7 +9531,7 @@ void TestProcessingGui::testOutputDefinitionWidgetVectorOut()
 
   panel3.setValue( QgsProcessing::TEMPORARY_OUTPUT );
   v = panel3.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "UTF-8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
   QVERIFY( !panel3.outputIsSkipped() );
@@ -9095,13 +9561,13 @@ void TestProcessingGui::testOutputDefinitionWidgetRasterOut()
   QSignalSpy changedSpy( &panel, &QgsProcessingLayerOutputDestinationWidget::destinationChanged );
 
   QVariant v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
   QVERIFY( !panel.outputIsSkipped() );
 
   panel.setValue( QgsProcessing::TEMPORARY_OUTPUT );
   v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "UTF-8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
   QVERIFY( !panel.outputIsSkipped() );
@@ -9115,7 +9581,7 @@ void TestProcessingGui::testOutputDefinitionWidgetRasterOut()
   QCOMPARE( skipSpy.count(), 0 );
   QCOMPARE( changedSpy.count(), 1 );
   v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "UTF-8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QStringLiteral( "/home/me/test.tif" ) );
   QVERIFY( !panel.outputIsSkipped() );
@@ -9127,7 +9593,7 @@ void TestProcessingGui::testOutputDefinitionWidgetRasterOut()
   settings.setValue( QStringLiteral( "/Processing/Configuration/OUTPUTS_FOLDER" ), TEST_DATA_DIR );
   panel.setValue( QStringLiteral( "test.tif" ) );
   v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "UTF-8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QString( TEST_DATA_DIR + QStringLiteral( "/test.tif" ) ) );
 
@@ -9140,13 +9606,13 @@ void TestProcessingGui::testOutputDefinitionWidgetRasterOut()
   QSignalSpy changedSpy2( &panel2, &QgsProcessingLayerOutputDestinationWidget::destinationChanged );
 
   v = panel2.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
   QVERIFY( !panel2.outputIsSkipped() );
 
   panel2.setValue( QgsProcessing::TEMPORARY_OUTPUT );
   v = panel2.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "UTF-8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
   QVERIFY( !panel2.outputIsSkipped() );
@@ -9178,7 +9644,7 @@ void TestProcessingGui::testOutputDefinitionWidgetRasterOut()
 
   panel3.setValue( QgsProcessing::TEMPORARY_OUTPUT );
   v = panel3.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "UTF-8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
   QVERIFY( !panel3.outputIsSkipped() );
@@ -9208,13 +9674,13 @@ void TestProcessingGui::testOutputDefinitionWidgetPointCloudOut()
   QSignalSpy changedSpy( &panel, &QgsProcessingLayerOutputDestinationWidget::destinationChanged );
 
   QVariant v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
   QVERIFY( !panel.outputIsSkipped() );
 
   panel.setValue( QgsProcessing::TEMPORARY_OUTPUT );
   v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "UTF-8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
   QVERIFY( !panel.outputIsSkipped() );
@@ -9228,7 +9694,7 @@ void TestProcessingGui::testOutputDefinitionWidgetPointCloudOut()
   QCOMPARE( skipSpy.count(), 0 );
   QCOMPARE( changedSpy.count(), 1 );
   v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "UTF-8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QStringLiteral( "/home/me/test.las" ) );
   QVERIFY( !panel.outputIsSkipped() );
@@ -9240,7 +9706,7 @@ void TestProcessingGui::testOutputDefinitionWidgetPointCloudOut()
   settings.setValue( QStringLiteral( "/Processing/Configuration/OUTPUTS_FOLDER" ), TEST_DATA_DIR );
   panel.setValue( QStringLiteral( "test.las" ) );
   v = panel.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "UTF-8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QString( TEST_DATA_DIR + QStringLiteral( "/test.las" ) ) );
 
@@ -9253,13 +9719,13 @@ void TestProcessingGui::testOutputDefinitionWidgetPointCloudOut()
   QSignalSpy changedSpy2( &panel2, &QgsProcessingLayerOutputDestinationWidget::destinationChanged );
 
   v = panel2.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
   QVERIFY( !panel2.outputIsSkipped() );
 
   panel2.setValue( QgsProcessing::TEMPORARY_OUTPUT );
   v = panel2.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "UTF-8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
   QVERIFY( !panel2.outputIsSkipped() );
@@ -9291,7 +9757,7 @@ void TestProcessingGui::testOutputDefinitionWidgetPointCloudOut()
 
   panel3.setValue( QgsProcessing::TEMPORARY_OUTPUT );
   v = panel3.value();
-  QCOMPARE( v.userType(), QMetaType::type( "QgsProcessingOutputLayerDefinition" ) );
+  QCOMPARE( v.userType(), qMetaTypeId<QgsProcessingOutputLayerDefinition>() );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().createOptions.value( QStringLiteral( "fileEncoding" ) ).toString(), QStringLiteral( "UTF-8" ) );
   QCOMPARE( v.value< QgsProcessingOutputLayerDefinition>().sink.staticValue().toString(), QgsProcessing::TEMPORARY_OUTPUT );
   QVERIFY( !panel3.outputIsSkipped() );
@@ -9988,6 +10454,9 @@ void TestProcessingGui::testDxfLayersWrapper()
   QVariantMap layerMap;
   layerMap["layer"] = "PointLayer";
   layerMap["attributeIndex"] = -1;
+  layerMap["overriddenLayerName"] = QString();
+  layerMap["buildDataDefinedBlocks"] = DEFAULT_DXF_DATA_DEFINED_BLOCKS;
+  layerMap["dataDefinedBlocksMaximumNumberOfClasses"] = -1;
   layerList.append( layerMap );
 
   QVERIFY( definition.checkValueIsAcceptable( layerList, &context ) );
@@ -9998,7 +10467,7 @@ void TestProcessingGui::testDxfLayersWrapper()
 
   QVERIFY( definition.checkValueIsAcceptable( value, &context ) );
   QString valueAsPythonString = definition.valueAsPythonString( value, context );
-  QCOMPARE( valueAsPythonString, QStringLiteral( "[{'layer': '%1','attributeIndex': -1}]" ).arg( vectorLayer->source() ) );
+  QCOMPARE( valueAsPythonString, QStringLiteral( "[{'layer': '%1','attributeIndex': -1,'overriddenLayerName': '','buildDataDefinedBlocks': True,'dataDefinedBlocksMaximumNumberOfClasses': -1}]" ).arg( vectorLayer->source() ) );
 }
 
 void TestProcessingGui::testAlignRasterLayersWrapper()
@@ -10034,6 +10503,32 @@ void TestProcessingGui::testAlignRasterLayersWrapper()
   QVERIFY( definition.checkValueIsAcceptable( value, &context ) );
   QString valueAsPythonString = definition.valueAsPythonString( value, context );
   QCOMPARE( valueAsPythonString, QStringLiteral( "[{'inputFile': '%1','outputFile': '%2','resampleMethod': 1,'rescale': False}]" ).arg( rasterLayer->source() ).arg( layerMap["outputFile"].toString() ) );
+}
+
+void TestProcessingGui::testRasterOptionsWrapper()
+{
+  QgsProcessingParameterString param( QStringLiteral( "string" ), QStringLiteral( "string" ) );
+  param.setMetadata( {{
+      QStringLiteral( "widget_wrapper" ), QVariantMap(
+      {{QStringLiteral( "widget_type" ), QStringLiteral( "rasteroptions" ) }}
+      )
+    }
+  } );
+
+  QgsProcessingContext context;
+  QgsProcessingRasterOptionsWidgetWrapper wrapper( &param );
+
+  std::unique_ptr<QWidget> w( wrapper.createWidget() );
+  QVERIFY( w );
+
+  QSignalSpy spy( &wrapper, &QgsProcessingRasterOptionsWidgetWrapper::widgetValueHasChanged );
+  wrapper.setWidgetValue( QStringLiteral( "TFW=YES" ), context );
+  QCOMPARE( spy.count(), 1 );
+  QCOMPARE( wrapper.widgetValue().toString(), QStringLiteral( "TFW=YES" ) );
+  wrapper.setWidgetValue( QStringLiteral( "TFW=YES TILED=YES" ), context );
+  QCOMPARE( wrapper.widgetValue().toString(), QStringLiteral( "TFW=YES|TILED=YES" ) );
+  wrapper.setWidgetValue( QStringLiteral( "TFW=YES|TILED=NO" ), context );
+  QCOMPARE( wrapper.widgetValue().toString(), QStringLiteral( "TFW=YES|TILED=NO" ) );
 }
 
 void TestProcessingGui::testMeshDatasetWrapperLayerInProject()
@@ -10152,7 +10647,7 @@ void TestProcessingGui::testMeshDatasetWrapperLayerInProject()
   QCOMPARE( timeSpy.count(), 3 );
 
   QVariant groupsValue = groupsWrapper.widgetValue();
-  QVERIFY( groupsValue.type() == QVariant::List );
+  QVERIFY( groupsValue.userType() == QMetaType::Type::QVariantList );
   QVariantList groupsList = groupsValue.toList();
   QCOMPARE( groupsList.count(), 1 );
   QCOMPARE( groupsList.at( 0 ).toInt(), 1 );
@@ -10182,7 +10677,7 @@ void TestProcessingGui::testMeshDatasetWrapperLayerInProject()
   QCOMPARE( timeSpy.count(), 4 ); //radioButtonDatasetGroupTimeStep already checked
 
   QVariant timeValue = timeWrapper.widgetValue();
-  QVERIFY( timeValue.type() == QVariant::Map );
+  QVERIFY( timeValue.userType() == QMetaType::Type::QVariantMap );
   QVariantMap timeValueMap = timeValue.toMap();
   QCOMPARE( timeValueMap[QStringLiteral( "type" )].toString(), QStringLiteral( "dataset-time-step" ) );
   pythonString = timeDefinition.valueAsPythonString( timeWrapper.widgetValue(), context );

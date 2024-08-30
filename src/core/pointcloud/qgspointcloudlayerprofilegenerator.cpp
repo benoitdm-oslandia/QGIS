@@ -20,16 +20,14 @@
 #include "qgspointcloudlayer.h"
 #include "qgscoordinatetransform.h"
 #include "qgsgeos.h"
-#include "qgsterrainprovider.h"
-#include "qgslinesymbol.h"
 #include "qgspointcloudlayerelevationproperties.h"
 #include "qgsprofilesnapping.h"
 #include "qgsprofilepoint.h"
 #include "qgspointcloudrenderer.h"
 #include "qgspointcloudrequest.h"
 #include "qgspointcloudblockrequest.h"
-#include "qgsmarkersymbol.h"
 #include "qgsmessagelog.h"
+#include "qgsproject.h"
 
 //
 // QgsPointCloudLayerProfileGenerator
@@ -37,18 +35,18 @@
 
 QgsPointCloudLayerProfileResults::QgsPointCloudLayerProfileResults()
 {
-  mPointIndex = GEOSSTRtree_create_r( QgsGeos::getGEOSHandler(), ( size_t )10 );
+  mPointIndex = GEOSSTRtree_create_r( QgsGeosContext::get(), ( size_t )10 );
 }
 
 QgsPointCloudLayerProfileResults::~QgsPointCloudLayerProfileResults()
 {
-  GEOSSTRtree_destroy_r( QgsGeos::getGEOSHandler(), mPointIndex );
+  GEOSSTRtree_destroy_r( QgsGeosContext::get(), mPointIndex );
   mPointIndex = nullptr;
 }
 
 void QgsPointCloudLayerProfileResults::finalize( QgsFeedback *feedback )
 {
-  GEOSContextHandle_t geosctxt = QgsGeos::getGEOSHandler();
+  GEOSContextHandle_t geosctxt = QgsGeosContext::get();
 
   const std::size_t size = results.size();
   PointResult *pointData = results.data();
@@ -240,7 +238,7 @@ QgsProfileSnapResult QgsPointCloudLayerProfileResults::snapPoint( const QgsProfi
 {
   QgsProfileSnapResult result;
 
-  GEOSContextHandle_t geosctxt = QgsGeos::getGEOSHandler();
+  GEOSContextHandle_t geosctxt = QgsGeosContext::get();
 
   const double minDistance = point.distance() - context.maximumPointDistanceDelta;
   const double maxDistance = point.distance() + context.maximumPointDistanceDelta;
@@ -356,7 +354,7 @@ QgsPointCloudLayerProfileGenerator::QgsPointCloudLayerProfileGenerator( QgsPoint
   , mFeedback( std::make_unique< QgsFeedback >() )
   , mProfileCurve( request.profileCurve() ? request.profileCurve()->clone() : nullptr )
   , mTolerance( request.tolerance() )
-  , mSourceCrs( layer->crs() )
+  , mSourceCrs( layer->crs3D() )
   , mTargetCrs( request.crs() )
   , mTransformContext( request.transformContext() )
   , mZOffset( layer->elevationProperties()->zOffset() )

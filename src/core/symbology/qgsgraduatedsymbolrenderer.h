@@ -31,6 +31,7 @@ class QgsExpression;
 /**
  * \ingroup core
  * \class QgsGraduatedSymbolRenderer
+ * \brief A vector feature renderer which uses numeric attributes to classify features into different ranges.
  */
 class CORE_EXPORT QgsGraduatedSymbolRenderer : public QgsFeatureRenderer
 {
@@ -232,8 +233,9 @@ class CORE_EXPORT QgsGraduatedSymbolRenderer : public QgsFeatureRenderer
      * Recalculate classes for a layer
      * \param vl  The layer being rendered (from which data values are calculated)
      * \param nclasses the number of classes
+     * \param error Optional parameter for error reporting
      */
-    void updateClasses( const QgsVectorLayer *vl, int nclasses );
+    void updateClasses( const QgsVectorLayer *vl, int nclasses, QString &error SIP_OUT );
 
     Q_NOWARN_DEPRECATED_PUSH;
 

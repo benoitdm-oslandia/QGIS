@@ -68,17 +68,22 @@
 #include "qgspoint3dbillboardmaterial.h"
 #include "qgsmaplayertemporalproperties.h"
 #include "qgsmaplayerelevationproperties.h"
+#include "framegraph/qgsdebugtextureentity.h"
+
 #include "qgslinematerial_p.h"
 #include "qgs3dsceneexporter.h"
 #include "qgs3dmapexportsettings.h"
 #include "qgsmessageoutput.h"
-#include "qgsframegraph.h"
+#include "framegraph/qgsframegraph.h"
 
 #include "qgsskyboxentity.h"
 #include "qgsskyboxsettings.h"
 
 #include "qgswindow3dengine.h"
 #include "qgspointcloudlayer.h"
+#include "framegraph/qgsshadowrenderview.h"
+#include "framegraph/qgsambientocclusionrenderview.h"
+#include "framegraph/qgspostprocessingrenderview.h"
 
 std::function< QMap< QString, Qgs3DMapScene * >() > Qgs3DMapScene::sOpenScenesFunction = [] { return QMap< QString, Qgs3DMapScene * >(); };
 
@@ -293,18 +298,6 @@ float Qgs3DMapScene::worldSpaceError( float epsilon, float distance ) const
   return err;
 }
 
-Qgs3DMapSceneEntity::SceneContext Qgs3DMapScene::buildSceneContext( ) const
-{
-  Qt3DRender::QCamera *camera = mEngine->camera();
-  Qgs3DMapSceneEntity::SceneContext sceneContext;
-  sceneContext.cameraFov = camera->fieldOfView();
-  sceneContext.cameraPos = camera->position();
-  const QSize size = mEngine->size();
-  sceneContext.screenSizePx = std::max( size.width(), size.height() ); // TODO: is this correct?
-  sceneContext.viewProjectionMatrix = camera->projectionMatrix() * camera->viewMatrix();
-  return sceneContext;
-}
-
 void Qgs3DMapScene::onCameraChanged()
 {
   if ( mMap.projectionType() == Qt3DRender::QCameraLens::OrthographicProjection )
@@ -332,45 +325,20 @@ void Qgs3DMapScene::onCameraChanged()
   emit viewed2DExtentFrom3DChanged( extent2D );
 }
 
-void removeQLayerComponentsFromHierarchy( Qt3DCore::QEntity *entity )
-{
-  QVector<Qt3DCore::QComponent *> toBeRemovedComponents;
-  const Qt3DCore::QComponentVector entityComponents = entity->components();
-  for ( Qt3DCore::QComponent *component : entityComponents )
-  {
-    Qt3DRender::QLayer *layer = qobject_cast<Qt3DRender::QLayer *>( component );
-    if ( layer != nullptr )
-      toBeRemovedComponents.push_back( layer );
-  }
-  for ( Qt3DCore::QComponent *component : toBeRemovedComponents )
-    entity->removeComponent( component );
-  const QList< Qt3DCore::QEntity *> childEntities = entity->findChildren<Qt3DCore::QEntity *>();
-  for ( Qt3DCore::QEntity *obj : childEntities )
-  {
-    if ( obj != nullptr )
-      removeQLayerComponentsFromHierarchy( obj );
-  }
-}
-
-void addQLayerComponentsToHierarchy( Qt3DCore::QEntity *entity, const QVector<Qt3DRender::QLayer *> &layers )
-{
-  for ( Qt3DRender::QLayer *layer : layers )
-    entity->addComponent( layer );
-
-  const QList< Qt3DCore::QEntity *> childEntities = entity->findChildren<Qt3DCore::QEntity *>();
-  for ( Qt3DCore::QEntity *child : childEntities )
-  {
-    if ( child != nullptr )
-      addQLayerComponentsToHierarchy( child, layers );
-  }
-}
-
 void Qgs3DMapScene::updateScene( bool forceUpdate )
 {
   if ( forceUpdate )
     QgsEventTracing::addEvent( QgsEventTracing::Instant, QStringLiteral( "3D" ), QStringLiteral( "Update Scene" ) );
 
-  Qgs3DMapSceneEntity::SceneContext sceneContext = buildSceneContext();
+  Qgs3DMapSceneEntity::SceneContext sceneContext;
+  Qt3DRender::QCamera *camera = mEngine->camera();
+  sceneContext.cameraFov = camera->fieldOfView();
+  sceneContext.cameraPos = camera->position();
+  const QSize size = mEngine->size();
+  sceneContext.screenSizePx = std::max( size.width(), size.height() ); // TODO: is this correct?
+  sceneContext.viewProjectionMatrix = camera->projectionMatrix() * camera->viewMatrix();
+
+
   for ( Qgs3DMapSceneEntity *entity : std::as_const( mSceneEntities ) )
   {
     if ( forceUpdate || ( entity->isEnabled() && entity->needsUpdate() ) )
@@ -506,7 +474,7 @@ void Qgs3DMapScene::createTerrainDeferred()
     const QgsAABB clippingBbox = Qgs3DUtils::mapToWorldExtent( mMap.extent(), rootBbox.zMin, rootBbox.zMax, mMap.origin() );
     mMap.terrainGenerator()->setupQuadtree( rootBbox, rootError, maxZoomLevel, clippingBbox );
 
-    mTerrain = new QgsTerrainEntity( mMap );
+    mTerrain = new QgsTerrainEntity( &mMap );
     mTerrain->setParent( this );
     mTerrain->setShowBoundingBoxes( mMap.showTerrainBoundingBoxes() );
 
@@ -682,7 +650,7 @@ void Qgs3DMapScene::addLayerEntity( QgsMapLayer *layer )
       tiledSceneRenderer->setLayer( static_cast<QgsTiledSceneLayer *>( layer ) );
     }
 
-    Qt3DCore::QEntity *newEntity = renderer->createEntity( mMap );
+    Qt3DCore::QEntity *newEntity = renderer->createEntity( &mMap );
     if ( newEntity )
     {
       newEntity->setParent( this );
@@ -959,43 +927,86 @@ void Qgs3DMapScene::onShadowSettingsChanged()
     }
   }
 
-  QgsShadowSettings shadowSettings = mMap.shadowSettings();
-  int selectedLight = shadowSettings.selectedDirectionalLight();
-  if ( shadowSettings.renderShadows() && selectedLight >= 0 && selectedLight < directionalLightSources.count() )
+  QgsShadowRenderView *shadowRenderView = dynamic_cast<QgsShadowRenderView *>( frameGraph->renderView( QgsFrameGraph::SHADOW_RENDERVIEW ) ) ;
+  if ( shadowRenderView )
   {
-    frameGraph->setShadowRenderingEnabled( true );
-    frameGraph->setShadowBias( shadowSettings.shadowBias() );
-    frameGraph->setShadowMapResolution( shadowSettings.shadowMapResolution() );
-    QgsDirectionalLightSettings light = *directionalLightSources.at( selectedLight );
-    frameGraph->setupDirectionalLight( light, shadowSettings.maximumShadowRenderingDistance() );
+    QgsShadowSettings shadowSettings = mMap.shadowSettings();
+    int selectedLight = shadowSettings.selectedDirectionalLight();
+    if ( shadowSettings.renderShadows() && selectedLight >= 0 && selectedLight < directionalLightSources.count() )
+    {
+      shadowRenderView->setShadowBias( shadowSettings.shadowBias() );
+      shadowRenderView->updateTargetOutputSize( shadowSettings.shadowMapResolution(), shadowSettings.shadowMapResolution() );
+      QgsDirectionalLightSettings light = *directionalLightSources.at( selectedLight );
+      shadowRenderView->setupDirectionalLight( light, shadowSettings.maximumShadowRenderingDistance(), frameGraph->mainCamera() );
+      shadowRenderView->enableSubTree( true );
+    }
+    else
+      shadowRenderView->enableSubTree( false );
   }
-  else
-    frameGraph->setShadowRenderingEnabled( false );
 }
 
 void Qgs3DMapScene::onAmbientOcclusionSettingsChanged()
 {
-  QgsFrameGraph *frameGraph = mEngine->frameGraph();
   QgsAmbientOcclusionSettings ambientOcclusionSettings = mMap.ambientOcclusionSettings();
-  frameGraph->setAmbientOcclusionEnabled( ambientOcclusionSettings.isEnabled() );
-  frameGraph->setAmbientOcclusionRadius( ambientOcclusionSettings.radius() );
-  frameGraph->setAmbientOcclusionIntensity( ambientOcclusionSettings.intensity() );
-  frameGraph->setAmbientOcclusionThreshold( ambientOcclusionSettings.threshold() );
+
+  QgsAbstractRenderView *renderView = mEngine->frameGraph()->renderView( QgsFrameGraph::AO_RENDERVIEW );
+  QgsAmbientOcclusionRenderView *aoRenderView = dynamic_cast<QgsAmbientOcclusionRenderView *>( renderView );
+
+  if ( aoRenderView )
+  {
+    aoRenderView->setRadius( ambientOcclusionSettings.radius() );
+    aoRenderView->setIntensity( ambientOcclusionSettings.intensity() );
+    aoRenderView->setThreshold( ambientOcclusionSettings.threshold() );
+  }
+
+  QgsPostprocessingRenderView *srv = dynamic_cast<QgsPostprocessingRenderView *>( mEngine->frameGraph()->renderView( QgsFrameGraph::POSTPROC_RENDERVIEW ) );
+  srv->setAmbientOcclusionEnabled( ambientOcclusionSettings.isEnabled() );
+
+  mEngine->frameGraph()->setEnableRenderView( QgsFrameGraph::AO_RENDERVIEW, ambientOcclusionSettings.isEnabled() );
 }
 
 void Qgs3DMapScene::onDebugShadowMapSettingsChanged()
 {
-  mEngine->frameGraph()->setupShadowMapDebugging( mMap.debugShadowMapEnabled(), mMap.debugShadowMapCorner(), mMap.debugShadowMapSize() );
+  if ( !mShadowTextureDebugging && mMap.debugShadowMapEnabled() )
+  {
+    QgsAbstractRenderView *shadowRenderView = mEngine->frameGraph()->renderView( QgsFrameGraph::SHADOW_RENDERVIEW );
+    Qt3DRender::QTexture2D *shadowDepthTexture = shadowRenderView->outputTexture( Qt3DRender::QRenderTargetOutput::Depth );
+
+    QgsAbstractRenderView *debugRenderView = mEngine->frameGraph()->renderView( QgsFrameGraph::DEBUG_RENDERVIEW );
+
+    mShadowTextureDebugging = new QgsDebugTextureEntity( shadowDepthTexture, debugRenderView->layerToFilter(), mEngine->frameGraph()->rootEntity() );
+  }
+
+  mEngine->frameGraph()->setEnableRenderView( QgsFrameGraph::DEBUG_RENDERVIEW, mMap.debugShadowMapEnabled() || mMap.debugDepthMapEnabled() );
+  if ( mShadowTextureDebugging )
+  {
+    mShadowTextureDebugging->onSettingsChanged( mMap.debugShadowMapEnabled(), mMap.debugShadowMapCorner(), mMap.debugShadowMapSize() );
+  }
 }
 
 void Qgs3DMapScene::onDebugDepthMapSettingsChanged()
 {
-  mEngine->frameGraph()->setupDepthMapDebugging( mMap.debugDepthMapEnabled(), mMap.debugDepthMapCorner(), mMap.debugDepthMapSize() );
+  if ( !mDepthTextureDebugging && mMap.debugDepthMapEnabled() )
+  {
+    QgsAbstractRenderView *forwardRenderView = mEngine->frameGraph()->renderView( QgsFrameGraph::FORWARD_RENDERVIEW );
+    Qt3DRender::QTexture2D *forwardDepthTexture = forwardRenderView->outputTexture( Qt3DRender::QRenderTargetOutput::Depth );
+
+    QgsAbstractRenderView *debugRenderView = mEngine->frameGraph()->renderView( QgsFrameGraph::DEBUG_RENDERVIEW );
+
+    mDepthTextureDebugging = new QgsDebugTextureEntity( forwardDepthTexture, debugRenderView->layerToFilter(), mEngine->frameGraph()->rootEntity() );
+  }
+
+  mEngine->frameGraph()->setEnableRenderView( QgsFrameGraph::DEBUG_RENDERVIEW, mMap.debugShadowMapEnabled() || mMap.debugDepthMapEnabled() );
+  if ( mDepthTextureDebugging )
+  {
+    mDepthTextureDebugging->onSettingsChanged( mMap.debugDepthMapEnabled(), mMap.debugDepthMapCorner(), mMap.debugDepthMapSize() );
+  }
 }
 
 void Qgs3DMapScene::onDebugOverlayEnabledChanged()
 {
   mEngine->frameGraph()->setDebugOverlayEnabled( mMap.isDebugOverlayEnabled() );
+  mEngine->renderSettings()->setRenderPolicy( mMap.isDebugOverlayEnabled() ? Qt3DRender::QRenderSettings::Always : Qt3DRender::QRenderSettings::OnDemand );
 }
 
 void Qgs3DMapScene::onEyeDomeShadingSettingsChanged()

@@ -77,6 +77,11 @@ QString QgsProcessingAlgorithm::helpUrl() const
   return QString();
 }
 
+Qgis::ProcessingAlgorithmDocumentationFlags QgsProcessingAlgorithm::documentationFlags() const
+{
+  return Qgis::ProcessingAlgorithmDocumentationFlags();
+}
+
 QIcon QgsProcessingAlgorithm::icon() const
 {
   return QgsApplication::getThemeIcon( "/processingAlgorithm.svg" );
@@ -536,24 +541,28 @@ QVariantMap QgsProcessingAlgorithm::run( const QVariantMap &parameters, QgsProce
     return QVariantMap();
 
   QVariantMap runRes;
+  bool success = false;
   try
   {
     runRes = alg->runPrepared( parameters, context, feedback );
+    success = true;
   }
   catch ( QgsProcessingException &e )
   {
     if ( !catchExceptions )
+    {
+      alg->postProcess( context, feedback, false );
       throw e;
+    }
 
     QgsMessageLog::logMessage( e.what(), QObject::tr( "Processing" ), Qgis::MessageLevel::Critical );
     feedback->reportError( e.what() );
-    return QVariantMap();
   }
 
   if ( ok )
-    *ok = true;
+    *ok = success;
 
-  QVariantMap ppRes = alg->postProcess( context, feedback );
+  QVariantMap ppRes = alg->postProcess( context, feedback, success );
   if ( !ppRes.isEmpty() )
     return ppRes;
   else
@@ -604,15 +613,30 @@ QVariantMap QgsProcessingAlgorithm::runPrepared( const QVariantMap &parameters, 
     mLocalContext.reset( new QgsProcessingContext() );
     // copy across everything we can safely do from the passed context
     mLocalContext->copyThreadSafeSettings( context );
+
     // and we'll run the actual algorithm processing using the local thread safe context
     runContext = mLocalContext.get();
   }
 
+  std::unique_ptr< QgsProcessingModelInitialRunConfig > modelConfig = context.takeModelInitialRunConfig();
+  if ( modelConfig )
+  {
+    std::unique_ptr< QgsMapLayerStore > modelPreviousLayerStore = modelConfig->takePreviousLayerStore();
+    if ( modelPreviousLayerStore )
+    {
+      // move layers from previous layer store to context's temporary layer store, in a thread-safe way
+      Q_ASSERT_X( !modelPreviousLayerStore->thread(), "QgsProcessingAlgorithm::runPrepared", "QgsProcessingModelConfig::modelPreviousLayerStore must have been pushed to a nullptr thread" );
+      modelPreviousLayerStore->moveToThread( QThread::currentThread() );
+      runContext->temporaryLayerStore()->transferLayersFromStore( modelPreviousLayerStore.get() );
+    }
+    runContext->setModelInitialRunConfig( std::move( modelConfig ) );
+  }
+
+  mHasExecuted = true;
   try
   {
     QVariantMap runResults = processAlgorithm( parameters, *runContext, feedback );
 
-    mHasExecuted = true;
     if ( mLocalContext )
     {
       // ok, time to clean things up. We need to push the temporary context back into
@@ -634,7 +658,7 @@ QVariantMap QgsProcessingAlgorithm::runPrepared( const QVariantMap &parameters, 
   }
 }
 
-QVariantMap QgsProcessingAlgorithm::postProcess( QgsProcessingContext &context, QgsProcessingFeedback *feedback )
+QVariantMap QgsProcessingAlgorithm::postProcess( QgsProcessingContext &context, QgsProcessingFeedback *feedback, bool runResult )
 {
   // cppcheck-suppress assertWithSideEffect
   Q_ASSERT_X( QThread::currentThread() == context.temporaryLayerStore()->thread(), "QgsProcessingAlgorithm::postProcess", "postProcess() must be called from the same thread the context was created in" );
@@ -652,14 +676,21 @@ QVariantMap QgsProcessingAlgorithm::postProcess( QgsProcessingContext &context, 
   }
 
   mHasPostProcessed = true;
-  try
+  if ( runResult )
   {
-    return postProcessAlgorithm( context, feedback );
+    try
+    {
+      return postProcessAlgorithm( context, feedback );
+    }
+    catch ( QgsProcessingException &e )
+    {
+      QgsMessageLog::logMessage( e.what(), QObject::tr( "Processing" ), Qgis::MessageLevel::Critical );
+      feedback->reportError( e.what() );
+      return QVariantMap();
+    }
   }
-  catch ( QgsProcessingException &e )
+  else
   {
-    QgsMessageLog::logMessage( e.what(), QObject::tr( "Processing" ), Qgis::MessageLevel::Critical );
-    feedback->reportError( e.what() );
     return QVariantMap();
   }
 }
@@ -899,17 +930,17 @@ QString QgsProcessingAlgorithm::invalidSourceError( const QVariantMap &parameter
   else
   {
     QVariant var = parameters.value( name );
-    if ( var.userType() == QMetaType::type( "QgsProcessingFeatureSourceDefinition" ) )
+    if ( var.userType() == qMetaTypeId<QgsProcessingFeatureSourceDefinition>() )
     {
       QgsProcessingFeatureSourceDefinition fromVar = qvariant_cast<QgsProcessingFeatureSourceDefinition>( var );
       var = fromVar.source;
     }
-    else if ( var.userType() == QMetaType::type( "QgsProcessingOutputLayerDefinition" ) )
+    else if ( var.userType() == qMetaTypeId<QgsProcessingOutputLayerDefinition>() )
     {
       QgsProcessingOutputLayerDefinition fromVar = qvariant_cast<QgsProcessingOutputLayerDefinition>( var );
       var = fromVar.sink;
     }
-    if ( var.userType() == QMetaType::type( "QgsProperty" ) )
+    if ( var.userType() == qMetaTypeId<QgsProperty>() )
     {
       QgsProperty p = var.value< QgsProperty >();
       if ( p.propertyType() == Qgis::PropertyType::Static )
@@ -931,7 +962,7 @@ QString QgsProcessingAlgorithm::invalidRasterError( const QVariantMap &parameter
   else
   {
     QVariant var = parameters.value( name );
-    if ( var.userType() == QMetaType::type( "QgsProperty" ) )
+    if ( var.userType() == qMetaTypeId<QgsProperty>() )
     {
       QgsProperty p = var.value< QgsProperty >();
       if ( p.propertyType() == Qgis::PropertyType::Static )
@@ -953,12 +984,12 @@ QString QgsProcessingAlgorithm::invalidSinkError( const QVariantMap &parameters,
   else
   {
     QVariant var = parameters.value( name );
-    if ( var.userType() == QMetaType::type( "QgsProcessingOutputLayerDefinition" ) )
+    if ( var.userType() == qMetaTypeId<QgsProcessingOutputLayerDefinition>() )
     {
       QgsProcessingOutputLayerDefinition fromVar = qvariant_cast<QgsProcessingOutputLayerDefinition>( var );
       var = fromVar.sink;
     }
-    if ( var.userType() == QMetaType::type( "QgsProperty" ) )
+    if ( var.userType() == qMetaTypeId<QgsProperty>() )
     {
       QgsProperty p = var.value< QgsProperty >();
       if ( p.propertyType() == Qgis::PropertyType::Static )
@@ -980,7 +1011,7 @@ QString QgsProcessingAlgorithm::invalidPointCloudError( const QVariantMap &param
   else
   {
     QVariant var = parameters.value( name );
-    if ( var.userType() == QMetaType::type( "QgsProperty" ) )
+    if ( var.userType() == qMetaTypeId<QgsProperty>() )
     {
       QgsProperty p = var.value< QgsProperty >();
       if ( p.propertyType() == Qgis::PropertyType::Static )

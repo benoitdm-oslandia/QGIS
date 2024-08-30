@@ -15,13 +15,13 @@
 
 #include "qgswindow3dengine.h"
 
-#include <Qt3DRender/QRenderCapture>
+#include "framegraph/qgsframegraph.h"
+
 #include <Qt3DExtras/QForwardRenderer>
 #include <Qt3DRender/QRenderSettings>
 
+#include "framegraph/qgsabstractrenderview.h"
 #include "qgs3dmapcanvas.h"
-#include "qgsframegraph.h"
-
 
 QgsWindow3DEngine::QgsWindow3DEngine( Qgs3DMapCanvas *parent )
   : QgsAbstract3DEngine( parent )
@@ -32,11 +32,12 @@ QgsWindow3DEngine::QgsWindow3DEngine( Qgs3DMapCanvas *parent )
   mMapCanvas3D->setRootEntity( mRoot );
 
   mFrameGraph = new QgsFrameGraph( mMapCanvas3D, QSize( 1024, 768 ), mMapCanvas3D->camera(), mRoot );
-  mFrameGraph->setRenderCaptureEnabled( false );
+  // to deactivate unit test render capture
+  mFrameGraph->setOffScreenRenderCaptureEnabled( false );
   mMapCanvas3D->setActiveFrameGraph( mFrameGraph->frameGraphRoot() );
 
   // force switching to no shadow rendering
-  setShadowRenderingEnabled( false );
+  mFrameGraph->setEnableRenderView( QgsFrameGraph::SHADOW_RENDERVIEW, false );
 }
 
 QWindow *QgsWindow3DEngine::window()
@@ -47,12 +48,6 @@ QWindow *QgsWindow3DEngine::window()
 Qt3DCore::QEntity *QgsWindow3DEngine::root() const
 {
   return mRoot;
-}
-
-void QgsWindow3DEngine::setShadowRenderingEnabled( bool enabled )
-{
-  mShadowRenderingEnabled = enabled;
-  mFrameGraph->setShadowRenderingEnabled( mShadowRenderingEnabled );
 }
 
 void QgsWindow3DEngine::setClearColor( const QColor &color )
@@ -70,8 +65,8 @@ void QgsWindow3DEngine::setRootEntity( Qt3DCore::QEntity *root )
 {
   mSceneRoot = root;
   mSceneRoot->setParent( mRoot );
-  mSceneRoot->addComponent( mFrameGraph->forwardRenderLayer() );
-  mSceneRoot->addComponent( mFrameGraph->castShadowsLayer() );
+  if ( mFrameGraph->renderView( QgsFrameGraph::FORWARD_RENDERVIEW ) )
+    mSceneRoot->addComponent( mFrameGraph->filterLayer( QgsFrameGraph::FORWARD_RENDERVIEW ) );
 }
 
 Qt3DRender::QRenderSettings *QgsWindow3DEngine::renderSettings()

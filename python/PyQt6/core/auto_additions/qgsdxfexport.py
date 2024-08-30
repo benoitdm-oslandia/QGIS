@@ -1,6 +1,7 @@
 # The following has been generated automatically from src/core/dxf/qgsdxfexport.h
 QgsDxfExport.FlagNoMText = QgsDxfExport.Flag.FlagNoMText
 QgsDxfExport.FlagOnlySelectedFeatures = QgsDxfExport.Flag.FlagOnlySelectedFeatures
+QgsDxfExport.FlagHairlineWidthExport = QgsDxfExport.Flag.FlagHairlineWidthExport
 QgsDxfExport.Flags = lambda flags=0: QgsDxfExport.Flag(flags)
 # monkey patching scoped based enum
 QgsDxfExport.ExportResult.Success.__doc__ = "Successful export"
@@ -50,3 +51,18 @@ QgsDxfExport.DxfPolylineFlag.__bool__ = lambda flag: bool(_force_int(flag))
 QgsDxfExport.DxfPolylineFlag.__eq__ = lambda flag1, flag2: _force_int(flag1) == _force_int(flag2)
 QgsDxfExport.DxfPolylineFlag.__and__ = lambda flag1, flag2: _force_int(flag1) & _force_int(flag2)
 QgsDxfExport.DxfPolylineFlag.__or__ = lambda flag1, flag2: QgsDxfExport.DxfPolylineFlag(_force_int(flag1) | _force_int(flag2))
+QgsDxfExport.closestColorMatch = staticmethod(QgsDxfExport.closestColorMatch)
+QgsDxfExport.mapUnitScaleFactor = staticmethod(QgsDxfExport.mapUnitScaleFactor)
+QgsDxfExport.dxfLayerName = staticmethod(QgsDxfExport.dxfLayerName)
+QgsDxfExport.dxfEncoding = staticmethod(QgsDxfExport.dxfEncoding)
+QgsDxfExport.encodings = staticmethod(QgsDxfExport.encodings)
+QgsDxfExport.DxfLayer.__doc__ = """Layers and optional attribute index to split
+into multiple layers using attribute value as layer name."""
+try:
+    QgsDxfExport.__group__ = ['dxf']
+except NameError:
+    pass
+try:
+    QgsDxfExport.DxfLayer.__group__ = ['dxf']
+except NameError:
+    pass

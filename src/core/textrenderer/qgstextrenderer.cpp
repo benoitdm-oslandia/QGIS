@@ -29,23 +29,11 @@
 #include "qgstextmetrics.h"
 #include "qgstextrendererutils.h"
 #include "qgsgeos.h"
-
+#include "qgspainting.h"
 #include <optional>
 
 #include <QTextBoundaryFinder>
 
-Q_GUI_EXPORT extern int qt_defaultDpiX();
-Q_GUI_EXPORT extern int qt_defaultDpiY();
-
-static void _fixQPictureDPI( QPainter *p )
-{
-  // QPicture makes an assumption that we drawing to it with system DPI.
-  // Then when being drawn, it scales the painter. The following call
-  // negates the effect. There is no way of setting QPicture's DPI.
-  // See QTBUG-20361
-  p->scale( static_cast< double >( qt_defaultDpiX() ) / p->device()->logicalDpiX(),
-            static_cast< double >( qt_defaultDpiY() ) / p->device()->logicalDpiY() );
-}
 
 Qgis::TextHorizontalAlignment QgsTextRenderer::convertQtHAlignment( Qt::Alignment alignment )
 {
@@ -610,13 +598,16 @@ double QgsTextRenderer::drawBuffer( QgsRenderContext &context, const QgsTextRend
       {
         QFont fragmentFont = metrics.fragmentFont( component.blockIndex, fragmentIndex );
 
-        if ( component.extraWordSpacing || component.extraLetterSpacing )
-          applyExtraSpacingForLineJustification( fragmentFont, component.extraWordSpacing, component.extraLetterSpacing );
+        if ( !fragment.isWhitespace() )
+        {
+          if ( component.extraWordSpacing || component.extraLetterSpacing )
+            applyExtraSpacingForLineJustification( fragmentFont, component.extraWordSpacing, component.extraLetterSpacing );
 
-        const double yOffset = metrics.fragmentVerticalOffset( component.blockIndex, fragmentIndex, mode );
-        path.addText( xOffset, yOffset, fragmentFont, fragment.text() );
+          const double yOffset = metrics.fragmentVerticalOffset( component.blockIndex, fragmentIndex, mode );
+          path.addText( xOffset, yOffset, fragmentFont, fragment.text() );
+        }
 
-        xOffset += metrics.fragmentHorizontalAdvance( component.blockIndex, fragmentIndex, mode );
+        xOffset += metrics.fragmentHorizontalAdvance( component.blockIndex, fragmentIndex, mode ) * scaleFactor;
 
         fragmentIndex++;
       }
@@ -728,7 +719,7 @@ double QgsTextRenderer::drawBuffer( QgsRenderContext &context, const QgsTextRend
 
   // scale for any print output or image saving @ specific dpi
   p->scale( component.dpiRatio, component.dpiRatio );
-  _fixQPictureDPI( p );
+  QgsPainting::applyScaleFixForQPictureDpi( p );
   p->drawPicture( 0, 0, buffPict );
 
   return advance / scaleFactor;
@@ -775,12 +766,15 @@ void QgsTextRenderer::drawMask( QgsRenderContext &context, const QgsTextRenderer
   int fragmentIndex = 0;
   for ( const QgsTextFragment &fragment : component.block )
   {
-    const QFont fragmentFont = metrics.fragmentFont( component.blockIndex, fragmentIndex );
+    if ( !fragment.isWhitespace() )
+    {
+      const QFont fragmentFont = metrics.fragmentFont( component.blockIndex, fragmentIndex );
 
-    const double fragmentYOffset = metrics.fragmentVerticalOffset( component.blockIndex, fragmentIndex, mode );
-    path.addText( xOffset, fragmentYOffset, fragmentFont, fragment.text() );
+      const double fragmentYOffset = metrics.fragmentVerticalOffset( component.blockIndex, fragmentIndex, mode );
+      path.addText( xOffset, fragmentYOffset, fragmentFont, fragment.text() );
+    }
 
-    xOffset += metrics.fragmentHorizontalAdvance( component.blockIndex, fragmentIndex, mode );
+    xOffset += metrics.fragmentHorizontalAdvance( component.blockIndex, fragmentIndex, mode ) * scaleFactor;
     fragmentIndex++;
   }
 
@@ -1402,7 +1396,7 @@ void QgsTextRenderer::drawBackground( QgsRenderContext &context, QgsTextRenderer
 
       // scale for any print output or image saving @ specific dpi
       p->scale( component.dpiRatio, component.dpiRatio );
-      _fixQPictureDPI( p );
+      QgsPainting::applyScaleFixForQPictureDpi( p );
       p->drawPicture( 0, 0, shapePict );
       p->setCompositionMode( QPainter::CompositionMode_SourceOver ); // just to be sure
       break;
@@ -1876,22 +1870,25 @@ void QgsTextRenderer::drawTextInternalHorizontal( QgsRenderContext &context, con
         for ( const QgsTextFragment &fragment : block )
         {
           // draw text, QPainterPath method
-          QPainterPath path;
-          path.setFillRule( Qt::WindingFill );
+          if ( !fragment.isWhitespace() )
+          {
+            QPainterPath path;
+            path.setFillRule( Qt::WindingFill );
 
-          QFont fragmentFont = metrics.fragmentFont( blockIndex, fragmentIndex );
+            QFont fragmentFont = metrics.fragmentFont( blockIndex, fragmentIndex );
 
-          if ( extraWordSpace || extraLetterSpace )
-            applyExtraSpacingForLineJustification( fragmentFont, extraWordSpace * fontScale, extraLetterSpace * fontScale );
+            if ( extraWordSpace || extraLetterSpace )
+              applyExtraSpacingForLineJustification( fragmentFont, extraWordSpace * fontScale, extraLetterSpace * fontScale );
 
-          const double yOffset = metrics.fragmentVerticalOffset( blockIndex, fragmentIndex, mode );
+            const double yOffset = metrics.fragmentVerticalOffset( blockIndex, fragmentIndex, mode );
 
-          path.addText( xOffset, yOffset, fragmentFont, fragment.text() );
+            path.addText( xOffset, yOffset, fragmentFont, fragment.text() );
 
-          QColor textColor = fragment.characterFormat().textColor().isValid() ? fragment.characterFormat().textColor() : format.color();
-          textColor.setAlphaF( fragment.characterFormat().textColor().isValid() ? textColor.alphaF() * format.opacity() : format.opacity() );
-          textp.setBrush( textColor );
-          textp.drawPath( path );
+            QColor textColor = fragment.characterFormat().textColor().isValid() ? fragment.characterFormat().textColor() : format.color();
+            textColor.setAlphaF( fragment.characterFormat().textColor().isValid() ? textColor.alphaF() * format.opacity() : format.opacity() );
+            textp.setBrush( textColor );
+            textp.drawPath( path );
+          }
 
           xOffset += metrics.fragmentHorizontalAdvance( blockIndex, fragmentIndex, mode ) * fontScale;
           fragmentIndex ++;
@@ -1922,7 +1919,7 @@ void QgsTextRenderer::drawTextInternalHorizontal( QgsRenderContext &context, con
         case Qgis::TextRenderFormat::AlwaysOutlines:
         {
           // draw outlined text
-          _fixQPictureDPI( context.painter() );
+          QgsPainting::applyScaleFixForQPictureDpi( context.painter() );
           context.painter()->drawPicture( 0, 0, textPict );
           break;
         }
@@ -1933,23 +1930,26 @@ void QgsTextRenderer::drawTextInternalHorizontal( QgsRenderContext &context, con
           int fragmentIndex = 0;
           for ( const QgsTextFragment &fragment : block )
           {
-            QFont fragmentFont = metrics.fragmentFont( blockIndex, fragmentIndex );
+            if ( !fragment.isWhitespace() )
+            {
+              QFont fragmentFont = metrics.fragmentFont( blockIndex, fragmentIndex );
 
-            if ( extraWordSpace || extraLetterSpace )
-              applyExtraSpacingForLineJustification( fragmentFont, extraWordSpace * fontScale, extraLetterSpace * fontScale );
+              if ( extraWordSpace || extraLetterSpace )
+                applyExtraSpacingForLineJustification( fragmentFont, extraWordSpace * fontScale, extraLetterSpace * fontScale );
 
-            const double yOffset = metrics.fragmentVerticalOffset( blockIndex, fragmentIndex, mode );
+              const double yOffset = metrics.fragmentVerticalOffset( blockIndex, fragmentIndex, mode );
 
-            QColor textColor = fragment.characterFormat().textColor().isValid() ? fragment.characterFormat().textColor() : format.color();
-            textColor.setAlphaF( fragment.characterFormat().textColor().isValid() ? textColor.alphaF() * format.opacity() : format.opacity() );
+              QColor textColor = fragment.characterFormat().textColor().isValid() ? fragment.characterFormat().textColor() : format.color();
+              textColor.setAlphaF( fragment.characterFormat().textColor().isValid() ? textColor.alphaF() * format.opacity() : format.opacity() );
 
-            context.painter()->setPen( textColor );
-            context.painter()->setFont( fragmentFont );
-            context.painter()->setRenderHint( QPainter::TextAntialiasing );
+              context.painter()->setPen( textColor );
+              context.painter()->setFont( fragmentFont );
+              context.painter()->setRenderHint( QPainter::TextAntialiasing );
 
-            context.painter()->scale( 1 / fontScale, 1 / fontScale );
-            context.painter()->drawText( QPointF( xOffset, yOffset ), fragment.text() );
-            context.painter()->scale( fontScale, fontScale );
+              context.painter()->scale( 1 / fontScale, 1 / fontScale );
+              context.painter()->drawText( QPointF( xOffset, yOffset ), fragment.text() );
+              context.painter()->scale( fontScale, fontScale );
+            }
 
             xOffset += metrics.fragmentHorizontalAdvance( blockIndex, fragmentIndex, mode );
             fragmentIndex++;
@@ -2199,7 +2199,7 @@ void QgsTextRenderer::drawTextInternalVertical( QgsRenderContext &context, const
           {
             // draw outlined text
             context.painter()->translate( 0, currentBlockYOffset );
-            _fixQPictureDPI( context.painter() );
+            QgsPainting::applyScaleFixForQPictureDpi( context.painter() );
             context.painter()->drawPicture( 0, 0, textPict );
             currentBlockYOffset += partYOffset;
             break;
@@ -2240,16 +2240,21 @@ double QgsTextRenderer::calculateScaleFactorForFormat( const QgsRenderContext &c
 
   const double pixelSize = context.convertToPainterUnits( format.size(), format.sizeUnit(), format.sizeMapUnitScale() );
 
-  // THESE THRESHOLD MAY NEED TWEAKING!
+  // THESE THRESHOLDS MAY NEED TWEAKING!
+
+  // NOLINTBEGIN(bugprone-branch-clone)
 
   // for small font sizes we need to apply a growth scaling workaround designed to stablise the rendering of small font sizes
+  // we scale the painter up so that we render small text at 200 pixel size and let the painter scaling handle making it the correct size
   if ( pixelSize < 50 )
-    return FONT_WORKAROUND_SCALE;
-  //... but for font sizes we might run into https://bugreports.qt.io/browse/QTBUG-98778, which messes up the spacing between words for large fonts!
+    return 200 / pixelSize;
+  //... but for large font sizes we might run into https://bugreports.qt.io/browse/QTBUG-98778, which messes up the spacing between words for large fonts!
   // so instead we scale down the painter so that we render the text at 200 pixel size and let painter scaling handle making it the correct size
   else if ( pixelSize > 200 )
     return 200 / pixelSize;
   else
     return 1.0;
+
+  // NOLINTEND(bugprone-branch-clone)
 }
 

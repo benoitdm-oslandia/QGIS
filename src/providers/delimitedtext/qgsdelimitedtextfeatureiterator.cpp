@@ -41,10 +41,7 @@ QgsDelimitedTextFeatureIterator::QgsDelimitedTextFeatureIterator( QgsDelimitedTe
   // load it.
   const bool hasGeometry = mSource->mGeomRep != QgsDelimitedTextProvider::GeomNone;
 
-  if ( mRequest.destinationCrs().isValid() && mRequest.destinationCrs() != mSource->mCrs )
-  {
-    mTransform = QgsCoordinateTransform( mSource->mCrs, mRequest.destinationCrs(), mRequest.transformContext() );
-  }
+  mTransform = mRequest.calculateTransform( mSource->mCrs );
   try
   {
     mFilterRect = filterRectToSourceCrs( mTransform );
@@ -515,7 +512,7 @@ void QgsDelimitedTextFeatureIterator::fetchAttribute( QgsFeature &feature, int f
   QVariant val;
   switch ( mSource->mFields.at( fieldIdx ).type() )
   {
-    case QVariant::Bool:
+    case QMetaType::Type::Bool:
     {
       Q_ASSERT( mSource->mFieldBooleanLiterals.contains( fieldIdx ) );
       if ( value.compare( mSource->mFieldBooleanLiterals[ fieldIdx ].first, Qt::CaseSensitivity::CaseInsensitive ) == 0 )
@@ -528,11 +525,11 @@ void QgsDelimitedTextFeatureIterator::fetchAttribute( QgsFeature &feature, int f
       }
       else
       {
-        val = QVariant( QVariant::Bool );
+        val = QgsVariantUtils::createNullVariant( QMetaType::Type::Bool );
       }
       break;
     }
-    case QVariant::Int:
+    case QMetaType::Type::Int:
     {
       int ivalue = 0;
       bool ok = false;
@@ -541,10 +538,10 @@ void QgsDelimitedTextFeatureIterator::fetchAttribute( QgsFeature &feature, int f
       if ( ok )
         val = QVariant( ivalue );
       else
-        val = QVariant( mSource->mFields.at( fieldIdx ).type() );
+        val = QgsVariantUtils::createNullVariant( mSource->mFields.at( fieldIdx ).type() );
       break;
     }
-    case QVariant::LongLong:
+    case QMetaType::Type::LongLong:
     {
       if ( ! value.isEmpty() )
       {
@@ -552,16 +549,16 @@ void QgsDelimitedTextFeatureIterator::fetchAttribute( QgsFeature &feature, int f
         val = value.toLongLong( &ok );
         if ( ! ok )
         {
-          val = QVariant( mSource->mFields.at( fieldIdx ).type() );
+          val = QgsVariantUtils::createNullVariant( mSource->mFields.at( fieldIdx ).type() );
         }
       }
       else
       {
-        val = QVariant( mSource->mFields.at( fieldIdx ).type() );
+        val = QgsVariantUtils::createNullVariant( mSource->mFields.at( fieldIdx ).type() );
       }
       break;
     }
-    case QVariant::Double:
+    case QMetaType::Type::Double:
     {
       double dvalue = 0.0;
       bool ok = false;
@@ -582,21 +579,21 @@ void QgsDelimitedTextFeatureIterator::fetchAttribute( QgsFeature &feature, int f
       }
       else
       {
-        val = QVariant( mSource->mFields.at( fieldIdx ).type() );
+        val = QgsVariantUtils::createNullVariant( mSource->mFields.at( fieldIdx ).type() );
       }
       break;
     }
-    case QVariant::DateTime:
+    case QMetaType::Type::QDateTime:
     {
       val = QVariant( QDateTime::fromString( value, Qt::ISODate ) );
       break;
     }
-    case QVariant::Date:
+    case QMetaType::Type::QDate:
     {
       val = QVariant( QDate::fromString( value, Qt::ISODate ) );
       break;
     }
-    case QVariant::Time:
+    case QMetaType::Type::QTime:
     {
       val = QVariant( QTime::fromString( value ) );
       break;

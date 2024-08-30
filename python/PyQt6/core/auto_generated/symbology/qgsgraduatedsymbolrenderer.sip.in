@@ -3,13 +3,16 @@
  *                                                                      *
  * src/core/symbology/qgsgraduatedsymbolrenderer.h                      *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
 
 class QgsGraduatedSymbolRenderer : QgsFeatureRenderer
 {
+%Docstring(signature="appended")
+A vector feature renderer which uses numeric attributes to classify features into different ranges.
+%End
 
 %TypeHeaderCode
 #include "qgsgraduatedsymbolrenderer.h"
@@ -264,7 +267,7 @@ Recalculate classes for a layer
 .. deprecated:: QGIS 3.10
 %End
 
-    void updateClasses( const QgsVectorLayer *vl, int nclasses );
+    void updateClasses( const QgsVectorLayer *vl, int nclasses, QString &error /Out/ );
 %Docstring
 Recalculate classes for a layer
 
@@ -513,5 +516,5 @@ Returns the matching legend key for a value.
  *                                                                      *
  * src/core/symbology/qgsgraduatedsymbolrenderer.h                      *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

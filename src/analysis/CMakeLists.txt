@@ -50,6 +50,7 @@ set(QGIS_ANALYSIS_SRCS
   processing/qgsalgorithmassignprojection.cpp
   processing/qgsalgorithmattributeindex.cpp
   processing/qgsalgorithmb3dmtogltf.cpp
+  processing/qgsalgorithmbasicstatistics.cpp
   processing/qgsalgorithmbatchgeocode.cpp
   processing/qgsalgorithmbatchnominatimgeocode.cpp
   processing/qgsalgorithmboundary.cpp
@@ -243,6 +244,7 @@ set(QGIS_ANALYSIS_SRCS
   processing/qgsalgorithmtruncatetable.cpp
   processing/qgsalgorithmunion.cpp
   processing/qgsalgorithmuniquevalueindex.cpp
+  processing/qgsalgorithmurlopener.cpp
   processing/qgsalgorithmvectorize.cpp
   processing/qgsalgorithmvirtualrastercalculator.cpp
   processing/qgsalgorithmvoronoipolygons.cpp
@@ -373,6 +375,7 @@ set(QGIS_ANALYSIS_HDRS
   processing/qgsnativealgorithms.h
   processing/qgsprojectstylealgorithms.h
   processing/qgsreclassifyutils.h
+  processing/qgsalgorithmurlopener.h
 
   raster/qgsalignraster.h
   raster/qgsaspectfilter.h

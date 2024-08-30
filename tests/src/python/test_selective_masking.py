@@ -16,7 +16,7 @@ import os
 import subprocess
 import tempfile
 
-from qgis.PyQt.QtCore import QRectF, QSize, Qt, QUuid
+from qgis.PyQt.QtCore import QRectF, QSize, Qt, QUuid, QCoreApplication
 from qgis.PyQt.QtGui import QColor, QImage, QPainter
 from qgis.core import (
     Qgis,
@@ -26,13 +26,16 @@ from qgis.core import (
     QgsLayoutItemMap,
     QgsLayoutItemPage,
     QgsLayoutSize,
+    QgsLineSymbol,
     QgsMapRendererCache,
     QgsMapRendererCustomPainterJob,
     QgsMapRendererParallelJob,
     QgsMapRendererSequentialJob,
     QgsMapSettings,
+    QgsMarkerLineSymbolLayer,
     QgsMarkerSymbol,
     QgsMaskMarkerSymbolLayer,
+    QgsNullSymbolRenderer,
     QgsOuterGlowEffect,
     QgsPalLayerSettings,
     QgsPathResolver,
@@ -48,7 +51,8 @@ from qgis.core import (
     QgsSymbolLayerUtils,
     QgsUnitTypes,
     QgsWkbTypes,
-    QgsFontUtils
+    QgsFontUtils,
+    QgsSettings
 )
 import unittest
 from qgis.testing import start_app, QgisTestCase
@@ -83,8 +87,17 @@ class TestSelectiveMasking(QgisTestCase):
     def control_path_prefix(cls):
         return "selective_masking"
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
+        super(TestSelectiveMasking, cls).setUpClass()
+        QCoreApplication.setOrganizationName("QGIS_Test")
+        QCoreApplication.setOrganizationDomain("SelectiveMaskingTestBase.com")
+        QCoreApplication.setApplicationName("SelectiveMaskingTestBase")
+        QgsSettings().clear()
 
+        start_app()
+
+    def setUp(self):
         self.map_settings = QgsMapSettings()
         crs = QgsCoordinateReferenceSystem('epsg:4326')
         extent = QgsRectangle(-123.0, 22.7, -76.4, 46.9)
@@ -161,14 +174,19 @@ class TestSelectiveMasking(QgisTestCase):
         symbollayer = self.get_symbollayer(layer, ruleId, symbollayer_ids)
         return QgsSymbolLayerReference(layer.id(), symbollayer.id())
 
-    def check_renderings(self, map_settings, control_name):
+    def check_renderings(self, map_settings, control_name, test_parallel_rendering: bool = True):
         """Test a rendering with different configurations:
         - parallel rendering, no cache
         - sequential rendering, no cache
         - parallel rendering, with cache (rendered two times)
         - sequential rendering, with cache (rendered two times)
         """
-        for do_parallel in [False, True]:
+        if test_parallel_rendering:
+            parallel_tests = [False, True]
+        else:
+            parallel_tests = [False]
+
+        for do_parallel in parallel_tests:
             for use_cache in [False, True]:
                 print("=== parallel", do_parallel, "cache", use_cache)
                 cache = None
@@ -810,7 +828,9 @@ class TestSelectiveMasking(QgisTestCase):
 
         # test that force vector output has no impact on the result
         self.map_settings.setFlag(Qgis.MapSettingsFlag.ForceVectorOutput, True)
-        self.check_renderings(self.map_settings, "label_mask_with_effect")
+        # skip parallel rendering for this check, as force vector output is ignored when parallel rendering
+        # is used
+        self.check_renderings(self.map_settings, "label_mask_with_effect", test_parallel_rendering=False)
 
     def test_different_dpi_target(self):
         """Test with raster layer and a target dpi"""
@@ -1326,6 +1346,8 @@ class TestSelectiveMasking(QgisTestCase):
 
         sl = QgsSvgMarkerSymbolLayer(svgPath, 5)
         sl.setFillColor(QColor("blue"))
+        sl.setStrokeColor(QColor("white"))
+        sl.setStrokeWidth(0)
 
         p = QgsMarkerSymbol()
         p.changeSymbolLayer(0, sl)
@@ -1347,7 +1369,32 @@ class TestSelectiveMasking(QgisTestCase):
         # no rasters
         self.check_layout_export("layout_export_svg_marker_masking", 0, [self.points_layer, self.lines_layer])
 
+    def test_markerline_masked(self):
+        """
+        Test a layout export where a QgsMarkerLineSymbolLayer is masked
+        """
+
+        sl = QgsMarkerLineSymbolLayer(True, 7)
+        circle_symbol = QgsMarkerSymbol.createSimple({'size': '3'})
+        sl.setSubSymbol(circle_symbol)
+
+        symbol = QgsLineSymbol.createSimple({})
+        symbol.changeSymbolLayer(0, sl)
+        self.lines_layer.setRenderer(QgsSingleSymbolRenderer(symbol))
+        self.polys_layer.setRenderer(QgsNullSymbolRenderer())
+
+        label_settings = self.polys_layer.labeling().settings()
+        fmt = label_settings.format()
+        # enable a mask
+        fmt.mask().setEnabled(True)
+        fmt.mask().setSize(4.0)
+        # and mask other symbol layers underneath
+        fmt.mask().setMaskedSymbolLayers([QgsSymbolLayerReference(self.lines_layer.id(), sl.id())])
+        label_settings.setFormat(fmt)
+        self.polys_layer.labeling().setSettings(label_settings)
+
+        self.check_layout_export("layout_export_markerline_masked", 0, [self.polys_layer, self.lines_layer])
+
 
 if __name__ == '__main__':
-    start_app()
     unittest.main()

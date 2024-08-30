@@ -3,7 +3,7 @@
  *                                                                      *
  * src/gui/qgsabstractrelationeditorwidget.h                            *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -226,9 +226,11 @@ Adds new features with given ``geometry``
 Delete a feature with given ``fid``
 %End
 
-    void linkFeature();
+    void linkFeature( const QString &filterExpression = QString() );
 %Docstring
 Links a new feature to the relation
+
+:param filterExpression: to filter the available features in the link dialog since QGIS 3.40
 %End
 
     void onLinkFeatureDlgAccepted();
@@ -459,5 +461,5 @@ Create a new configuration widget for this widget type.
  *                                                                      *
  * src/gui/qgsabstractrelationeditorwidget.h                            *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

@@ -222,10 +222,7 @@ class CORE_EXPORT QgsSymbolLayer
 
     virtual ~QgsSymbolLayer();
 
-    //! QgsSymbolLayer cannot be copied
     QgsSymbolLayer( const QgsSymbolLayer &other ) = delete;
-
-    //! QgsSymbolLayer cannot be copied
     QgsSymbolLayer &operator=( const QgsSymbolLayer &other ) = delete;
 
     /**
@@ -653,6 +650,23 @@ class CORE_EXPORT QgsSymbolLayer
      */
     QString id() const;
 
+    /**
+     * When rendering, install masks on \a context painter.
+     *
+     * If \a recursive is TRUE masks are installed recursively for all children symbol layers.
+     *
+     * Since QGIS 3.38 the \a rect argument can be used to specify a target bounds (in painter coordinates)
+     * for mask geometries. Only mask geometries which intersect ``rect`` will be installed.
+     *
+     * \returns TRUE if any masks were installed (since QGIS 3.38)
+     *
+     * \see prepareMasks()
+     * \see removeMasks()
+     *
+     * \since QGIS 3.30
+     */
+    bool installMasks( QgsRenderContext &context, bool recursive, const QRectF &rect = QRectF() );
+
   protected:
 
     /**
@@ -706,15 +720,6 @@ class CORE_EXPORT QgsSymbolLayer
      * \param destLayer destination layer
      */
     void copyPaintEffect( QgsSymbolLayer *destLayer ) const;
-
-    /**
-     * When rendering, install masks on \a context painter
-     * if \a recursive is TRUE masks are installed recursively for all children symbol layers
-     * \see prepareMasks()
-     * \see removeMasks()
-     * \since QGIS 3.30
-     */
-    void installMasks( QgsRenderContext &context, bool recursive );
 
     /**
      * When rendering, remove previously installed masks from \a context painter
@@ -772,10 +777,7 @@ class CORE_EXPORT QgsMarkerSymbolLayer : public QgsSymbolLayer
       Bottom, //!< Align to bottom of symbol
     };
 
-    //! QgsMarkerSymbolLayer cannot be copied
     QgsMarkerSymbolLayer( const QgsMarkerSymbolLayer &other ) = delete;
-
-    //! QgsMarkerSymbolLayer cannot be copied
     QgsMarkerSymbolLayer &operator=( const QgsMarkerSymbolLayer &other ) = delete;
 
     void startRender( QgsSymbolRenderContext &context ) override;
@@ -1070,6 +1072,8 @@ class CORE_EXPORT QgsMarkerSymbolLayer : public QgsSymbolLayer
 /**
  * \ingroup core
  * \class QgsLineSymbolLayer
+ *
+ * \brief Abstract base class for line symbol layers.
  */
 class CORE_EXPORT QgsLineSymbolLayer : public QgsSymbolLayer
 {
@@ -1083,10 +1087,7 @@ class CORE_EXPORT QgsLineSymbolLayer : public QgsSymbolLayer
       InteriorRingsOnly, //!< Render the interior rings only
     };
 
-    //! QgsLineSymbolLayer cannot be copied
     QgsLineSymbolLayer( const QgsLineSymbolLayer &other ) = delete;
-
-    //! QgsLineSymbolLayer cannot be copied
     QgsLineSymbolLayer &operator=( const QgsLineSymbolLayer &other ) = delete;
 
     void setOutputUnit( Qgis::RenderUnit unit ) override;
@@ -1268,15 +1269,13 @@ class CORE_EXPORT QgsLineSymbolLayer : public QgsSymbolLayer
 /**
  * \ingroup core
  * \class QgsFillSymbolLayer
+ * \brief Abstract base class for fill symbol layers.
  */
 class CORE_EXPORT QgsFillSymbolLayer : public QgsSymbolLayer
 {
   public:
 
-    //! QgsFillSymbolLayer cannot be copied
     QgsFillSymbolLayer( const QgsFillSymbolLayer &other ) = delete;
-
-    //! QgsFillSymbolLayer cannot be copied
     QgsFillSymbolLayer &operator=( const QgsFillSymbolLayer &other ) = delete;
 
     /**

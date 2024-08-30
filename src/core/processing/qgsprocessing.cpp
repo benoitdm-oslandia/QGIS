@@ -21,8 +21,20 @@ const QgsSettingsEntryBool *QgsProcessing::settingsPreferFilenameAsLayerName = n
 
 const QgsSettingsEntryString *QgsProcessing::settingsTempPath = new QgsSettingsEntryString( QStringLiteral( "temp-path" ), sTreeConfiguration, QString(), QObject::tr( "Override temporary output folder path" ) );
 
-const QgsSettingsEntryInteger *QgsProcessing::settingsDefaultOutputVectorLayerExt = new QgsSettingsEntryInteger( QStringLiteral( "default-output-vector-layer-ext" ), sTreeConfiguration, -1, QObject::tr( "Default output vector layer extension" ) );
+const QgsSettingsEntryString *QgsProcessing::settingsDefaultOutputVectorLayerExt = new QgsSettingsEntryString( QStringLiteral( "default-output-vector-ext" ), sTreeConfiguration, QString(), QObject::tr( "Default output vector layer extension" ) );
 
-const QgsSettingsEntryInteger *QgsProcessing::settingsDefaultOutputRasterLayerExt = new QgsSettingsEntryInteger( QStringLiteral( "default-output-raster-layer-ext" ), sTreeConfiguration, -1, QObject::tr( "Default output raster layer extension" ) );
+const QgsSettingsEntryString *QgsProcessing::settingsDefaultOutputRasterLayerExt = new QgsSettingsEntryString( QStringLiteral( "default-output-raster-ext" ), sTreeConfiguration, QString(), QObject::tr( "Default output raster layer extension" ) );
 
 const QString QgsProcessing::TEMPORARY_OUTPUT = QStringLiteral( "TEMPORARY_OUTPUT" );
+
+QString QgsProcessing::documentationFlagToString( Qgis::ProcessingAlgorithmDocumentationFlag flag )
+{
+  switch ( flag )
+  {
+    case Qgis::ProcessingAlgorithmDocumentationFlag::RegeneratesPrimaryKey:
+      return QObject::tr( "This algorithm drops existing primary keys or FID values and regenerates them in output layers." );
+    case Qgis::ProcessingAlgorithmDocumentationFlag::RegeneratesPrimaryKeyInSomeScenarios:
+      return QObject::tr( "This algorithm may drop existing primary keys or FID values and regenerate them in output layers, depending on the input parameters." );
+  }
+  BUILTIN_UNREACHABLE
+}

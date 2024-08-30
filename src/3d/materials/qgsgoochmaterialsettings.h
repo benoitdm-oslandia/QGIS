@@ -37,9 +37,6 @@ class _3D_EXPORT QgsGoochMaterialSettings : public QgsAbstractMaterialSettings
 {
   public:
 
-    /**
-     * Constructor for QgsGoochMaterialSettings.
-     */
     QgsGoochMaterialSettings() = default;
 
     QString type() const override;
@@ -100,7 +97,7 @@ class _3D_EXPORT QgsGoochMaterialSettings : public QgsAbstractMaterialSettings
 
 #ifndef SIP_RUN
     Qt3DRender::QMaterial *toMaterial( QgsMaterialSettingsRenderingTechnique technique, const QgsMaterialContext &context ) const override;
-    void addParametersToEffect( Qt3DRender::QEffect *effect ) const override;
+    void addParametersToEffect( Qt3DRender::QEffect *effect, const QgsMaterialContext &materialContext ) const override;
 
     QByteArray dataDefinedVertexColorsAsByte( const QgsExpressionContext &expressionContext ) const override;
     int dataDefinedByteStride() const override;
@@ -134,7 +131,7 @@ class _3D_EXPORT QgsGoochMaterialSettings : public QgsAbstractMaterialSettings
     float mBeta = 0.5f;
 
     //! Constructs a material from shader files
-    Qt3DRender::QMaterial *dataDefinedMaterial() const;
+    Qt3DRender::QMaterial *buildMaterial( const QgsMaterialContext &context ) const;
 };
 
 

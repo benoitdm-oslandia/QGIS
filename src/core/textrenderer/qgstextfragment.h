@@ -61,6 +61,21 @@ class CORE_EXPORT QgsTextFragment
     void setText( const QString &text );
 
     /**
+     * Returns TRUE if the fragment consists of just a tab character.
+     *
+     * \since QGIS 3.38
+     */
+    bool isTab() const { return mText == '\t'; }
+
+    /**
+     * Returns TRUE if the fragment consists of just whitespace characters, and does not
+     * contain any content to render.
+     *
+     * \since QGIS 3.38
+     */
+    bool isWhitespace() const { return isTab() || mText.trimmed().isEmpty(); }
+
+    /**
      * Returns the character formatting for the fragment.
      *
      * \see setCharacterFormat()
@@ -82,7 +97,7 @@ class CORE_EXPORT QgsTextFragment
      * format for this fragment.
      *
      * The optional \a scaleFactor parameter can specify a font size scaling factor. It is recommended to set this to
-     * QgsTextRenderer::FONT_WORKAROUND_SCALE and then manually calculations
+     * QgsTextRenderer::calculateScaleFactorForFormat() and then manually calculations
      * based on the resultant font metrics. Failure to do so will result in poor quality text rendering
      * at small font sizes.
      */

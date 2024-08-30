@@ -34,8 +34,8 @@ class QgsPostgresRasterProvider : public QgsRasterDataProvider
 
   public:
 
-    QgsPostgresRasterProvider( const QString &uri, const QgsDataProvider::ProviderOptions &providerOptions, QgsDataProvider::ReadFlags flags = QgsDataProvider::ReadFlags() );
-    explicit QgsPostgresRasterProvider( const QgsPostgresRasterProvider &other, const QgsDataProvider::ProviderOptions &providerOptions, QgsDataProvider::ReadFlags flags = QgsDataProvider::ReadFlags() );
+    QgsPostgresRasterProvider( const QString &uri, const QgsDataProvider::ProviderOptions &providerOptions, Qgis::DataProviderReadFlags flags = Qgis::DataProviderReadFlags() );
+    explicit QgsPostgresRasterProvider( const QgsPostgresRasterProvider &other, const QgsDataProvider::ProviderOptions &providerOptions, Qgis::DataProviderReadFlags flags = Qgis::DataProviderReadFlags() );
 
     virtual ~QgsPostgresRasterProvider() override = default;
 
@@ -64,10 +64,10 @@ class QgsPostgresRasterProvider : public QgsRasterDataProvider
     virtual QString htmlMetadata() const override;
     virtual QString lastErrorTitle() override;
     virtual QString lastError() override;
-    int capabilities() const override;
+    Qgis::RasterInterfaceCapabilities capabilities() const override;
     QgsFields fields() const override;
     QgsLayerMetadata layerMetadata() const override;
-    QgsRasterDataProvider::ProviderCapabilities providerCapabilities() const override;
+    Qgis::RasterProviderCapabilities providerCapabilities() const override;
 
     // QgsRasterInterface interface
     int xSize() const override;
@@ -264,7 +264,7 @@ class QgsPostgresRasterProviderMetadata: public QgsProviderMetadata
     QgsPostgresRasterProviderMetadata();
     QIcon icon() const override;
     QVariantMap decodeUri( const QString &uri ) const override;
-    QgsPostgresRasterProvider *createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, QgsDataProvider::ReadFlags flags = QgsDataProvider::ReadFlags() ) override;
+    QgsPostgresRasterProvider *createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, Qgis::DataProviderReadFlags flags = Qgis::DataProviderReadFlags() ) override;
     QString encodeUri( const QVariantMap &parts ) const override;
     QList< Qgis::LayerType > supportedLayerTypes() const override;
     bool saveLayerMetadata( const QString &uri, const QgsLayerMetadata &metadata, QString &errorMessage ) override;

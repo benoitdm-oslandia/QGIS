@@ -85,7 +85,6 @@ class CORE_EXPORT QgsRectangle
       mYmax = qRectF.bottomRight().y();
     }
 
-    //! Copy constructor
     QgsRectangle( const QgsRectangle &other ) SIP_HOLDGIL
     {
       mXmin = other.xMinimum();
@@ -541,10 +540,6 @@ class CORE_EXPORT QgsRectangle
      */
     QString asPolygon() const;
 
-    /**
-     * Comparison operator
-     * \returns TRUE if rectangles are equal
-     */
     bool operator==( const QgsRectangle &r1 ) const
     {
       if ( isNull() ) return r1.isNull();
@@ -555,19 +550,11 @@ class CORE_EXPORT QgsRectangle
              qgsDoubleNear( r1.yMinimum(), yMinimum() );
     }
 
-    /**
-     * Comparison operator
-     * \returns FALSE if rectangles are equal
-     */
     bool operator!=( const QgsRectangle &r1 ) const
     {
       return ( ! operator==( r1 ) );
     }
 
-    /**
-     * Assignment operator
-     * \param r1 QgsRectangle to assign from
-     */
     QgsRectangle &operator=( const QgsRectangle &r1 )
     {
       if ( &r1 != this )

@@ -3,7 +3,7 @@
  *                                                                      *
  * src/gui/qgsbrowsertreeview.h                                         *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -66,11 +66,13 @@ Returns ``True`` if the item was found and could be selected.
 .. versionadded:: 3.28
 %End
 
-    void expandPath( const QString &path );
+    void expandPath( const QString &path, bool selectPath = false );
 %Docstring
 Expands out a file ``path`` in the view.
 
 The ``path`` must correspond to a valid directory existing on the file system.
+
+Since QGIS 3.38 the ``selectPath`` argument can be used to automatically select the path too.
 
 .. versionadded:: 3.28
 %End
@@ -91,5 +93,5 @@ The ``path`` must correspond to a valid directory existing on the file system.
  *                                                                      *
  * src/gui/qgsbrowsertreeview.h                                         *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

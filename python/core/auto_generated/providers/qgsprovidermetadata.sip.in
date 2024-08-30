@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/providers/qgsprovidermetadata.h                             *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -400,7 +400,7 @@ The default implementation returns an empty string.
 
     virtual QgsDataProvider *createProvider( const QString &uri,
         const QgsDataProvider::ProviderOptions &options,
-        QgsDataProvider::ReadFlags flags = QgsDataProvider::ReadFlags() ) /Factory/;
+        Qgis::DataProviderReadFlags flags = Qgis::DataProviderReadFlags() ) /Factory/;
 %Docstring
 Class factory to return a pointer to a newly created :py:class:`QgsDataProvider` object
 
@@ -441,11 +441,9 @@ metadata :py:func:`~QgsProviderMetadata.createDatabase` method can be used to cr
 :return: - ``True`` if the database was successfully created
          - errorMessage: will be set to a descriptive error message if the database could not be successfully created.
 
-
 .. note::
 
    This method is only supported by providers which return the QgsProviderMetadata.ProviderMetadataCapability.CreateDatabase capability.
-
 
 .. versionadded:: 3.28
 %End
@@ -470,9 +468,11 @@ Creates a new instance of the raster data provider.
       const QgsMesh &mesh,
       const QString &fileName,
       const QString &driverName,
-      const QgsCoordinateReferenceSystem &crs ) const;
+      const QgsCoordinateReferenceSystem &crs,
+      const QMap<QString, QString> &metadata = QMap<QString, QString>() ) const;
 %Docstring
 Creates mesh data source from a file name ``fileName`` and a driver ``driverName``, that is the mesh frame stored in file, memory or with other way (depending of the provider)
+Since QGIS 3.38 the optional ``metadata`` argument can be used to pass metadata to the provider.
 
 .. versionadded:: 3.16
 %End
@@ -480,9 +480,11 @@ Creates mesh data source from a file name ``fileName`` and a driver ``driverName
     virtual bool createMeshData(
       const QgsMesh &mesh,
       const QString &uri,
-      const QgsCoordinateReferenceSystem &crs ) const;
+      const QgsCoordinateReferenceSystem &crs,
+      const QMap<QString, QString> &metadata = QMap<QString, QString>() ) const;
 %Docstring
 Creates mesh data source from an ``uri``, that is the mesh frame stored in file, memory or with other way (depending of the provider)
+Since QGIS 3.38 the optional ``metadata`` argument can be used to pass metadata to the provider.
 
 .. versionadded:: 3.22
 %End
@@ -674,10 +676,8 @@ Saves ``metadata`` to the layer corresponding to the specified ``uri``.
 :return: - ``True`` if the metadata was successfully saved.
          - errorMessage: descriptive string of error if encountered
 
-
 :raises QgsNotSupportedException: if the provider does not support saving layer metadata for the
    specified ``uri``.
-
 
 .. versionadded:: 3.20
 %End
@@ -842,5 +842,5 @@ QFlags<QgsProviderMetadata::ProviderCapability> operator|(QgsProviderMetadata::P
  *                                                                      *
  * src/core/providers/qgsprovidermetadata.h                             *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

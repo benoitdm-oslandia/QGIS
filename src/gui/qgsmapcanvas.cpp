@@ -410,14 +410,13 @@ void QgsMapCanvas::setLayers( const QList<QgsMapLayer *> &layers )
 
 void QgsMapCanvas::setLayersPrivate( const QList<QgsMapLayer *> &layers )
 {
-  QList<QgsMapLayer *> oldLayers = mSettings.layers();
+  const QList<QgsMapLayer *> oldLayers = mSettings.layers();
 
   // update only if needed
   if ( layers == oldLayers )
     return;
 
-  const auto constOldLayers = oldLayers;
-  for ( QgsMapLayer *layer : constOldLayers )
+  for ( QgsMapLayer *layer : oldLayers )
   {
     disconnect( layer, &QgsMapLayer::repaintRequested, this, &QgsMapCanvas::layerRepaintRequested );
     disconnect( layer, &QgsMapLayer::autoRefreshIntervalChanged, this, &QgsMapCanvas::updateAutoRefreshTimer );
@@ -451,8 +450,7 @@ void QgsMapCanvas::setLayersPrivate( const QList<QgsMapLayer *> &layers )
 
   mSettings.setLayers( layers );
 
-  const auto constLayers = layers;
-  for ( QgsMapLayer *layer : constLayers )
+  for ( QgsMapLayer *layer : std::as_const( layers ) )
   {
     if ( !layer )
       continue;
@@ -754,6 +752,24 @@ void QgsMapCanvas::refresh()
   mRenderedItemResultsOutdated = true;
 }
 
+QList< QgsMapLayer * > filterLayersForRender( const QList< QgsMapLayer * > &layers )
+{
+  QList<QgsMapLayer *> filteredLayers;
+  for ( QgsMapLayer *layer : layers )
+  {
+    if ( QgsAnnotationLayer *annotationLayer = qobject_cast< QgsAnnotationLayer * >( layer ) )
+    {
+      if ( QgsMapLayer *linkedLayer = annotationLayer->linkedVisibilityLayer() )
+      {
+        if ( !layers.contains( linkedLayer ) )
+          continue;
+      }
+    }
+    filteredLayers.append( layer );
+  }
+  return filteredLayers;
+}
+
 void QgsMapCanvas::refreshMap()
 {
   Q_ASSERT( mRefreshScheduled );
@@ -762,6 +778,17 @@ void QgsMapCanvas::refreshMap()
 
   stopRendering(); // if any...
   stopPreviewJobs();
+
+  if ( mCacheInvalidations.testFlag( CacheInvalidationType::Temporal ) )
+  {
+    clearTemporalCache();
+    mCacheInvalidations &= ~( static_cast< int >( CacheInvalidationType::Temporal ) );
+  }
+  if ( mCacheInvalidations.testFlag( CacheInvalidationType::Elevation ) )
+  {
+    clearElevationCache();
+    mCacheInvalidations &= ~( static_cast< int >( CacheInvalidationType::Elevation ) );
+  }
 
   mSettings.setExpressionContext( createExpressionContext() );
 
@@ -799,7 +826,8 @@ void QgsMapCanvas::refreshMap()
   QgsMapSettings renderSettings = mSettings;
   QList<QgsMapLayer *> allLayers = renderSettings.layers();
   allLayers.insert( 0, QgsProject::instance()->mainAnnotationLayer() );
-  renderSettings.setLayers( allLayers );
+
+  renderSettings.setLayers( filterLayersForRender( allLayers ) );
 
   // create the renderer job
 
@@ -966,8 +994,6 @@ void QgsMapCanvas::rendererJobFinished()
   if ( mRefreshAfterJob )
   {
     mRefreshAfterJob = false;
-    clearTemporalCache();
-    clearElevationCache();
     refresh();
   }
 }
@@ -1059,7 +1085,9 @@ void QgsMapCanvas::clearTemporalCache()
           continue;
 
         if ( !alreadyInvalidatedThisLayer )
+        {
           mCache->invalidateCacheForLayer( layer );
+        }
       }
       else if ( QgsGroupLayer *gl = qobject_cast<QgsGroupLayer *>( layer ) )
       {
@@ -1336,8 +1364,7 @@ void QgsMapCanvas::setTemporalRange( const QgsDateTimeRange &dateTimeRange )
 
   // we need to discard any previously cached images which have temporal properties enabled, so that these will be updated when
   // the canvas is redrawn
-  if ( !mJob )
-    clearTemporalCache();
+  mCacheInvalidations |= CacheInvalidationType::Temporal;
 
   autoRefreshTriggered();
 }
@@ -1918,8 +1945,7 @@ void QgsMapCanvas::setZRange( const QgsDoubleRange &range )
 
   // we need to discard any previously cached images which are elevation aware, so that these will be updated when
   // the canvas is redrawn
-  if ( !mJob )
-    clearElevationCache();
+  mCacheInvalidations |= CacheInvalidationType::Elevation;
 
   autoRefreshTriggered();
 }
@@ -3564,7 +3590,11 @@ void QgsMapCanvas::startPreviewJob( int number )
 
     previewLayers << layer;
   }
-  jobSettings.setLayers( previewLayers );
+  if ( QgsProject::instance()->mainAnnotationLayer()->dataProvider()->renderInPreview( context ) )
+  {
+    previewLayers.insert( 0, QgsProject::instance()->mainAnnotationLayer() );
+  }
+  jobSettings.setLayers( filterLayersForRender( previewLayers ) );
 
   QgsMapRendererQImageJob *job = new QgsMapRendererSequentialJob( jobSettings );
   job->setProperty( "number", number );

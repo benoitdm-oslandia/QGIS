@@ -50,10 +50,10 @@ const QStringList QgsGPXProvider::sAttributeNames = { "name", "elevation", "symb
                                                       "comment", "description", "source",
                                                       "url", "url name", "time"
                                                     };
-const QList< QVariant::Type > QgsGPXProvider::sAttributeTypes = { QVariant::String, QVariant::Double, QVariant::String, QVariant::Int,
-                                                                  QVariant::String, QVariant::String, QVariant::String,
-                                                                  QVariant::String, QVariant::String, QVariant::DateTime,
-                                                                };
+const QList< QMetaType::Type > QgsGPXProvider::sAttributeTypes = { QMetaType::Type::QString, QMetaType::Type::Double, QMetaType::Type::QString, QMetaType::Type::Int,
+                                                                   QMetaType::Type::QString, QMetaType::Type::QString, QMetaType::Type::QString,
+                                                                   QMetaType::Type::QString, QMetaType::Type::QString, QMetaType::Type::QDateTime,
+                                                                 };
 const QList< QgsGPXProvider::DataType > QgsGPXProvider::sAttributedUsedForLayerType =
 {
   QgsGPXProvider::AllType, QgsGPXProvider::WaypointType, QgsGPXProvider::TrkRteType, QgsGPXProvider::TrkRteType,
@@ -66,7 +66,7 @@ const QString GPX_KEY = QStringLiteral( "gpx" );
 const QString GPX_DESCRIPTION = QObject::tr( "GPS eXchange format provider" );
 
 
-QgsGPXProvider::QgsGPXProvider( const QString &uri, const ProviderOptions &options, QgsDataProvider::ReadFlags flags )
+QgsGPXProvider::QgsGPXProvider( const QString &uri, const ProviderOptions &options, Qgis::DataProviderReadFlags flags )
   : QgsVectorDataProvider( uri, options, flags )
 {
   // we always use UTF-8
@@ -93,7 +93,7 @@ QgsGPXProvider::QgsGPXProvider( const QString &uri, const ProviderOptions &optio
   {
     if ( sAttributedUsedForLayerType[i] & mFeatureType )
     {
-      const QString attrTypeName = ( sAttributeTypes[i] == QVariant::Int ? "int" : ( sAttributeTypes[i] == QVariant::Double ? "double" : "text" ) );
+      const QString attrTypeName = ( sAttributeTypes[i] == QMetaType::Type::Int ? "int" : ( sAttributeTypes[i] == QMetaType::Type::Double ? "double" : "text" ) );
       mAttributeFields.append( QgsField( sAttributeNames[i], sAttributeTypes[i], attrTypeName ) );
       mIndexToAttr.append( i );
     }
@@ -122,11 +122,11 @@ QString QgsGPXProvider::storageType() const
   return tr( "GPS eXchange file" );
 }
 
-QgsVectorDataProvider::Capabilities QgsGPXProvider::capabilities() const
+Qgis::VectorProviderCapabilities QgsGPXProvider::capabilities() const
 {
-  return QgsVectorDataProvider::AddFeatures |
-         QgsVectorDataProvider::DeleteFeatures |
-         QgsVectorDataProvider::ChangeAttributeValues;
+  return Qgis::VectorProviderCapability::AddFeatures |
+         Qgis::VectorProviderCapability::DeleteFeatures |
+         Qgis::VectorProviderCapability::ChangeAttributeValues;
 }
 
 QgsRectangle QgsGPXProvider::extent() const
@@ -569,7 +569,7 @@ QGISEXTERN QgsProviderMetadata *providerMetadataFactory()
   return new QgsGpxProviderMetadata();
 }
 
-QgsDataProvider *QgsGpxProviderMetadata::createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, QgsDataProvider::ReadFlags flags )
+QgsDataProvider *QgsGpxProviderMetadata::createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, Qgis::DataProviderReadFlags flags )
 {
   return new QgsGPXProvider( uri, options, flags );
 }

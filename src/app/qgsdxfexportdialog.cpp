@@ -33,6 +33,7 @@
 
 #include <QFileDialog>
 #include <QPushButton>
+#include <QMessageBox>
 
 const int LAYER_COL = 0;
 const int OUTPUT_LAYER_ATTRIBUTE_COL = 1;
@@ -48,7 +49,24 @@ QWidget *FieldSelectorDelegate::createEditor( QWidget *parent, const QStyleOptio
 {
   Q_UNUSED( option )
 
-  if ( index.column() == ALLOW_DD_SYMBOL_BLOCKS_COL )
+  QgsVectorLayer *vl = indexToLayer( index.model(), index );
+  if ( !vl )
+    return nullptr;
+
+  if ( index.column() == LAYER_COL )
+  {
+    QgsFilterLineEdit *le = new QgsFilterLineEdit( parent, vl->name() );
+
+    return le;
+  }
+  else if ( index.column() == OUTPUT_LAYER_ATTRIBUTE_COL )
+  {
+    QgsFieldComboBox *w = new QgsFieldComboBox( parent );
+    w->setLayer( vl );
+    w->setAllowEmptyFieldName( true );
+    return w;
+  }
+  else if ( index.column() == ALLOW_DD_SYMBOL_BLOCKS_COL )
   {
     return nullptr;
   }
@@ -59,44 +77,68 @@ QWidget *FieldSelectorDelegate::createEditor( QWidget *parent, const QStyleOptio
     return le;
   }
 
-  QgsVectorLayer *vl = indexToLayer( index.model(), index );
-  if ( !vl )
-    return nullptr;
-
-  QgsFieldComboBox *w = new QgsFieldComboBox( parent );
-  w->setLayer( vl );
-  w->setAllowEmptyFieldName( true );
-  return w;
+  return nullptr;
 }
 
 void FieldSelectorDelegate::setEditorData( QWidget *editor, const QModelIndex &index ) const
 {
-  if ( index.column() == MAXIMUM_DD_SYMBOL_BLOCKS_COL )
+  QgsVectorLayer *vl = indexToLayer( index.model(), index );
+  if ( !vl )
+    return;
+
+  if ( index.column() == LAYER_COL )
+  {
+    QgsFilterLineEdit *le = qobject_cast< QgsFilterLineEdit * >( editor );
+    if ( le )
+    {
+      le->setText( index.data().toString() );
+    }
+  }
+  else if ( index.column() == OUTPUT_LAYER_ATTRIBUTE_COL )
+  {
+    QgsFieldComboBox *fcb = qobject_cast<QgsFieldComboBox *>( editor );
+    if ( !fcb )
+      return;
+
+    int idx = attributeIndex( index.model(), vl );
+    if ( vl->fields().exists( idx ) )
+    {
+      fcb->setField( vl->fields().at( idx ).name() );
+    }
+  }
+  else if ( index.column() == MAXIMUM_DD_SYMBOL_BLOCKS_COL )
   {
     QLineEdit *le = qobject_cast<QLineEdit *>( editor );
     if ( le )
     {
       le->setText( index.data().toString() );
     }
-    return;
   }
-
-  QgsVectorLayer *vl = indexToLayer( index.model(), index );
-  if ( !vl )
-    return;
-
-  QgsFieldComboBox *fcb = qobject_cast<QgsFieldComboBox *>( editor );
-  if ( !fcb )
-    return;
-
-  int idx = attributeIndex( index.model(), vl );
-  if ( vl->fields().exists( idx ) )
-    fcb->setField( vl->fields().at( idx ).name() );
 }
 
 void FieldSelectorDelegate::setModelData( QWidget *editor, QAbstractItemModel *model, const QModelIndex &index ) const
 {
-  if ( index.column() == MAXIMUM_DD_SYMBOL_BLOCKS_COL )
+  QgsVectorLayer *vl = indexToLayer( index.model(), index );
+  if ( !vl )
+    return;
+
+  if ( index.column() == LAYER_COL )
+  {
+    QgsFilterLineEdit *le = qobject_cast<QgsFilterLineEdit *>( editor );
+    if ( le )
+    {
+      model->setData( index, le->text() );
+    }
+  }
+  else if ( index.column() == OUTPUT_LAYER_ATTRIBUTE_COL )
+  {
+    QgsFieldComboBox *fcb = qobject_cast<QgsFieldComboBox *>( editor );
+    if ( !fcb )
+      return;
+
+    model->setData( index, vl->fields().lookupField( fcb->currentField() ) );
+  }
+  else if ( index.column() == MAXIMUM_DD_SYMBOL_BLOCKS_COL )
   {
     QLineEdit *le = qobject_cast<QLineEdit *>( editor );
     if ( le )
@@ -104,16 +146,6 @@ void FieldSelectorDelegate::setModelData( QWidget *editor, QAbstractItemModel *m
       model->setData( index, le->text().toInt() );
     }
   }
-
-  QgsVectorLayer *vl = indexToLayer( index.model(), index );
-  if ( !vl )
-    return;
-
-  QgsFieldComboBox *fcb = qobject_cast<QgsFieldComboBox *>( editor );
-  if ( !fcb )
-    return;
-
-  model->setData( index, vl->fields().lookupField( fcb->currentField() ) );
 }
 
 QgsVectorLayer *FieldSelectorDelegate::indexToLayer( const QAbstractItemModel *model, const QModelIndex &index ) const
@@ -149,7 +181,7 @@ QgsVectorLayerAndAttributeModel::QgsVectorLayerAndAttributeModel( QgsLayerTree *
     const QgsVectorLayer *vLayer = qobject_cast< const QgsVectorLayer *>( QgsProject::instance()->mapLayer( id ) );
     if ( vLayer )
     {
-      mCreateDDBlockInfo[vLayer] = QgsDxfExportDialog::settingsDxfEnableDDBlocks->value();
+      mCreateDDBlockInfo[vLayer] = DEFAULT_DXF_DATA_DEFINED_BLOCKS;
       mDDBlocksMaxNumberOfClasses[vLayer] = -1;
     }
   }
@@ -166,7 +198,7 @@ Qt::ItemFlags QgsVectorLayerAndAttributeModel::flags( const QModelIndex &index )
   QgsVectorLayer *vl = vectorLayer( index );
   if ( index.column() == LAYER_COL )
   {
-    return Qt::ItemIsEnabled | Qt::ItemIsUserCheckable;
+    return vl ? Qt::ItemIsEditable | Qt::ItemIsEnabled | Qt::ItemIsUserCheckable : Qt::ItemIsEnabled | Qt::ItemIsUserCheckable;
   }
   else if ( index.column() == OUTPUT_LAYER_ATTRIBUTE_COL )
   {
@@ -228,6 +260,7 @@ QVariant QgsVectorLayerAndAttributeModel::headerData( int section, Qt::Orientati
 QVariant QgsVectorLayerAndAttributeModel::data( const QModelIndex &idx, int role ) const
 {
   QgsVectorLayer *vl = vectorLayer( idx );
+
   if ( idx.column() == LAYER_COL )
   {
     if ( role == Qt::CheckStateRole )
@@ -276,8 +309,33 @@ QVariant QgsVectorLayerAndAttributeModel::data( const QModelIndex &idx, int role
       Q_ASSERT( hasUnchecked );
       return Qt::Unchecked;
     }
+    else if ( role == Qt::DisplayRole && vl && mOverriddenName.contains( vl ) )
+    {
+      return mOverriddenName[ vl ];
+    }
     else
+    {
       return QgsLayerTreeModel::data( idx, role );
+    }
+  }
+  else if ( idx.column() == OUTPUT_LAYER_ATTRIBUTE_COL && vl )
+  {
+    int idx = mAttributeIdx.value( vl, -1 );
+    if ( role == Qt::EditRole )
+      return idx;
+
+    if ( role == Qt::DisplayRole )
+    {
+      if ( vl->fields().exists( idx ) )
+        return vl->fields().at( idx ).name();
+      else
+        return mOverriddenName.contains( vl ) ? mOverriddenName[ vl ] : vl->name();
+    }
+
+    if ( role == Qt::ToolTipRole )
+    {
+      return tr( "Attribute containing the name of the destination layer in the DXF output." );
+    }
   }
   else if ( idx.column() == ALLOW_DD_SYMBOL_BLOCKS_COL )
   {
@@ -286,7 +344,7 @@ QVariant QgsVectorLayerAndAttributeModel::data( const QModelIndex &idx, int role
       return QVariant();
     }
 
-    bool checked = mCreateDDBlockInfo.contains( vl ) ? mCreateDDBlockInfo[vl] : false;
+    bool checked = mCreateDDBlockInfo.contains( vl ) ? mCreateDDBlockInfo[vl] : DEFAULT_DXF_DATA_DEFINED_BLOCKS;
     if ( role == Qt::CheckStateRole )
     {
       return checked ? Qt::Checked : Qt::Unchecked;
@@ -316,65 +374,58 @@ QVariant QgsVectorLayerAndAttributeModel::data( const QModelIndex &idx, int role
     }
   }
 
-
-  if ( idx.column() == OUTPUT_LAYER_ATTRIBUTE_COL && vl )
-  {
-    int idx = mAttributeIdx.value( vl, -1 );
-    if ( role == Qt::EditRole )
-      return idx;
-
-    if ( role == Qt::DisplayRole )
-    {
-      if ( vl->fields().exists( idx ) )
-        return vl->fields().at( idx ).name();
-      else
-        return vl->name();
-    }
-
-    if ( role == Qt::ToolTipRole )
-    {
-      return tr( "Attribute containing the name of the destination layer in the DXF output." );
-    }
-  }
-
   return QVariant();
 }
 
 bool QgsVectorLayerAndAttributeModel::setData( const QModelIndex &index, const QVariant &value, int role )
 {
-  if ( index.column() == LAYER_COL && role == Qt::CheckStateRole )
-  {
-    int i = 0;
-    for ( i = 0; ; i++ )
-    {
-      QModelIndex child = QgsVectorLayerAndAttributeModel::index( i, 0, index );
-      if ( !child.isValid() )
-        break;
-
-      setData( child, value, role );
-    }
-
-    if ( i == 0 )
-    {
-      if ( value.toInt() == Qt::Checked )
-        mCheckedLeafs.insert( index );
-      else if ( value.toInt() == Qt::Unchecked )
-        mCheckedLeafs.remove( index );
-      else
-        Q_ASSERT( "expected checked or unchecked" );
-
-      emit dataChanged( QModelIndex(), index );
-    }
-
-    return true;
-  }
-
   QgsVectorLayer *vl = vectorLayer( index );
-  if ( index.column() == OUTPUT_LAYER_ATTRIBUTE_COL )
+
+  if ( index.column() == LAYER_COL )
+  {
+    if ( role == Qt::CheckStateRole )
+    {
+      int i = 0;
+      for ( i = 0; ; i++ )
+      {
+        QModelIndex child = QgsVectorLayerAndAttributeModel::index( i, 0, index );
+        if ( !child.isValid() )
+          break;
+
+        setData( child, value, role );
+      }
+
+      if ( i == 0 )
+      {
+        if ( value.toInt() == Qt::Checked )
+          mCheckedLeafs.insert( index );
+        else if ( value.toInt() == Qt::Unchecked )
+          mCheckedLeafs.remove( index );
+        else
+          Q_ASSERT( "expected checked or unchecked" );
+
+        emit dataChanged( QModelIndex(), index );
+      }
+
+      return true;
+    }
+    else if ( role == Qt::EditRole )
+    {
+      if ( !value.toString().trimmed().isEmpty() && value.toString() != vl->name() )
+      {
+        mOverriddenName[ vl ] = value.toString();
+      }
+      else
+      {
+        mOverriddenName.remove( vl );
+      }
+      return true;
+    }
+  }
+  else if ( index.column() == OUTPUT_LAYER_ATTRIBUTE_COL )
   {
     if ( role != Qt::EditRole )
       return false;
-
 
     if ( vl )
     {
@@ -382,8 +433,7 @@ bool QgsVectorLayerAndAttributeModel::setData( const QModelIndex &index, const Q
       return true;
     }
   }
-
-  if ( index.column() == ALLOW_DD_SYMBOL_BLOCKS_COL && role == Qt::CheckStateRole )
+  else if ( index.column() == ALLOW_DD_SYMBOL_BLOCKS_COL && role == Qt::CheckStateRole )
   {
     if ( vl )
     {
@@ -422,7 +472,11 @@ QList< QgsDxfExport::DxfLayer > QgsVectorLayerAndAttributeModel::layers() const
         if ( !layerIdx.contains( vl->id() ) )
         {
           layerIdx.insert( vl->id(), layers.size() );
-          layers << QgsDxfExport::DxfLayer( vl, mAttributeIdx.value( vl, -1 ), mCreateDDBlockInfo.value( vl, false ), mDDBlocksMaxNumberOfClasses.value( vl,  -1 ) );
+          layers << QgsDxfExport::DxfLayer( vl,
+                                            mAttributeIdx.value( vl, -1 ),
+                                            mCreateDDBlockInfo.value( vl, DEFAULT_DXF_DATA_DEFINED_BLOCKS ),
+                                            mDDBlocksMaxNumberOfClasses.value( vl,  -1 ),
+                                            mOverriddenName.value( vl, QString() ) );
         }
       }
     }
@@ -433,7 +487,11 @@ QList< QgsDxfExport::DxfLayer > QgsVectorLayerAndAttributeModel::layers() const
       if ( !layerIdx.contains( vl->id() ) )
       {
         layerIdx.insert( vl->id(), layers.size() );
-        layers << QgsDxfExport::DxfLayer( vl, mAttributeIdx.value( vl, -1 ), mCreateDDBlockInfo.value( vl, false ), mDDBlocksMaxNumberOfClasses.value( vl,  -1 ) );
+        layers << QgsDxfExport::DxfLayer( vl,
+                                          mAttributeIdx.value( vl, -1 ),
+                                          mCreateDDBlockInfo.value( vl, DEFAULT_DXF_DATA_DEFINED_BLOCKS ),
+                                          mDDBlocksMaxNumberOfClasses.value( vl,  -1 ),
+                                          mOverriddenName.value( vl, QString() ) );
       }
     }
   }
@@ -527,14 +585,34 @@ void QgsVectorLayerAndAttributeModel::loadLayersOutputAttribute( QgsLayerTreeNod
       QgsVectorLayer *vl = qobject_cast< QgsVectorLayer * >( QgsLayerTree::toLayer( child )->layer() );
       if ( vl )
       {
+        QModelIndex idx = node2index( child );
+
         const int attributeIndex = vl->fields().lookupField( vl->customProperty( QStringLiteral( "lastDxfOutputAttribute" ), -1 ).toString() );
         if ( attributeIndex > -1 )
         {
           mAttributeIdx[vl] = attributeIndex;
-
-          QModelIndex idx = node2index( child );
-          idx = index( idx.row(), 1, idx.parent() );
+          idx = index( idx.row(), OUTPUT_LAYER_ATTRIBUTE_COL, idx.parent() );
           emit dataChanged( idx, idx, QVector<int>() << Qt::EditRole );
+        }
+
+        if ( vl->geometryType() == Qgis::GeometryType::Point )
+        {
+          const bool allowDataDefinedBlocks = vl->customProperty( QStringLiteral( "lastAllowDataDefinedBlocks" ), DEFAULT_DXF_DATA_DEFINED_BLOCKS ).toBool();
+
+          if ( allowDataDefinedBlocks != DEFAULT_DXF_DATA_DEFINED_BLOCKS )
+          {
+            mCreateDDBlockInfo[vl] = allowDataDefinedBlocks;
+            idx = index( idx.row(), ALLOW_DD_SYMBOL_BLOCKS_COL, idx.parent() );
+            emit dataChanged( idx, idx, QVector<int>() << Qt::CheckStateRole );
+          }
+
+          const int maximumNumberOfBlocks = vl->customProperty( QStringLiteral( "lastMaximumNumberOfBlocks" ), -1 ).toInt();
+          if ( maximumNumberOfBlocks > -1 )
+          {
+            mDDBlocksMaxNumberOfClasses[vl] = maximumNumberOfBlocks;
+            idx = index( idx.row(), MAXIMUM_DD_SYMBOL_BLOCKS_COL, idx.parent() );
+            emit dataChanged( idx, idx, QVector<int>() << Qt::EditRole );
+          }
         }
       }
     }
@@ -556,7 +634,7 @@ void QgsVectorLayerAndAttributeModel::saveLayersOutputAttribute( QgsLayerTreeNod
       if ( vl )
       {
         QModelIndex idx = node2index( child );
-        const int attributeIndex = data( index( idx.row(), 1, idx.parent() ), Qt::EditRole ).toInt();
+        const int attributeIndex = data( index( idx.row(), OUTPUT_LAYER_ATTRIBUTE_COL, idx.parent() ), Qt::EditRole ).toInt();
         const QgsFields fields = vl->fields();
         if ( attributeIndex > -1 && attributeIndex < fields.count() )
         {
@@ -565,6 +643,22 @@ void QgsVectorLayerAndAttributeModel::saveLayersOutputAttribute( QgsLayerTreeNod
         else
         {
           vl->removeCustomProperty( QStringLiteral( "lastDxfOutputAttribute" ) );
+        }
+
+        if ( vl->geometryType() == Qgis::GeometryType::Point )
+        {
+          const bool allowDataDefinedBlocks = data( index( idx.row(), ALLOW_DD_SYMBOL_BLOCKS_COL, idx.parent() ), Qt::CheckStateRole ).toBool();
+          vl->setCustomProperty( QStringLiteral( "lastAllowDataDefinedBlocks" ), allowDataDefinedBlocks );
+
+          const int maximumNumberOfBlocks = data( index( idx.row(), MAXIMUM_DD_SYMBOL_BLOCKS_COL, idx.parent() ), Qt::DisplayRole ).toInt();
+          if ( maximumNumberOfBlocks > -1 )
+          {
+            vl->setCustomProperty( QStringLiteral( "lastMaximumNumberOfBlocks" ), maximumNumberOfBlocks );
+          }
+          else
+          {
+            vl->removeCustomProperty( QStringLiteral( "lastMaximumNumberOfBlocks" ) );
+          }
         }
       }
     }
@@ -710,6 +804,7 @@ QgsDxfExportDialog::QgsDxfExportDialog( QWidget *parent, Qt::WindowFlags f )
   mSelectedFeaturesOnly->setChecked( QgsProject::instance()->readEntry( QStringLiteral( "dxf" ), QStringLiteral( "/lastDxfSelectedFeaturesOnly" ), settings.value( QStringLiteral( "qgis/lastDxfSelectedFeaturesOnly" ), "false" ).toString() ) != QLatin1String( "false" ) );
   mMTextCheckBox->setChecked( QgsProject::instance()->readEntry( QStringLiteral( "dxf" ), QStringLiteral( "/lastDxfUseMText" ), settings.value( QStringLiteral( "qgis/lastDxfUseMText" ), "true" ).toString() ) != QLatin1String( "false" ) );
   mForce2d->setChecked( QgsProject::instance()->readEntry( QStringLiteral( "dxf" ), QStringLiteral( "/lastDxfForce2d" ), settings.value( QStringLiteral( "qgis/lastDxfForce2d" ), "false" ).toString() ) != QLatin1String( "false" ) );
+  mHairlineWidthExportCheckBox->setChecked( QgsProject::instance()->readEntry( QStringLiteral( "dxf" ), QStringLiteral( "/lastDxfHairlineWidthExport" ), settings.value( QStringLiteral( "qgis/lastDxfHairlineWidthExport" ), "false" ).toString() ) !=  QLatin1String( "false" ) );
 
   QStringList ids = QgsProject::instance()->mapThemeCollection()->mapThemes();
   ids.prepend( QString() );
@@ -730,6 +825,17 @@ QgsDxfExportDialog::QgsDxfExportDialog( QWidget *parent, Qt::WindowFlags f )
 
   mEncoding->addItems( QgsDxfExport::encodings() );
   mEncoding->setCurrentIndex( mEncoding->findText( QgsProject::instance()->readEntry( QStringLiteral( "dxf" ), QStringLiteral( "/lastDxfEncoding" ), settings.value( QStringLiteral( "qgis/lastDxfEncoding" ), "CP1252" ).toString() ) ) );
+
+  QPushButton *btnLoadSaveSettings = new QPushButton( tr( "Settings" ), this );
+  QMenu *menuSettings = new QMenu( this );
+  menuSettings->addAction( tr( "Load Settings from File…" ), this, &QgsDxfExportDialog::loadSettingsFromFile );
+  menuSettings->addAction( tr( "Save Settings to File…" ), this, &QgsDxfExportDialog::saveSettingsToFile );
+  btnLoadSaveSettings->setMenu( menuSettings );
+  buttonBox->addButton( btnLoadSaveSettings, QDialogButtonBox::ResetRole );
+
+  mMessageBar = new QgsMessageBar();
+  mMessageBar->setSizePolicy( QSizePolicy::Minimum, QSizePolicy::Fixed );
+  mainLayout->insertWidget( 0, mMessageBar );
 
   mModel->loadLayersOutputAttribute( mModel->rootGroup() );
 }
@@ -758,7 +864,8 @@ void QgsDxfExportDialog::cleanGroup( QgsLayerTreeNode *node )
   {
     if ( QgsLayerTree::isLayer( child ) &&
          ( QgsLayerTree::toLayer( child )->layer()->type() != Qgis::LayerType::Vector ||
-           ! QgsLayerTree::toLayer( child )->layer()->isSpatial() ) )
+           ! QgsLayerTree::toLayer( child )->layer()->isSpatial() ||
+           ! QgsLayerTree::toLayer( child )->layer()->isValid() ) )
     {
       toRemove << child;
       continue;
@@ -794,6 +901,294 @@ void QgsDxfExportDialog::selectDataDefinedBlocks()
 void QgsDxfExportDialog::deselectDataDefinedBlocks()
 {
   mModel->deselectDataDefinedBlocks();
+}
+
+
+void QgsDxfExportDialog::loadSettingsFromFile()
+{
+  const QString fileName = QFileDialog::getOpenFileName( this, tr( "Load DXF Export Settings" ),
+                           QgsDxfExportDialog::settingsDxfLastSettingsDir->value(),
+                           tr( "XML file" ) + " (*.xml)" );
+  if ( fileName.isNull() )
+  {
+    return;
+  }
+
+  bool resultFlag = false;
+
+  QDomDocument domDocument( QStringLiteral( "qgis" ) );
+
+  // location of problem associated with errorMsg
+  int line, column;
+  QString errorMessage;
+
+  QFile file( fileName );
+  if ( file.open( QFile::ReadOnly ) )
+  {
+    QgsDebugMsgLevel( QStringLiteral( "file found %1" ).arg( fileName ), 2 );
+    // read file
+    resultFlag = domDocument.setContent( &file, &errorMessage, &line, &column );
+    if ( !resultFlag )
+      errorMessage = tr( "%1 at line %2 column %3" ).arg( errorMessage ).arg( line ).arg( column );
+    file.close();
+  }
+
+  if ( QMessageBox::question( this,
+                              tr( "DXF Export - Load from XML File" ),
+                              tr( "Are you sure you want to load settings from XML? This will change some values in the DXF Export dialog." ) ) == QMessageBox::Yes )
+  {
+    resultFlag = loadSettingsFromXML( domDocument, errorMessage );
+    if ( !resultFlag )
+    {
+      mMessageBar->pushWarning( tr( "Load DXF Export Settings" ), tr( "Failed to load DXF Export settings file as %1. Details: %2" ).arg( fileName, errorMessage ) );
+    }
+    else
+    {
+      QgsDxfExportDialog::settingsDxfLastSettingsDir->setValue( QFileInfo( fileName ).path() );
+      mMessageBar->pushMessage( QString(), tr( "DXF Export settings loaded!" ), Qgis::MessageLevel::Success, 0 );
+    }
+  }
+}
+
+
+bool QgsDxfExportDialog::loadSettingsFromXML( QDomDocument &doc, QString &errorMessage ) const
+{
+  const QDomElement rootElement = doc.firstChildElement( QStringLiteral( "qgis" ) );
+  if ( rootElement.isNull() )
+  {
+    errorMessage = tr( "Root &lt;qgis&gt; element could not be found." );
+    return false;
+  }
+
+  const QDomElement dxfElement = rootElement.firstChildElement( QStringLiteral( "dxf_settings" ) );
+  if ( dxfElement.isNull() )
+  {
+    errorMessage = tr( "The XML file does not correspond to DXF Export settings. It must have a &lt;dxf-settings&gt; element." );
+    return false;
+  }
+
+  QDomElement element;
+  QVariant value;
+
+  element = dxfElement.namedItem( QStringLiteral( "symbology_mode" ) ).toElement();
+  value = QgsXmlUtils::readVariant( element.firstChildElement() );
+  if ( !value.isNull() )
+    mSymbologyModeComboBox->setCurrentIndex( value.toInt() );
+
+  element = dxfElement.namedItem( QStringLiteral( "symbology_scale" ) ).toElement();
+  value = QgsXmlUtils::readVariant( element.firstChildElement() );
+  if ( !value.isNull() )
+    mScaleWidget->setScale( value.toDouble() );
+
+  element = dxfElement.namedItem( QStringLiteral( "encoding" ) ).toElement();
+  value = QgsXmlUtils::readVariant( element.firstChildElement() );
+  if ( !value.isNull() )
+    mEncoding->setCurrentText( value.toString() );
+
+  element = dxfElement.namedItem( QStringLiteral( "crs" ) ).toElement();
+  value = QgsXmlUtils::readVariant( element.firstChildElement() );
+  if ( !value.isNull() )
+    mCrsSelector->setCrs( value.value< QgsCoordinateReferenceSystem >() );
+
+  element = dxfElement.namedItem( QStringLiteral( "map_theme" ) ).toElement();
+  value = QgsXmlUtils::readVariant( element.firstChildElement() );
+  if ( !value.isNull() )
+    mVisibilityPresets->setCurrentText( value.toString() );
+
+  // layer settings
+  element = dxfElement.namedItem( QStringLiteral( "layers" ) ).toElement();
+  QDomNodeList layerNodeList = element.elementsByTagName( QStringLiteral( "layer" ) );
+  const QgsReadWriteContext rwContext = QgsReadWriteContext();
+
+  QgsVectorLayer *vl;
+  QgsVectorLayerRef vlRef;
+
+  for ( int i = 0; i < layerNodeList.length(); i++ )
+  {
+    element = layerNodeList.at( i ).toElement();
+    if ( vlRef.readXml( element, rwContext ) )
+    {
+      vl = vlRef.resolveWeakly( QgsProject::instance() );
+      if ( vl )
+      {
+        QgsLayerTreeLayer *treeNode = mLayerTreeGroup->findLayer( vl );
+        QModelIndex idx = mModel->node2index( treeNode );
+
+        idx = mModel->index( idx.row(), OUTPUT_LAYER_ATTRIBUTE_COL, idx.parent() );
+        mModel->setData( idx, element.attribute( QStringLiteral( "attribute-index" ), QStringLiteral( "-1" ) ) );
+
+        idx = mModel->index( idx.row(), ALLOW_DD_SYMBOL_BLOCKS_COL, idx.parent() );
+        mModel->setData( idx, element.attribute( QStringLiteral( "use_symbol_blocks" ), QStringLiteral( "0" ) ), Qt::CheckStateRole );
+
+        idx = mModel->index( idx.row(), MAXIMUM_DD_SYMBOL_BLOCKS_COL, idx.parent() );
+        mModel->setData( idx, element.attribute( QStringLiteral( "max_number_of_classes" ), QStringLiteral( "-1" ) ) );
+      }
+      else
+      {
+        QgsDebugMsgLevel( QStringLiteral( " Layer '%1' found in the DXF Export settings XML file, but not present in the project." ).arg( element.attribute( QStringLiteral( "name" ) ) ), 1 );
+      }
+    }
+  }
+
+  element = dxfElement.namedItem( QStringLiteral( "use_layer_title" ) ).toElement();
+  value = QgsXmlUtils::readVariant( element.firstChildElement() );
+  if ( !value.isNull() )
+    mLayerTitleAsName->setChecked( value == true );
+
+  element = dxfElement.namedItem( QStringLiteral( "use_map_extent" ) ).toElement();
+  value = QgsXmlUtils::readVariant( element.firstChildElement() );
+  if ( !value.isNull() )
+    mMapExtentCheckBox->setChecked( value == true );
+
+  element = dxfElement.namedItem( QStringLiteral( "force_2d" ) ).toElement();
+  value = QgsXmlUtils::readVariant( element.firstChildElement() );
+  if ( !value.isNull() )
+    mForce2d->setChecked( value == true );
+
+  element = dxfElement.namedItem( QStringLiteral( "mtext" ) ).toElement();
+  value = QgsXmlUtils::readVariant( element.firstChildElement() );
+  if ( !value.isNull() )
+    mMTextCheckBox->setChecked( value == true );
+
+  element = dxfElement.namedItem( QStringLiteral( "selected_features_only" ) ).toElement();
+  value = QgsXmlUtils::readVariant( element.firstChildElement() );
+  if ( !value.isNull() )
+    mSelectedFeaturesOnly->setChecked( value == true );
+
+  element = dxfElement.namedItem( QStringLiteral( "hairline_width_export" ) ).toElement();
+  value = QgsXmlUtils::readVariant( element.firstChildElement() );
+  if ( !value.isNull() )
+    mHairlineWidthExportCheckBox->setChecked( value == true );
+
+  return true;
+}
+
+
+void QgsDxfExportDialog::saveSettingsToFile()
+{
+  QString outputFileName = QFileDialog::getSaveFileName( this, tr( "Save DXF Export Settings as XML" ),
+                           QgsDxfExportDialog::settingsDxfLastSettingsDir->value(),
+                           tr( "XML file" ) + " (*.xml)" );
+  // return dialog focus on Mac
+  activateWindow();
+  raise();
+  if ( outputFileName.isEmpty() )
+  {
+    return;
+  }
+
+  //ensure the user never omitted the extension from the file name
+  if ( !outputFileName.endsWith( QStringLiteral( ".xml" ), Qt::CaseInsensitive ) )
+  {
+    outputFileName += QLatin1String( ".xml" );
+  }
+
+  QDomDocument domDocument;
+
+  saveSettingsToXML( domDocument );
+
+  const QFileInfo fileInfo( outputFileName );
+  const QFileInfo dirInfo( fileInfo.path() );  //excludes file name
+  if ( !dirInfo.isWritable() )
+  {
+    mMessageBar->pushInfo( tr( "Save DXF Export Settings" ), tr( "The directory containing your dataset needs to be writable!" ) );
+    return;
+  }
+
+  QFile file( outputFileName );
+  if ( file.open( QFile::WriteOnly | QFile::Truncate ) )
+  {
+    QTextStream fileStream( &file );
+    // save as utf-8 with 2 spaces for indents
+    domDocument.save( fileStream, 2 );
+    file.close();
+    mMessageBar->pushSuccess( tr( "Save DXF Export Settings" ), tr( "Created DXF Export settings file as %1" ).arg( outputFileName ) );
+    QgsDxfExportDialog::settingsDxfLastSettingsDir->setValue( QFileInfo( outputFileName ).absolutePath() );
+    return;
+  }
+  else
+  {
+    mMessageBar->pushWarning( tr( "Save DXF Export Settings" ), tr( "Failed to created DXF Export settings file as %1. Check file permissions and retry." ).arg( outputFileName ) );
+    return;
+  }
+}
+
+
+void QgsDxfExportDialog::saveSettingsToXML( QDomDocument &doc ) const
+{
+  QDomImplementation DomImplementation;
+  const QDomDocumentType documentType = DomImplementation.createDocumentType( QStringLiteral( "qgis" ), QStringLiteral( "http://mrcc.com/qgis.dtd" ), QStringLiteral( "SYSTEM" ) );
+  QDomDocument domDocument( documentType );
+
+  QDomElement rootElement = domDocument.createElement( QStringLiteral( "qgis" ) );
+  rootElement.setAttribute( QStringLiteral( "version" ), Qgis::version() );
+  domDocument.appendChild( rootElement );
+
+  QDomElement dxfElement = domDocument.createElement( QStringLiteral( "dxf_settings" ) );
+  rootElement.appendChild( dxfElement );
+
+  QDomElement symbologyModeElement = domDocument.createElement( QStringLiteral( "symbology_mode" ) );
+  symbologyModeElement.appendChild( QgsXmlUtils::writeVariant( static_cast<int>( symbologyMode() ), doc ) );
+  dxfElement.appendChild( symbologyModeElement );
+
+  QDomElement symbologyScaleElement = domDocument.createElement( QStringLiteral( "symbology_scale" ) );
+  symbologyScaleElement.appendChild( QgsXmlUtils::writeVariant( symbologyScale(), doc ) );
+  dxfElement.appendChild( symbologyScaleElement );
+
+  QDomElement encodingElement = domDocument.createElement( QStringLiteral( "encoding" ) );
+  encodingElement.appendChild( QgsXmlUtils::writeVariant( encoding(), doc ) );
+  dxfElement.appendChild( encodingElement );
+
+  QDomElement crsElement = domDocument.createElement( QStringLiteral( "crs" ) );
+  crsElement.appendChild( QgsXmlUtils::writeVariant( crs(), doc ) );
+  dxfElement.appendChild( crsElement );
+
+  QDomElement mapThemeElement = domDocument.createElement( QStringLiteral( "map_theme" ) );
+  mapThemeElement.appendChild( QgsXmlUtils::writeVariant( mapTheme(), doc ) );
+  dxfElement.appendChild( mapThemeElement );
+
+  QDomElement layersElement = domDocument.createElement( QStringLiteral( "layers" ) );
+  QgsVectorLayerRef vlRef;
+  const QgsReadWriteContext rwContext = QgsReadWriteContext();
+
+  for ( const auto &dxfLayer : layers() )
+  {
+    QDomElement layerElement = domDocument.createElement( QStringLiteral( "layer" ) );
+    vlRef.setLayer( dxfLayer.layer() );
+    vlRef.writeXml( layerElement, rwContext );
+    layerElement.setAttribute( QStringLiteral( "attribute-index" ), dxfLayer.layerOutputAttributeIndex() ) ;
+    layerElement.setAttribute( QStringLiteral( "use_symbol_blocks" ), dxfLayer.buildDataDefinedBlocks() ) ;
+    layerElement.setAttribute( QStringLiteral( "max_number_of_classes" ), dxfLayer.dataDefinedBlocksMaximumNumberOfClasses() ) ;
+    layersElement.appendChild( layerElement );
+  }
+  dxfElement.appendChild( layersElement );
+
+  QDomElement titleAsNameElement = domDocument.createElement( QStringLiteral( "use_layer_title" ) );
+  titleAsNameElement.appendChild( QgsXmlUtils::writeVariant( layerTitleAsName(), doc ) );
+  dxfElement.appendChild( titleAsNameElement );
+
+  QDomElement useMapExtentElement = domDocument.createElement( QStringLiteral( "use_map_extent" ) );
+  useMapExtentElement.appendChild( QgsXmlUtils::writeVariant( exportMapExtent(), doc ) );
+  dxfElement.appendChild( useMapExtentElement );
+
+  QDomElement force2dElement = domDocument.createElement( QStringLiteral( "force_2d" ) );
+  force2dElement.appendChild( QgsXmlUtils::writeVariant( force2d(), doc ) );
+  dxfElement.appendChild( force2dElement );
+
+  QDomElement useMTextElement = domDocument.createElement( QStringLiteral( "mtext" ) );
+  useMTextElement.appendChild( QgsXmlUtils::writeVariant( useMText(), doc ) );
+  dxfElement.appendChild( useMTextElement );
+
+  QDomElement selectedFeatures = domDocument.createElement( QStringLiteral( "selected_features_only" ) );
+  selectedFeatures.appendChild( QgsXmlUtils::writeVariant( selectedFeaturesOnly(), doc ) );
+  dxfElement.appendChild( selectedFeatures );
+
+  QDomElement hairlineWidthExportElem = domDocument.createElement( QStringLiteral( "hairline_width_export" ) );
+  hairlineWidthExportElem.appendChild( QgsXmlUtils::writeVariant( hairlineWidthExport(), doc ) );
+  dxfElement.appendChild( hairlineWidthExportElem );
+
+
+  doc = domDocument;
 }
 
 
@@ -868,6 +1263,11 @@ bool QgsDxfExportDialog::useMText() const
   return mMTextCheckBox->isChecked();
 }
 
+bool QgsDxfExportDialog::hairlineWidthExport() const
+{
+  return mHairlineWidthExportCheckBox->isChecked();
+}
+
 void QgsDxfExportDialog::saveSettings()
 {
   QgsSettings settings;
@@ -882,6 +1282,7 @@ void QgsDxfExportDialog::saveSettings()
   settings.setValue( QStringLiteral( "qgis/lastDxfCrs" ), QString::number( mCRS.srsid() ) );
   settings.setValue( QStringLiteral( "qgis/lastDxfUseMText" ), mMTextCheckBox->isChecked() );
   settings.setValue( QStringLiteral( "qgis/lastDxfForce2d" ), mForce2d->isChecked() );
+  settings.setValue( QStringLiteral( "qgis/lastDxfHairlineWidthExport" ), mHairlineWidthExportCheckBox->isChecked() );
 
   QgsProject::instance()->writeEntry( QStringLiteral( "dxf" ), QStringLiteral( "/lastDxfSymbologyMode" ), mSymbologyModeComboBox->currentIndex() );
   QgsProject::instance()->writeEntry( QStringLiteral( "dxf" ), QStringLiteral( "/lastSymbologyExportScale" ), mScaleWidget->scale() != 0 ? 1.0 / mScaleWidget->scale() : 0 );
@@ -893,6 +1294,7 @@ void QgsDxfExportDialog::saveSettings()
   QgsProject::instance()->writeEntry( QStringLiteral( "dxf" ), QStringLiteral( "/lastDxfCrs" ), QString::number( mCRS.srsid() ) );
   QgsProject::instance()->writeEntry( QStringLiteral( "dxf" ), QStringLiteral( "/lastDxfUseMText" ), mMTextCheckBox->isChecked() );
   QgsProject::instance()->writeEntry( QStringLiteral( "dxf" ), QStringLiteral( "/lastDxfForce2d" ), mForce2d->isChecked() );
+  QgsProject::instance()->writeEntry( QStringLiteral( "dxf" ), QStringLiteral( "/lastDxfHairlineWidthExport" ), mHairlineWidthExportCheckBox->isChecked() );
 
   mModel->saveLayersOutputAttribute( mModel->rootGroup() );
 }

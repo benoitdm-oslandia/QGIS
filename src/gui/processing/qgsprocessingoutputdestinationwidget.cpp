@@ -84,7 +84,7 @@ void QgsProcessingLayerOutputDestinationWidget::setValue( const QVariant &value 
 {
   const bool prevSkip = outputIsSkipped();
   mUseRemapping = false;
-  if ( !value.isValid() || ( value.type() == QVariant::String && value.toString().isEmpty() ) )
+  if ( !value.isValid() || ( value.userType() == QMetaType::Type::QString && value.toString().isEmpty() ) )
   {
     if ( mParameter->flags() & Qgis::ProcessingParameterFlag::Optional )
       skipOutput();
@@ -97,7 +97,7 @@ void QgsProcessingLayerOutputDestinationWidget::setValue( const QVariant &value 
     {
       saveToTemporary();
     }
-    else if ( value.userType() == QMetaType::type( "QgsProcessingOutputLayerDefinition" ) )
+    else if ( value.userType() == qMetaTypeId<QgsProcessingOutputLayerDefinition>() )
     {
       const QgsProcessingOutputLayerDefinition def = value.value< QgsProcessingOutputLayerDefinition >();
       if ( def.sink.staticValue().toString() == QLatin1String( "memory:" ) || def.sink.staticValue().toString() == QgsProcessing::TEMPORARY_OUTPUT || def.sink.staticValue().toString().isEmpty() )
@@ -133,7 +133,7 @@ void QgsProcessingLayerOutputDestinationWidget::setValue( const QVariant &value 
       }
       else
       {
-        if ( prev.userType() != QMetaType::type( "QgsProcessingOutputLayerDefinition" ) ||
+        if ( prev.userType() != qMetaTypeId<QgsProcessingOutputLayerDefinition>() ||
              !( prev.value< QgsProcessingOutputLayerDefinition >() == QgsProcessingLayerOutputDestinationWidget::value().value< QgsProcessingOutputLayerDefinition >() ) )
           emit destinationChanged();
       }

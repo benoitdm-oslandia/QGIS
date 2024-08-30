@@ -160,7 +160,7 @@ class QgsOracleConn : public QObject
     /**
      * Quote a value for placement in a SQL string.
      */
-    static QString quotedValue( const QVariant &value, QVariant::Type type = QVariant::Invalid );
+    static QString quotedValue( const QVariant &value, QMetaType::Type type = QMetaType::Type::UnknownType );
 
     bool exec( const QString &query, bool logError = true, QString *errorMessage = nullptr );
     bool execLogged( const QString &sql, bool logError = true, QString *errorMessage = nullptr, const QString &originatorClass = QString(), const QString &queryOrigin = QString() );
@@ -258,6 +258,12 @@ class QgsOracleConn : public QObject
     static void deleteConnection( const QString &connName );
     static QString databaseName( const QString &database, const QString &host, const QString &port );
     static QString toPoolName( const QgsDataSourceUri &uri );
+
+    /**
+     * Duplicates \a src connection settings to a new \a dst connection.
+     * \since QGIS 3.40
+     */
+    static void duplicateConnection( const QString &src, const QString &dst );
 
     operator QSqlDatabase() { return mDatabase; }
 

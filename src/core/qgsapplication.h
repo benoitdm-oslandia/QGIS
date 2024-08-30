@@ -77,6 +77,7 @@ class QgsRecentStyleHandler;
 class QgsDatabaseQueryLog;
 class QgsFontManager;
 class QgsSensorRegistry;
+class QgsProfileSourceRegistry;
 
 /**
  * \ingroup core
@@ -948,6 +949,12 @@ class CORE_EXPORT QgsApplication : public QApplication
     static QgsExternalStorageRegistry *externalStorageRegistry() SIP_KEEPREFERENCE;
 
     /**
+     * Returns registry of available profile source implementations.
+     * \since QGIS 3.38
+     */
+    static QgsProfileSourceRegistry *profileSourceRegistry() SIP_KEEPREFERENCE;
+
+    /**
      * Returns the registry of data repositories
      * These are used as paths for basemaps, logos, etc. which can be referenced
      * differently across work stations.
@@ -957,17 +964,26 @@ class CORE_EXPORT QgsApplication : public QApplication
     static QgsLocalizedDataPathRegistry *localizedDataPathRegistry() SIP_KEEPREFERENCE;
 
     /**
-     * This string is used to represent the value `NULL` throughout QGIS.
+     * Returns the string used to represent the value `NULL` throughout QGIS.
      *
-     * In general, when passing values around, prefer to use a null QVariant
-     * `QVariant( field.type() )` or `QVariant( QVariant::Int )`. This value
-     * should only be used in the final presentation step when showing values
+     * \note In general, when passing values around, prefer to use an invalid QVariant.
+     * The nullRepresentation() value should only be used in the final presentation step when showing values
      * in a widget or sending it to a web browser.
+     *
+     * \see setNullRepresentation()
+     * \see nullRepresentationChanged()
      */
     static QString nullRepresentation();
 
     /**
-     * \copydoc nullRepresentation()
+     * Sets the string used to represent the value `NULL` throughout QGIS.
+     *
+     * \note In general, when passing values around, prefer to use an invalid QVariant.
+     * The nullRepresentation() value should only be used in the final presentation step when showing values
+     * in a widget or sending it to a web browser.
+     *
+     * \see nullRepresentation()
+     * \see nullRepresentationChanged()
      */
     static void setNullRepresentation( const QString &nullRepresentation );
 
@@ -1065,9 +1081,11 @@ class CORE_EXPORT QgsApplication : public QApplication
      */
     void customVariablesChanged();
 
-
     /**
-     * \copydoc nullRepresentation()
+     * Emitted when the string representing the `NULL` value is changed.
+     *
+     * \see setNullRepresentation()
+     * \see nullRepresentation()
      */
     void nullRepresentationChanged();
 
@@ -1138,6 +1156,7 @@ class CORE_EXPORT QgsApplication : public QApplication
       QgsProjectStorageRegistry *mProjectStorageRegistry = nullptr;
       QgsLayerMetadataProviderRegistry *mLayerMetadataProviderRegistry = nullptr;
       QgsExternalStorageRegistry *mExternalStorageRegistry = nullptr;
+      QgsProfileSourceRegistry *mProfileSourceRegistry = nullptr;
       QgsPageSizeRegistry *mPageSizeRegistry = nullptr;
       QgsRasterRendererRegistry *mRasterRendererRegistry = nullptr;
       QgsRendererRegistry *mRendererRegistry = nullptr;

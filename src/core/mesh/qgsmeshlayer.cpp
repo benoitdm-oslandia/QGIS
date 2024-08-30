@@ -61,10 +61,10 @@ QgsMeshLayer::QgsMeshLayer( const QString &meshLayerPath,
   mShouldValidateCrs = !options.skipCrsValidation;
 
   const QgsDataProvider::ProviderOptions providerOptions { options.transformContext };
-  QgsDataProvider::ReadFlags flags = QgsDataProvider::ReadFlags();
+  Qgis::DataProviderReadFlags flags;
   if ( options.loadDefaultStyle )
   {
-    flags |= QgsDataProvider::FlagLoadDefaultStyle;
+    flags |= Qgis::DataProviderReadFlag::LoadDefaultStyle;
   }
   QgsMeshLayer::setDataSourcePrivate( meshLayerPath, baseName, providerKey, providerOptions, flags );
   resetDatasetGroupTreeItem();
@@ -788,8 +788,8 @@ void QgsMeshLayer::applyClassificationOnScalarSettings( const QgsMeshDatasetGrou
       colorRampShader.setMaximumValue( colorRampItemlist.count() - 1 );
       scalarSettings.setClassificationMinimumMaximum( 0, colorRampItemlist.count() - 1 );
       colorRampShader.setColorRampItemList( colorRampItemlist );
-      colorRampShader.setColorRampType( QgsColorRampShader::Exact );
-      colorRampShader.setClassificationMode( QgsColorRampShader::EqualInterval );
+      colorRampShader.setColorRampType( Qgis::ShaderInterpolationMethod::Exact );
+      colorRampShader.setClassificationMode( Qgis::ShaderClassificationMethod::EqualInterval );
     }
 
     scalarSettings.setColorRampShader( colorRampShader );
@@ -797,24 +797,24 @@ void QgsMeshLayer::applyClassificationOnScalarSettings( const QgsMeshDatasetGrou
   }
 }
 
-QgsMeshDatasetIndex QgsMeshLayer::activeScalarDatasetAtTime( const QgsDateTimeRange &timeRange ) const
+QgsMeshDatasetIndex QgsMeshLayer::activeScalarDatasetAtTime( const QgsDateTimeRange &timeRange, int group ) const
 {
   QGIS_PROTECT_QOBJECT_THREAD_ACCESS
 
   if ( mTemporalProperties->isActive() )
-    return datasetIndexAtTime( timeRange, mRendererSettings.activeScalarDatasetGroup() );
+    return datasetIndexAtTime( timeRange, group >= 0 ? group : mRendererSettings.activeScalarDatasetGroup() );
   else
-    return QgsMeshDatasetIndex( mRendererSettings.activeScalarDatasetGroup(), mStaticScalarDatasetIndex );
+    return QgsMeshDatasetIndex( group >= 0 ? group : mRendererSettings.activeScalarDatasetGroup(), mStaticScalarDatasetIndex );
 }
 
-QgsMeshDatasetIndex QgsMeshLayer::activeVectorDatasetAtTime( const QgsDateTimeRange &timeRange ) const
+QgsMeshDatasetIndex QgsMeshLayer::activeVectorDatasetAtTime( const QgsDateTimeRange &timeRange, int group ) const
 {
   QGIS_PROTECT_QOBJECT_THREAD_ACCESS
 
   if ( mTemporalProperties->isActive() )
-    return datasetIndexAtTime( timeRange, mRendererSettings.activeVectorDatasetGroup() );
+    return datasetIndexAtTime( timeRange, group >= 0 ? group : mRendererSettings.activeVectorDatasetGroup() );
   else
-    return QgsMeshDatasetIndex( mRendererSettings.activeVectorDatasetGroup(), mStaticVectorDatasetIndex );
+    return QgsMeshDatasetIndex( group >= 0 ? group : mRendererSettings.activeVectorDatasetGroup(), mStaticVectorDatasetIndex );
 }
 
 void QgsMeshLayer::fillNativeMesh()
@@ -903,11 +903,11 @@ int QgsMeshLayer::closestEdge( const QgsPointXY &point, double searchRadius, Qgs
   return selectedIndex;
 }
 
-QgsMeshDatasetIndex QgsMeshLayer::staticVectorDatasetIndex() const
+QgsMeshDatasetIndex QgsMeshLayer::staticVectorDatasetIndex( int group ) const
 {
   QGIS_PROTECT_QOBJECT_THREAD_ACCESS
 
-  return QgsMeshDatasetIndex( mRendererSettings.activeVectorDatasetGroup(), mStaticVectorDatasetIndex );
+  return QgsMeshDatasetIndex( group >= 0 ? group : mRendererSettings.activeVectorDatasetGroup(), mStaticVectorDatasetIndex );
 }
 
 void QgsMeshLayer::setReferenceTime( const QDateTime &referenceTime )
@@ -1451,7 +1451,7 @@ QgsMeshRendererSettings QgsMeshLayer::accordSymbologyWithGroupName( const QgsMes
   return consistentSettings;
 }
 
-void QgsMeshLayer::setDataSourcePrivate( const QString &dataSource, const QString &baseName, const QString &provider, const QgsDataProvider::ProviderOptions &options, QgsDataProvider::ReadFlags flags )
+void QgsMeshLayer::setDataSourcePrivate( const QString &dataSource, const QString &baseName, const QString &provider, const QgsDataProvider::ProviderOptions &options, Qgis::DataProviderReadFlags flags )
 {
   QGIS_PROTECT_QOBJECT_THREAD_ACCESS
 
@@ -1545,11 +1545,11 @@ QList<int> QgsMeshLayer::selectFacesByExpression( QgsExpression expression )
   return ret;
 }
 
-QgsMeshDatasetIndex QgsMeshLayer::staticScalarDatasetIndex() const
+QgsMeshDatasetIndex QgsMeshLayer::staticScalarDatasetIndex( int group ) const
 {
   QGIS_PROTECT_QOBJECT_THREAD_ACCESS
 
-  return QgsMeshDatasetIndex( mRendererSettings.activeScalarDatasetGroup(), mStaticScalarDatasetIndex );
+  return QgsMeshDatasetIndex( group >= 0 ? group : mRendererSettings.activeScalarDatasetGroup(), mStaticScalarDatasetIndex );
 }
 
 void QgsMeshLayer::setStaticVectorDatasetIndex( const QgsMeshDatasetIndex &staticVectorDatasetIndex )
@@ -1871,7 +1871,7 @@ bool QgsMeshLayer::readXml( const QDomNode &layer_node, QgsReadWriteContext &con
   }
 
   const QgsDataProvider::ProviderOptions providerOptions;
-  QgsDataProvider::ReadFlags flags = providerReadFlags( layer_node, mReadFlags );
+  Qgis::DataProviderReadFlags flags = providerReadFlags( layer_node, mReadFlags );
 
   const QDomElement elemExtraDatasets = layer_node.firstChildElement( QStringLiteral( "extra-datasets" ) );
   if ( !elemExtraDatasets.isNull() )
@@ -2084,6 +2084,8 @@ QString QgsMeshLayer::htmlMetadata() const
   myMetadata += htmlFormatter.historySectionHtml( );
   myMetadata += QLatin1String( "<br><br>\n" );
 
+  myMetadata += customPropertyHtmlMetadata();
+
   myMetadata += QLatin1String( "\n</body>\n</html>\n" );
   return myMetadata;
 }
@@ -2095,7 +2097,7 @@ bool QgsMeshLayer::isEditable() const
   return mMeshEditor != nullptr;
 }
 
-bool QgsMeshLayer::setDataProvider( QString const &provider, const QgsDataProvider::ProviderOptions &options, QgsDataProvider::ReadFlags flags )
+bool QgsMeshLayer::setDataProvider( QString const &provider, const QgsDataProvider::ProviderOptions &options, Qgis::DataProviderReadFlags flags )
 {
   QGIS_PROTECT_QOBJECT_THREAD_ACCESS
 
@@ -2156,7 +2158,7 @@ bool QgsMeshLayer::setDataProvider( QString const &provider, const QgsDataProvid
   {
     int globalIndex = mDatasetGroupStore->globalDatasetGroupIndexInSource( mDataProvider, i );
     if ( globalIndex != -1 &&
-         ( !mRendererSettings.hasSettings( globalIndex ) || ( flags & QgsDataProvider::FlagLoadDefaultStyle ) ) )
+         ( !mRendererSettings.hasSettings( globalIndex ) || ( flags & Qgis::DataProviderReadFlag::LoadDefaultStyle ) ) )
       assignDefaultStyleToDatasetGroup( globalIndex );
   }
 

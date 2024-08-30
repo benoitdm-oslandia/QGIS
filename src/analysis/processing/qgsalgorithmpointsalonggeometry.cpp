@@ -66,6 +66,11 @@ QString QgsPointsAlongGeometryAlgorithm::shortDescription() const
   return QObject::tr( "Creates regularly spaced points along line features." );
 }
 
+Qgis::ProcessingAlgorithmDocumentationFlags QgsPointsAlongGeometryAlgorithm::documentationFlags() const
+{
+  return Qgis::ProcessingAlgorithmDocumentationFlag::RegeneratesPrimaryKey;
+}
+
 QList<int> QgsPointsAlongGeometryAlgorithm::inputLayerTypes() const
 {
   return QList<int>() << static_cast< int >( Qgis::ProcessingSourceType::VectorLine ) << static_cast< int >( Qgis::ProcessingSourceType::VectorPolygon );
@@ -89,8 +94,8 @@ Qgis::WkbType QgsPointsAlongGeometryAlgorithm::outputWkbType( Qgis::WkbType inpu
 QgsFields QgsPointsAlongGeometryAlgorithm::outputFields( const QgsFields &inputFields ) const
 {
   QgsFields output = inputFields;
-  output.append( QgsField( QStringLiteral( "distance" ), QVariant::Double ) );
-  output.append( QgsField( QStringLiteral( "angle" ), QVariant::Double ) );
+  output.append( QgsField( QStringLiteral( "distance" ), QMetaType::Type::Double ) );
+  output.append( QgsField( QStringLiteral( "angle" ), QMetaType::Type::Double ) );
   return output;
 }
 

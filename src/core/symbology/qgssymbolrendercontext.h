@@ -51,7 +51,6 @@ class CORE_EXPORT QgsSymbolRenderContext
 
     ~QgsSymbolRenderContext();
 
-    //! QgsSymbolRenderContext cannot be copied.
     QgsSymbolRenderContext( const QgsSymbolRenderContext &rh ) = delete;
 
     /**
@@ -127,10 +126,26 @@ class CORE_EXPORT QgsSymbolRenderContext
     Qgis::SymbolRenderHints renderHints() const { return mRenderHints; }
 
     /**
+     * Returns TRUE if symbol must be rendered using vector methods, and optimisations
+     * like pre-rendered images must be disabled.
+     *
+     * \since QGIS 3.40
+     */
+    bool forceVectorRendering() const;
+
+    /**
      * Sets rendering hint flags for the symbol.
      * \see renderHints()
      */
     void setRenderHints( Qgis::SymbolRenderHints hints ) { mRenderHints = hints; }
+
+    /**
+     * Sets a rendering \a hint flag for the symbol.
+     * \see renderHints()
+     *
+     * \since QGIS 3.40
+     */
+    void setRenderHint( Qgis::SymbolRenderHint hint, bool enabled = true ) { mRenderHints.setFlag( hint, enabled ); }
 
     void setFeature( const QgsFeature *f ) { mFeature = f; }
 

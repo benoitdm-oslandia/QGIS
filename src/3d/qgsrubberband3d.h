@@ -75,7 +75,7 @@ namespace Qt3DRender
 class _3D_EXPORT QgsRubberBand3D
 {
   public:
-    QgsRubberBand3D( Qgs3DMapSettings &map, QgsWindow3DEngine *engine, Qt3DCore::QEntity *parentEntity );
+    QgsRubberBand3D( Qgs3DMapSettings &map, QgsWindow3DEngine *engine );
     ~QgsRubberBand3D();
 
     float width() const;

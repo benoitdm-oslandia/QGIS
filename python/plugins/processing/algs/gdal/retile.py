@@ -110,9 +110,7 @@ class retile(GdalAlgorithm):
                                                      self.tr('Additional creation options'),
                                                      defaultValue='',
                                                      optional=True)
-        options_param.setMetadata({
-            'widget_wrapper': {
-                'class': 'processing.algs.gdal.ui.RasterOptionsWidget.RasterOptionsWidgetWrapper'}})
+        options_param.setMetadata({'widget_wrapper': {'widget_type': 'rasteroptions'}})
         params.append(options_param)
 
         params.append(QgsProcessingParameterString(self.EXTRA,
@@ -215,7 +213,17 @@ class retile(GdalAlgorithm):
         arguments.append('-targetDir')
         arguments.append(self.parameterAsString(parameters, self.OUTPUT, context))
 
-        layers = [l.source() for l in self.parameterAsLayerList(parameters, self.INPUT, context)]
+        input_layers = self.parameterAsLayerList(parameters, self.INPUT, context)
+        layers = []
+        credential_options = []
+        for layer in input_layers:
+            layer_details = GdalUtils.gdal_connection_details_from_layer(layer)
+            layers.append(layer_details.connection_string)
+
+            if layer_details.credential_options:
+                credential_options.extend(
+                    layer_details.credential_options_as_arguments())
         arguments.extend(layers)
+        arguments.extend(credential_options)
 
         return [self.commandName() + ('.bat' if isWindows() else '.py'), GdalUtils.escapeAndJoin(arguments)]

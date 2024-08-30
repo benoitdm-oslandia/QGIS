@@ -144,10 +144,14 @@ void QgsAppLayerHandling::postProcessAddedLayer( QgsMapLayer *layer )
 
     case Qgis::LayerType::VectorTile:
     {
-      bool ok = false;
-      QString error = layer->loadDefaultStyle( ok );
-      if ( !ok )
+      QString error;
+      QStringList warnings;
+      bool ok = qobject_cast< QgsVectorTileLayer * >( layer )->loadDefaultStyle( error, warnings );
+      if ( !ok && !error.isEmpty() )
         QgisApp::instance()->visibleMessageBar()->pushMessage( QObject::tr( "Error loading style" ), error, Qgis::MessageLevel::Warning );
+      else if ( !warnings.empty() )
+        QgisApp::instance()->visibleMessageBar()->pushMessage( layer->name(), QObject::tr( "Some warnings were raised while converting the layer's style" ), warnings.join( '\n' ), Qgis::MessageLevel::Warning );
+
       error = layer->loadDefaultMetadata( ok );
       if ( !ok )
         QgisApp::instance()->visibleMessageBar()->pushMessage( QObject::tr( "Error loading layer metadata" ), error, Qgis::MessageLevel::Warning );
@@ -1209,7 +1213,7 @@ void QgsAppLayerHandling::addMapLayer( QgsMapLayer *mapLayer, bool addToLegend )
   }
 }
 
-void QgsAppLayerHandling::openLayerDefinition( const QString &filename )
+void QgsAppLayerHandling::openLayerDefinition( const QString &filename, const QgsLayerTreeRegistryBridge::InsertionPoint *insertPoint )
 {
   QString errorMessage;
   QgsReadWriteContext context;
@@ -1236,7 +1240,9 @@ void QgsAppLayerHandling::openLayerDefinition( const QString &filename )
       context.setPathResolver( QgsPathResolver( filename ) );
       context.setProjectTranslator( QgsProject::instance() );
 
-      loaded = QgsLayerDefinition::loadLayerDefinition( doc, QgsProject::instance(), QgsProject::instance()->layerTreeRoot(), errorMessage, context );
+      QgsSettings settings;
+      Qgis::LayerTreeInsertionMethod insertionMethod = settings.enumValue( QStringLiteral( "/qgis/layerTreeInsertionMethod" ), Qgis::LayerTreeInsertionMethod::OptimalInInsertionGroup );
+      loaded = QgsLayerDefinition::loadLayerDefinition( doc, QgsProject::instance(), QgsProject::instance()->layerTreeRoot(), errorMessage, context, insertionMethod, insertPoint );
     }
   }
 
@@ -1260,7 +1266,7 @@ void QgsAppLayerHandling::openLayerDefinition( const QString &filename )
   }
 }
 
-void QgsAppLayerHandling::addLayerDefinition()
+void QgsAppLayerHandling::addLayerDefinition( const QgsLayerTreeRegistryBridge::InsertionPoint *insertPoint )
 {
   QgsSettings settings;
   QString lastUsedDir = settings.value( QStringLiteral( "UI/lastQLRDir" ), QDir::homePath() ).toString();
@@ -1272,7 +1278,7 @@ void QgsAppLayerHandling::addLayerDefinition()
   QFileInfo fi( path );
   settings.setValue( QStringLiteral( "UI/lastQLRDir" ), fi.path() );
 
-  openLayerDefinition( path );
+  openLayerDefinition( path, insertPoint );
 }
 
 QList< QgsMapLayer * > QgsAppLayerHandling::addDatabaseLayers( const QStringList &layerPathList, const QString &providerKey, bool &ok )

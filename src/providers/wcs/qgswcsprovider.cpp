@@ -57,7 +57,7 @@ static QString DEFAULT_LATLON_CRS = QStringLiteral( "CRS:84" );
 
 // TODO: colortable - use common baseclass with gdal, mapserver does not support http://trac.osgeo.org/mapserver/ticket/1671
 
-QgsWcsProvider::QgsWcsProvider( const QString &uri, const ProviderOptions &options, QgsDataProvider::ReadFlags flags )
+QgsWcsProvider::QgsWcsProvider( const QString &uri, const ProviderOptions &options, Qgis::DataProviderReadFlags flags )
   : QgsRasterDataProvider( uri, options, flags )
   , mCachedViewExtent( 0 )
 {
@@ -1230,16 +1230,16 @@ bool QgsWcsProvider::calculateExtent() const
 }
 
 
-int QgsWcsProvider::capabilities() const
+Qgis::RasterInterfaceCapabilities QgsWcsProvider::capabilities() const
 {
-  int capability = NoCapabilities;
-  capability |= QgsRasterDataProvider::Identify;
-  capability |= QgsRasterDataProvider::IdentifyValue;
-  capability |= QgsRasterDataProvider::Prefetch;
+  Qgis::RasterInterfaceCapabilities capability = Qgis::RasterInterfaceCapability::NoCapabilities;
+  capability |= Qgis::RasterInterfaceCapability::Identify;
+  capability |= Qgis::RasterInterfaceCapability::IdentifyValue;
+  capability |= Qgis::RasterInterfaceCapability::Prefetch;
 
   if ( mHasSize )
   {
-    capability |= QgsRasterDataProvider::Size;
+    capability |= Qgis::RasterInterfaceCapability::Size;
   }
 
   return capability;
@@ -1617,9 +1617,9 @@ QString  QgsWcsProvider::description() const
   return WCS_DESCRIPTION;
 }
 
-QgsRasterDataProvider::ProviderCapabilities QgsWcsProvider::providerCapabilities() const
+Qgis::RasterProviderCapabilities QgsWcsProvider::providerCapabilities() const
 {
-  return ProviderCapability::ReloadData;
+  return Qgis::RasterProviderCapability::ReloadData;
 }
 
 void QgsWcsProvider::reloadProviderData()
@@ -1675,7 +1675,7 @@ QMap<QString, QString> QgsWcsProvider::supportedMimes()
   return mimes;
 }
 
-QgsWcsProvider *QgsWcsProviderMetadata::createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, QgsDataProvider::ReadFlags flags )
+QgsWcsProvider *QgsWcsProviderMetadata::createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, Qgis::DataProviderReadFlags flags )
 {
   return new QgsWcsProvider( uri, options, flags );
 }

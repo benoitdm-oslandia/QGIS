@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/settings/qgssettingsregistry.h                              *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -29,10 +29,6 @@ list of child :py:class:`QgsSettingsRegistry` and a list of child :py:class:`Qgs
   public:
 
     QgsSettingsRegistry();
-%Docstring
-Constructor for QgsSettingsRegistry.
-%End
-
     virtual ~QgsSettingsRegistry();
 
     QList<const QgsSettingsEntryBase *> settingEntries() const;
@@ -85,5 +81,5 @@ Adds a group of setting to the registry
  *                                                                      *
  * src/core/settings/qgssettingsregistry.h                              *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

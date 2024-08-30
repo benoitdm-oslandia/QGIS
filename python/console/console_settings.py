@@ -1,4 +1,3 @@
-# -*- coding:utf-8 -*-
 """
 /***************************************************************************
 Python Console for QGIS
@@ -19,6 +18,9 @@ email                : lrssvtml (at) gmail (dot) com
 Some portions of code were taken from https://code.google.com/p/pydee/
 """
 
+from pathlib import Path
+
+from qgis.PyQt import uic
 from qgis.PyQt.QtCore import QCoreApplication, QUrl
 from qgis.PyQt.QtWidgets import QWidget, QFileDialog, QMessageBox, QTableWidgetItem, QHBoxLayout
 from qgis.PyQt.QtGui import QIcon, QDesktopServices
@@ -27,7 +29,8 @@ from qgis.core import QgsSettings, QgsApplication, QgsSettingsTree
 from qgis.gui import QgsOptionsPageWidget, QgsOptionsWidgetFactory
 
 from .console_compile_apis import PrepareAPIDialog
-from .ui_console_settings import Ui_SettingsDialogPythonConsole
+
+Ui_SettingsDialogPythonConsole, _ = uic.loadUiType(Path(__file__).parent / 'console_settings.ui')
 
 
 class ConsoleOptionsFactory(QgsOptionsWidgetFactory):
@@ -95,14 +98,8 @@ class ConsoleOptionsWidget(QWidget, Ui_SettingsDialogPythonConsole):
         self.removeAPIpath.clicked.connect(self.removeAPI)
         self.compileAPIs.clicked.connect(self._prepareAPI)
 
-        self.generateToken.clicked.connect(self.generateGHToken)
         self.formatter.currentTextChanged.connect(self.onFormatterChanged)
         self.onFormatterChanged()
-
-    def generateGHToken(self):
-        description = self.tr("PyQGIS Console")
-        url = 'https://github.com/settings/tokens/new?description={}&scopes=gist'.format(description)
-        QDesktopServices.openUrl(QUrl(url))
 
     def initialCheck(self):
         if self.preloadAPI.isChecked():
@@ -189,8 +186,6 @@ class ConsoleOptionsWidget(QWidget, Ui_SettingsDialogPythonConsole):
         settings.setValue("pythonConsole/preloadAPI", self.preloadAPI.isChecked())
         settings.setValue("pythonConsole/autoSaveScript", self.autoSaveScript.isChecked())
 
-        settings.setValue("pythonConsole/accessTokenGithub", self.tokenGhLineEdit.text())
-
         for i in range(0, self.tableWidget.rowCount()):
             text = self.tableWidget.item(i, 1).text()
             self.listPath.append(text)
@@ -222,12 +217,13 @@ class ConsoleOptionsWidget(QWidget, Ui_SettingsDialogPythonConsole):
         pythonSettingsTreeNode.childSetting("autopep8-level").setValue(self.autopep8Level.value())
         pythonSettingsTreeNode.childSetting("black-normalize-quotes").setValue(self.blackNormalizeQuotes.isChecked())
         pythonSettingsTreeNode.childSetting("max-line-length").setValue(self.maxLineLength.value())
+        pythonSettingsTreeNode.childSetting('external-editor').setValue(
+            self.externalEditor.text())
 
     def restoreSettings(self):
         settings = QgsSettings()
         self.preloadAPI.setChecked(settings.value("pythonConsole/preloadAPI", True, type=bool))
         self.lineEdit.setText(settings.value("pythonConsole/preparedAPIFile", "", type=str))
-        self.tokenGhLineEdit.setText(settings.value("pythonConsole/accessTokenGithub", "", type=str))
         itemTable = settings.value("pythonConsole/userAPI", [])
         if itemTable:
             self.tableWidget.setRowCount(0)
@@ -263,6 +259,10 @@ class ConsoleOptionsWidget(QWidget, Ui_SettingsDialogPythonConsole):
             self.autoCompFromAPI.setChecked(True)
         elif settings.value("pythonConsole/autoCompleteSource") == 'fromDocAPI':
             self.autoCompFromDocAPI.setChecked(True)
+
+        self.externalEditor.setText(
+            pythonSettingsTreeNode.childSetting('external-editor').value()
+        )
 
     def onFormatterChanged(self):
         """ Toggle formatter-specific options visibility when the formatter is changed """

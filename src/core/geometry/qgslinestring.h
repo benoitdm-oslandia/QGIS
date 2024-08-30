@@ -626,7 +626,7 @@ class CORE_EXPORT QgsLineString: public QgsCurve
     /**
      * Returns the z-coordinate of the specified node in the line string.
      * \param index index of node, where the first node in the line is 0
-     * \returns z-coordinate of node, or ``nan`` if index is out of bounds or the line
+     * \returns z-coordinate of node, or ``NaN`` if index is out of bounds or the line
      * does not have a z dimension
      * \see setZAt()
      */
@@ -642,7 +642,7 @@ class CORE_EXPORT QgsLineString: public QgsCurve
     /**
      * Returns the z-coordinate of the specified node in the line string.
      *
-     * If the LineString does not have a z-dimension then ``nan`` will be returned.
+     * If the LineString does not have a z-dimension then ``NaN`` will be returned.
      *
      * Indexes can be less than 0, in which case they correspond to positions from the end of the line. E.g. an index of -1
      * corresponds to the last point in the line.
@@ -672,7 +672,7 @@ class CORE_EXPORT QgsLineString: public QgsCurve
     /**
      * Returns the m value of the specified node in the line string.
      * \param index index of node, where the first node in the line is 0
-     * \returns m value of node, or ``nan`` if index is out of bounds or the line
+     * \returns m value of node, or ``NaN`` if index is out of bounds or the line
      * does not have m values
      * \see setMAt()
      */
@@ -688,7 +688,7 @@ class CORE_EXPORT QgsLineString: public QgsCurve
     /**
      * Returns the m-coordinate of the specified node in the line string.
      *
-     * If the LineString does not have a m-dimension then ``nan`` will be returned.
+     * If the LineString does not have a m-dimension then ``NaN`` will be returned.
      *
      * Indexes can be less than 0, in which case they correspond to positions from the end of the line. E.g. an index of -1
      * corresponds to the last point in the line.
@@ -954,7 +954,7 @@ class CORE_EXPORT QgsLineString: public QgsCurve
     bool isEmpty() const override SIP_HOLDGIL;
     int indexOf( const QgsPoint &point ) const final;
     bool isValid( QString &error SIP_OUT, Qgis::GeometryValidityFlags flags = Qgis::GeometryValidityFlags() ) const override;
-    QgsLineString *snappedToGrid( double hSpacing, double vSpacing, double dSpacing = 0, double mSpacing = 0 ) const override SIP_FACTORY;
+    QgsLineString *snappedToGrid( double hSpacing, double vSpacing, double dSpacing = 0, double mSpacing = 0, bool removeRedundantPoints = false ) const override SIP_FACTORY;
     bool removeDuplicateNodes( double epsilon = 4 * std::numeric_limits<double>::epsilon(), bool useZValues = false ) override;
     bool isClosed() const override SIP_HOLDGIL;
     bool isClosed2D() const override SIP_HOLDGIL;
@@ -972,6 +972,7 @@ class CORE_EXPORT QgsLineString: public QgsCurve
 
     QPolygonF asQPolygonF() const override;
 
+    QgsLineString *simplifyByDistance( double tolerance ) const override SIP_FACTORY;
     bool fromWkb( QgsConstWkbPtr &wkb ) override;
     bool fromWkt( const QString &wkt ) override;
 
@@ -1187,7 +1188,6 @@ class CORE_EXPORT QgsLineString: public QgsCurve
      */
     QgsBox3D calculateBoundingBox3D() const override;
 
-
     /**
      * Re-write the measure ordinate (or add one, if it isn't already there) interpolating
      * the measure between the supplied \a start and \a end values.
@@ -1195,6 +1195,47 @@ class CORE_EXPORT QgsLineString: public QgsCurve
      * \since QGIS 3.36
      */
     QgsLineString *measuredLine( double start, double end ) const SIP_FACTORY;
+
+    /**
+     * Returns a copy of this line with all missing (NaN) m values interpolated
+     * from m values of surrounding vertices.
+     *
+     * If the line does not contain m values, NULLPTR is returned.
+     *
+     * The \a use3DDistance controls whether 2D or 3D distances between vertices
+     * should be used during interpolation. This option is only considered for lines
+     * with z values.
+     *
+     * \see lineLocatePointByM()
+     * \since QGIS 3.38
+     */
+    QgsLineString *interpolateM( bool use3DDistance = true ) const SIP_FACTORY;
+
+    /**
+     * Attempts to locate a point on the linestring by m value.
+     *
+     * This method will linearly interpolate along line segments to find the point which corresponds to the specified m value.
+     *
+     * If the linestring contains sections with constant m values matching \a m, then the interpolated point will be located
+     * at the center of these sections.
+     *
+     * Any missing (NaN) values in the linestring will be linearly interpolated from the
+     * m values of surrounding vertices (see interpolateM()).
+     *
+     * \param m target m value
+     * \param x interpolated x coordinate
+     * \param y interpolated y coordinate
+     * \param z interpolated z coordinate (for 3D lines only)
+     * \param distanceFromStart calculated distance from the start of the linestring to the located point
+     * \param use3DDistance controls whether 2D or 3D distances between vertices should be used during interpolation. This option is only considered for lines with z values.
+     *
+     * \returns TRUE if a matching point was found, or FALSE if it could not be found
+     *
+     * \see interpolateM()
+     *
+     * \since QGIS 3.40
+     */
+    bool lineLocatePointByM( double m, double &x SIP_OUT, double &y SIP_OUT, double &z SIP_OUT, double &distanceFromStart SIP_OUT, bool use3DDistance = true ) const;
 
   protected:
 
@@ -1218,6 +1259,8 @@ class CORE_EXPORT QgsLineString: public QgsCurve
       mWkbType = type;
       importVerticesFromWkb( wkb );
     }
+
+    bool lineLocatePointByMPrivate( double m, double &x, double &y, double &z, double &distanceFromStart, bool use3DDistance, bool haveInterpolatedM ) const;
 
     friend class QgsPolygon;
     friend class QgsTriangle;

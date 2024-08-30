@@ -250,7 +250,8 @@ class CORE_EXPORT QgsOgrProviderUtils
                                QString &layerName,
                                QString &subsetString,
                                OGRwkbGeometryType &ogrGeometryTypeFilter,
-                               QStringList &openOptions );
+                               QStringList &openOptions,
+                               QVariantMap &credentialOptions );
 
     //! Whether a driver can share the same dataset handle among different layers
     static bool canDriverShareSameDatasetAmongLayers( const QString &driverName );
@@ -475,6 +476,11 @@ class QgsOgrLayer
 
     //! Wrapper of OGR_L_GetLayerCount
     OGRErr SetFeature( OGRFeatureH hFeature );
+
+#if GDAL_VERSION_NUM >= GDAL_COMPUTE_VERSION(3,7,0)
+    //! Wrapper of OGR_L_UpdateFeature
+    OGRErr UpdateFeature( OGRFeatureH hFeature, int nUpdatedFieldsCount, const int *panUpdatedFieldsIdx, int nUpdatedGeomFieldsCount, const int *panUpdatedGeomFieldsIdx, bool bUpdateStyleString );
+#endif
 
     //! Wrapper of OGR_L_GetLayerCount
     OGRErr DeleteFeature( GIntBig fid );

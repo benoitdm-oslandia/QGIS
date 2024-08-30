@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/layout/qgslayoutitemmapgrid.h                               *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -1115,6 +1115,13 @@ Retrieves the second fill color for the grid frame.
     virtual void refresh();
 
 
+    void copyProperties( const QgsLayoutItemMapGrid *other );
+%Docstring
+Copies properties from specified map grid.
+
+.. versionadded:: 3.38
+%End
+
   signals:
 
     void crsChanged();
@@ -1134,5 +1141,5 @@ QFlags<QgsLayoutItemMapGrid::FrameSideFlag> operator|(QgsLayoutItemMapGrid::Fram
  *                                                                      *
  * src/core/layout/qgslayoutitemmapgrid.h                               *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

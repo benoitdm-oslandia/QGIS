@@ -48,7 +48,7 @@ class QgsMdalProvider : public QgsMeshDataProvider
      * \param uri file name
      * \param options generic provider options
      */
-    QgsMdalProvider( const QString &uri, const QgsDataProvider::ProviderOptions &providerOptions, QgsDataProvider::ReadFlags flags = QgsDataProvider::ReadFlags() );
+    QgsMdalProvider( const QString &uri, const QgsDataProvider::ProviderOptions &providerOptions, Qgis::DataProviderReadFlags flags = Qgis::DataProviderReadFlags() );
     ~QgsMdalProvider() override;
 
     bool isValid() const override;
@@ -66,10 +66,10 @@ class QgsMdalProvider : public QgsMeshDataProvider
     QStringList extraDatasets() const override;
 
     int datasetGroupCount() const override;
-    int datasetCount( int groupIndex ) const override;
+    int datasetCount( int groupIndex ) const override final;
 
-    QgsMeshDatasetGroupMetadata datasetGroupMetadata( int groupIndex ) const override;
-    QgsMeshDatasetMetadata datasetMetadata( QgsMeshDatasetIndex index ) const override;
+    QgsMeshDatasetGroupMetadata datasetGroupMetadata( int groupIndex ) const override final;
+    QgsMeshDatasetMetadata datasetMetadata( QgsMeshDatasetIndex index ) const override final;
     QgsMeshDatasetValue datasetValue( QgsMeshDatasetIndex index, int valueIndex ) const override;
     QgsMeshDataBlock datasetValues( QgsMeshDatasetIndex index, int valueIndex, int count ) const override;
     QgsMesh3DDataBlock dataset3dValues( QgsMeshDatasetIndex index, int faceIndex, int count ) const override;
@@ -132,6 +132,7 @@ class QgsMdalProvider : public QgsMeshDataProvider
     QgsCoordinateReferenceSystem mCrs;
     QStringList mSubLayersUris;
     QString mDriverName;
+    QMap<QString, QString> mMeshMetadata;
 
     /**
      * Closes and reloads dataset
@@ -147,14 +148,16 @@ class QgsMdalProviderMetadata: public QgsProviderMetadata
     QIcon icon() const override;
     QString filters( Qgis::FileFilterType type ) override;
     QList<QgsMeshDriverMetadata> meshDriversMetadata() override;
-    QgsMdalProvider *createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, QgsDataProvider::ReadFlags flags = QgsDataProvider::ReadFlags() ) override;
+    QgsMdalProvider *createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, Qgis::DataProviderReadFlags flags = Qgis::DataProviderReadFlags() ) override;
     bool createMeshData( const QgsMesh &mesh,
                          const QString &fileName,
                          const QString &driverName,
-                         const QgsCoordinateReferenceSystem &crs ) const override;
+                         const QgsCoordinateReferenceSystem &crs,
+                         const QMap<QString, QString> &metadata = QMap<QString, QString>() ) const override;
     bool createMeshData( const QgsMesh &mesh,
                          const QString &uri,
-                         const QgsCoordinateReferenceSystem &crs ) const override;
+                         const QgsCoordinateReferenceSystem &crs,
+                         const QMap<QString, QString> &metadata = QMap<QString, QString>() ) const override;
     QVariantMap decodeUri( const QString &uri ) const override;
     QString encodeUri( const QVariantMap &parts ) const override;
     QString absoluteToRelativeUri( const QString &uri, const QgsReadWriteContext &context ) const override;

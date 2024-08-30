@@ -3,7 +3,7 @@
  *                                                                      *
  * src/gui/qgsfeaturelistcombobox.h                                     *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -242,6 +242,13 @@ Emitted when the current feature changes
 .. versionadded:: 3.16.5
 %End
 
+    void currentFeatureFoundChanged( bool found );
+%Docstring
+Emitted when the feature picker model changes its feature ``found`` state
+
+.. versionadded:: 3.38
+%End
+
 };
 
 
@@ -251,5 +258,5 @@ Emitted when the current feature changes
  *                                                                      *
  * src/gui/qgsfeaturelistcombobox.h                                     *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

@@ -272,7 +272,7 @@ QIcon QgsVirtualRasterProviderMetadata::icon() const
   return QgsApplication::getThemeIcon( QStringLiteral( "mIconRaster.svg" ) );
 }
 
-QgsVirtualRasterProvider *QgsVirtualRasterProviderMetadata::createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, QgsDataProvider::ReadFlags flags )
+QgsVirtualRasterProvider *QgsVirtualRasterProviderMetadata::createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, Qgis::DataProviderReadFlags flags )
 {
   Q_UNUSED( flags );
   return new QgsVirtualRasterProvider( uri, options );
@@ -353,15 +353,13 @@ QString QgsVirtualRasterProvider::providerKey()
   return PROVIDER_KEY;
 };
 
-int QgsVirtualRasterProvider::capabilities() const
+Qgis::RasterInterfaceCapabilities QgsVirtualRasterProvider::capabilities() const
 {
-  const int capability = QgsRasterDataProvider::Identify
-                         | QgsRasterDataProvider::IdentifyValue
-                         | QgsRasterDataProvider::Size
-                         //| QgsRasterDataProvider::BuildPyramids
-                         | QgsRasterDataProvider::Create
-                         | QgsRasterDataProvider::Remove
-                         | QgsRasterDataProvider::Prefetch;
+  const Qgis::RasterInterfaceCapabilities capability = Qgis::RasterInterfaceCapability::Identify
+      | Qgis::RasterInterfaceCapability::IdentifyValue
+      | Qgis::RasterInterfaceCapability::Size
+      //| Qgis::RasterInterfaceCapability::BuildPyramids
+      | Qgis::RasterInterfaceCapability::Prefetch;
   return capability;
 }
 

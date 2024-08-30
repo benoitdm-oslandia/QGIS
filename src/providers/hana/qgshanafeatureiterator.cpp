@@ -63,7 +63,7 @@ namespace
   {
     QString typeName = field.typeName();
     QString fieldName = QgsHanaUtils::quotedIdentifier( field.name() );
-    if ( field.type() == QVariant::String &&
+    if ( field.type() == QMetaType::Type::QString &&
          ( typeName == QLatin1String( "ST_GEOMETRY" ) || typeName == QLatin1String( "ST_POINT" ) ) )
       return QStringLiteral( "%1.ST_ASWKT()" ).arg( fieldName );
     return fieldName;
@@ -85,8 +85,7 @@ QgsHanaFeatureIterator::QgsHanaFeatureIterator(
     return;
   }
 
-  if ( mRequest.destinationCrs().isValid() && mRequest.destinationCrs() != mSource->mCrs )
-    mTransform = QgsCoordinateTransform( mSource->mCrs, mRequest.destinationCrs(), mRequest.transformContext() );
+  mTransform = mRequest.calculateTransform( mSource->mCrs );
 
   try
   {

@@ -53,6 +53,7 @@ from qgis.core import (
     QgsReadWriteContext,
     QgsSingleBandGrayRenderer,
     QgsSingleBandPseudoColorRenderer,
+    QgsRasterDataProvider,
 )
 import unittest
 from qgis.testing import start_app, QgisTestCase
@@ -633,6 +634,40 @@ class TestQgsRasterLayer(QgisTestCase):
 
         # compare xml documents
         self.assertEqual(layer_doc.toString(), clone_doc.toString())
+
+    def test_clone_resampling(self):
+        """
+        Test that cloning copies resampling settings
+        """
+        layer = QgsRasterLayer(
+            self.get_test_data_path('raster/band1_float32_noct_epsg4326.tif').as_posix(),
+            'test')
+        self.assertTrue(layer.isValid())
+
+        layer.setResamplingStage(
+            Qgis.RasterResamplingStage.Provider
+        )
+        layer.dataProvider().setZoomedInResamplingMethod(
+            QgsRasterDataProvider.ResamplingMethod.CubicSpline
+        )
+        layer.dataProvider().setZoomedOutResamplingMethod(
+            QgsRasterDataProvider.ResamplingMethod.Average
+        )
+
+        # clone layer
+        clone = layer.clone()
+        self.assertEqual(
+            clone.resamplingStage(),
+            Qgis.RasterResamplingStage.Provider
+        )
+        self.assertEqual(
+            clone.dataProvider().zoomedInResamplingMethod(),
+            QgsRasterDataProvider.ResamplingMethod.CubicSpline
+        )
+        self.assertEqual(
+            clone.dataProvider().zoomedOutResamplingMethod(),
+            QgsRasterDataProvider.ResamplingMethod.Average
+        )
 
     def testSetDataSource(self):
         """Test change data source"""
@@ -1228,6 +1263,43 @@ class TestQgsRasterLayerTransformContext(QgisTestCase):
         num = 10
         for _ in range(num):
             layer.readLayerXml(map_layer_element, context)
+
+    def test_as_numpy(self):
+        layer = QgsRasterLayer(self.rpath, 'raster')
+        arrays = layer.as_numpy()
+        self.assertEqual(type(arrays[5]), np.ndarray)
+        self.assertEqual(arrays.shape, (9, 200, 200))
+        self.assertEqual(arrays[0].dtype, np.int8)
+
+        # test with bands parameter
+        arrays = layer.as_numpy(bands=[1, 3])
+        self.assertEqual(type(arrays[0]), np.ndarray)
+        self.assertEqual(arrays.shape, (2, 200, 200))
+        self.assertEqual(arrays[0].dtype, np.int8)
+
+        path = os.path.join(unitTestDataPath('raster'),
+                            'rgb_with_mask.tif')
+        layer = QgsRasterLayer(path, QFileInfo(path).baseName())
+        arrays = layer.as_numpy()
+        self.assertEqual(type(arrays[0]), np.ndarray)
+        self.assertEqual(arrays.shape, (4, 150, 162))
+        self.assertEqual(arrays[0].dtype, np.int8)
+
+        path = os.path.join(unitTestDataPath('raster'),
+                            'rnd_percentile_raster5_float64.tif')
+        layer = QgsRasterLayer(path, QFileInfo(path).baseName())
+        arrays = layer.as_numpy()
+        self.assertEqual(type(arrays[0]), np.ndarray)  # All maskedArrays are converted to numpy.array
+        self.assertEqual(arrays.shape, (1, 4, 4))
+        self.assertEqual(arrays[0].dtype, np.float64)
+
+        path = os.path.join(unitTestDataPath('raster'),
+                            'rnd_percentile_raster5_float64.tif')
+        layer = QgsRasterLayer(path, QFileInfo(path).baseName())
+        arrays = layer.as_numpy(use_masking=False)
+        self.assertEqual(type(arrays[0]), np.ndarray)
+        self.assertEqual(arrays.shape, (1, 4, 4))
+        self.assertEqual(arrays[0].dtype, np.float64)
 
 
 if __name__ == '__main__':

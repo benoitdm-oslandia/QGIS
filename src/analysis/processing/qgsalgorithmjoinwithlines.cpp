@@ -102,6 +102,11 @@ QString QgsJoinWithLinesAlgorithm::shortDescription() const
   return QObject::tr( "Creates lines joining two point layers, based on a common attribute value." );
 }
 
+Qgis::ProcessingAlgorithmDocumentationFlags QgsJoinWithLinesAlgorithm::documentationFlags() const
+{
+  return Qgis::ProcessingAlgorithmDocumentationFlag::RegeneratesPrimaryKey;
+}
+
 QgsJoinWithLinesAlgorithm *QgsJoinWithLinesAlgorithm::createInstance() const
 {
   return new QgsJoinWithLinesAlgorithm();
@@ -259,7 +264,8 @@ QVariantMap QgsJoinWithLinesAlgorithm::processAlgorithm( const QVariantMap &para
 
     // only keep selected attributes
     QgsAttributes hubAttributes;
-    for ( int j = 0; j < hubFeature.attributes().count(); ++j )
+    const int attributeCount = hubFeature.attributeCount();
+    for ( int j = 0; j < attributeCount; ++j )
     {
       if ( !hubFieldIndices.contains( j ) )
         continue;
@@ -333,7 +339,8 @@ QVariantMap QgsJoinWithLinesAlgorithm::processAlgorithm( const QVariantMap &para
 
       // only keep selected attributes
       QgsAttributes spokeAttributes;
-      for ( int j = 0; j < spokeFeature.attributes().count(); ++j )
+      const int attributeCount = spokeFeature.attributeCount();
+      for ( int j = 0; j < attributeCount; ++j )
       {
         if ( !spokeFieldIndices.contains( j ) )
           continue;

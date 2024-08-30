@@ -37,9 +37,6 @@ class _3D_EXPORT QgsNullMaterialSettings : public QgsAbstractMaterialSettings
 {
   public:
 
-    /**
-     * Constructor for QgsNullMaterialSettings.
-     */
     QgsNullMaterialSettings() = default;
 
     QString type() const override;
@@ -59,7 +56,7 @@ class _3D_EXPORT QgsNullMaterialSettings : public QgsAbstractMaterialSettings
     QMap<QString, QString> toExportParameters() const override;
 #ifndef SIP_RUN
     Qt3DRender::QMaterial *toMaterial( QgsMaterialSettingsRenderingTechnique technique, const QgsMaterialContext &context ) const override SIP_FACTORY;
-    void addParametersToEffect( Qt3DRender::QEffect *effect ) const override;
+    void addParametersToEffect( Qt3DRender::QEffect *effect, const QgsMaterialContext &materialContext ) const override;
 #endif
 
 };

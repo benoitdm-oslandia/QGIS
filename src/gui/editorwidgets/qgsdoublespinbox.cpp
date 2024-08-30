@@ -40,6 +40,7 @@ QgsDoubleSpinBox::QgsDoubleSpinBox( QWidget *parent )
   : QDoubleSpinBox( parent )
 {
   mLineEdit = new QgsSpinBoxLineEdit();
+  connect( mLineEdit, &QLineEdit::returnPressed, this, &QgsDoubleSpinBox::returnPressed );
 
   // By default, group separator is off
   setLineEdit( mLineEdit );
@@ -112,6 +113,20 @@ void QgsDoubleSpinBox::paintEvent( QPaintEvent *event )
 {
   mLineEdit->setShowClearButton( shouldShowClearForValue( value() ) );
   QDoubleSpinBox::paintEvent( event );
+}
+
+void QgsDoubleSpinBox::stepBy( int steps )
+{
+  const bool wasNull = mShowClearButton && value() == clearValue();
+  if ( wasNull && minimum() < 0 && maximum() > 0 )
+  {
+    // value is currently null, and range allows both positive and negative numbers
+    // in this case we DON'T do the default step, as that would add one step to the NULL value,
+    // which is usually the minimum acceptable value... so the user will get a very large negative number!
+    // Instead, treat the initial value as 0 instead, and then perform the step.
+    whileBlocking( this )->setValue( 0 );
+  }
+  QDoubleSpinBox::stepBy( steps );
 }
 
 void QgsDoubleSpinBox::changed( double value )

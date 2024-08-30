@@ -23,13 +23,11 @@ import os
 
 from qgis.PyQt.QtGui import QIcon
 
-from qgis.core import (QgsRasterFileWriter,
-                       QgsProcessingException,
+from qgis.core import (QgsProcessingException,
                        QgsProcessingParameterDefinition,
                        QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterField,
                        QgsProcessingParameterRasterLayer,
-                       QgsProcessingParameterNumber,
                        QgsProcessingParameterString,
                        QgsProcessingParameterBoolean,
                        QgsProcessingOutputRasterLayer)
@@ -98,17 +96,19 @@ class rasterize_over(GdalAlgorithm):
         return 'gdal_rasterize'
 
     def getConsoleCommands(self, parameters, context, feedback, executing=True):
-        ogrLayer, layerName = self.getOgrCompatibleSource(self.INPUT, parameters, context, feedback, executing)
+        input_details = self.getOgrCompatibleSource(self.INPUT, parameters, context, feedback, executing)
         inLayer = self.parameterAsRasterLayer(parameters, self.INPUT_RASTER, context)
         if inLayer is None:
             raise QgsProcessingException(self.invalidRasterError(parameters, self.INPUT_RASTER))
+        input_raster_details = GdalUtils.gdal_connection_details_from_layer(
+            inLayer)
 
         fieldName = self.parameterAsString(parameters, self.FIELD, context)
         self.setOutputValue(self.OUTPUT, inLayer.source())
 
         arguments = [
             '-l',
-            layerName,
+            input_details.layer_name,
             '-a',
             fieldName
         ]
@@ -119,8 +119,19 @@ class rasterize_over(GdalAlgorithm):
             extra = self.parameterAsString(parameters, self.EXTRA, context)
             arguments.append(extra)
 
-        arguments.append(ogrLayer)
-        arguments.append(inLayer.source())
+        if input_details.open_options:
+            if GdalUtils.version() < 3070000:
+                raise QgsProcessingException(self.tr(
+                    'Open options are not supported by gdal_rasterize version {} (requires GDAL version 3.7 or later)'.format(
+                        GdalUtils.readableVersion())))
+
+            arguments.extend(input_details.open_options_as_arguments())
+
+        if input_details.credential_options:
+            arguments.extend(input_details.credential_options_as_arguments())
+
+        arguments.append(input_details.connection_string)
+        arguments.append(input_raster_details.connection_string)
 
         return [self.commandName(), GdalUtils.escapeAndJoin(arguments)]
 

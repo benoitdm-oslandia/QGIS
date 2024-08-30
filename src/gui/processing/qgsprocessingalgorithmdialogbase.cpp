@@ -333,12 +333,13 @@ void QgsProcessingAlgorithmDialogBase::setAlgorithm( QgsProcessingAlgorithm *alg
   QString title;
   if ( ( QgsGui::higFlags() & QgsGui::HigDialogTitleIsTitleCase ) && !( algorithm->flags() & Qgis::ProcessingAlgorithmFlag::DisplayNameIsLiteral ) )
   {
-    title = QgsStringUtils::capitalize( mAlgorithm->displayName(), Qgis::Capitalization::TitleCase );
+    title = QStringLiteral( "%1 - %2" ).arg( QgsStringUtils::capitalize( mAlgorithm->group(), Qgis::Capitalization::TitleCase ), QgsStringUtils::capitalize( mAlgorithm->displayName(), Qgis::Capitalization::TitleCase ) );
   }
   else
   {
-    title = mAlgorithm->displayName();
+    title = QStringLiteral( "%1 - %2" ).arg( mAlgorithm->group(), mAlgorithm->displayName() );
   }
+
   setWindowTitle( title );
 
   const QString algHelp = formatHelp( algorithm );
@@ -349,7 +350,7 @@ void QgsProcessingAlgorithmDialogBase::setAlgorithm( QgsProcessingAlgorithm *alg
     textShortHelp->document()->setDefaultStyleSheet( QStringLiteral( ".summary { margin-left: 10px; margin-right: 10px; }\n"
         "h2 { color: #555555; padding-bottom: 15px; }\n"
         "a { text - decoration: none; color: #3498db; font-weight: bold; }\n"
-        "p { color: #666666; }\n"
+        "p, ul, li { color: #666666; }\n"
         "b { color: #333333; }\n"
         "dl dd { margin - bottom: 5px; }" ) );
     textShortHelp->setHtml( algHelp );
@@ -762,6 +763,7 @@ void QgsProcessingAlgorithmDialogBase::setProgressText( const QString &text )
 
 QString QgsProcessingAlgorithmDialogBase::formatHelp( QgsProcessingAlgorithm *algorithm )
 {
+  QString result;
   const QString text = algorithm->shortHelpString();
   if ( !text.isEmpty() )
   {
@@ -771,14 +773,26 @@ QString QgsProcessingAlgorithmDialogBase::formatHelp( QgsProcessingAlgorithm *al
     {
       help += QStringLiteral( "<p>%1</p>" ).arg( paragraph );
     }
-    return QStringLiteral( "<h2>%1</h2>%2" ).arg( algorithm->displayName(), help );
+    result = QStringLiteral( "<h2>%1</h2>%2" ).arg( algorithm->displayName(), help );
   }
   else if ( !algorithm->shortDescription().isEmpty() )
   {
-    return QStringLiteral( "<h2>%1</h2><p>%2</p>" ).arg( algorithm->displayName(), algorithm->shortDescription() );
+    result = QStringLiteral( "<h2>%1</h2><p>%2</p>" ).arg( algorithm->displayName(), algorithm->shortDescription() );
   }
-  else
-    return QString();
+
+  if ( algorithm->documentationFlags() != Qgis::ProcessingAlgorithmDocumentationFlags() )
+  {
+    QStringList flags;
+    for ( Qgis::ProcessingAlgorithmDocumentationFlag flag : qgsEnumList< Qgis::ProcessingAlgorithmDocumentationFlag>() )
+    {
+      if ( algorithm->documentationFlags() & flag )
+      {
+        flags << QgsProcessing::documentationFlagToString( flag );
+      }
+    }
+    result += QStringLiteral( "<ul><li><i>%1</i></li></ul>" ).arg( flags.join( QLatin1String( "</i></li><li><i>" ) ) );
+  }
+  return result;
 }
 
 void QgsProcessingAlgorithmDialogBase::processEvents()

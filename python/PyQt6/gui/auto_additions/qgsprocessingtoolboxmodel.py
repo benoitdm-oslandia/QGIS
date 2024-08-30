@@ -16,7 +16,10 @@ QgsProcessingToolboxModelNode.NodeRecent = QgsProcessingToolboxModelNode.NodeTyp
 QgsProcessingToolboxModelNode.NodeType.NodeRecent = QgsProcessingToolboxModelNode.NodeType.Recent
 QgsProcessingToolboxModelNode.NodeRecent.is_monkey_patched = True
 QgsProcessingToolboxModelNode.NodeRecent.__doc__ = "Recent algorithms node"
-QgsProcessingToolboxModelNode.NodeType.__doc__ = "Enumeration of possible model node types\n\n" + '* ``NodeProvider``: ' + QgsProcessingToolboxModelNode.NodeType.Provider.__doc__ + '\n' + '* ``NodeGroup``: ' + QgsProcessingToolboxModelNode.NodeType.Group.__doc__ + '\n' + '* ``NodeAlgorithm``: ' + QgsProcessingToolboxModelNode.NodeType.Algorithm.__doc__ + '\n' + '* ``NodeRecent``: ' + QgsProcessingToolboxModelNode.NodeType.Recent.__doc__
+QgsProcessingToolboxModelNode.Favorite = QgsProcessingToolboxModelNode.NodeType.Favorite
+QgsProcessingToolboxModelNode.Favorite.is_monkey_patched = True
+QgsProcessingToolboxModelNode.Favorite.__doc__ = "Favorites algorithms node, since QGIS 3.40"
+QgsProcessingToolboxModelNode.NodeType.__doc__ = "Enumeration of possible model node types\n\n" + '* ``NodeProvider``: ' + QgsProcessingToolboxModelNode.NodeType.Provider.__doc__ + '\n' + '* ``NodeGroup``: ' + QgsProcessingToolboxModelNode.NodeType.Group.__doc__ + '\n' + '* ``NodeAlgorithm``: ' + QgsProcessingToolboxModelNode.NodeType.Algorithm.__doc__ + '\n' + '* ``NodeRecent``: ' + QgsProcessingToolboxModelNode.NodeType.Recent.__doc__ + '\n' + '* ``Favorite``: ' + QgsProcessingToolboxModelNode.NodeType.Favorite.__doc__
 # --
 QgsProcessingToolboxModelNode.NodeType.baseClass = QgsProcessingToolboxModelNode
 QgsProcessingToolboxModel.Roles = QgsProcessingToolboxModel.CustomRole
@@ -75,3 +78,39 @@ QgsProcessingToolboxProxyModel.Filter.baseClass = QgsProcessingToolboxProxyModel
 QgsProcessingToolboxProxyModel.Filters = lambda flags=0: QgsProcessingToolboxProxyModel.Filter(flags)
 QgsProcessingToolboxProxyModel.Filters.baseClass = QgsProcessingToolboxProxyModel
 Filters = QgsProcessingToolboxProxyModel  # dirty hack since SIP seems to introduce the flags in module
+try:
+    QgsProcessingToolboxModel.__attribute_docs__ = {'recentAlgorithmAdded': 'Emitted whenever recent algorithms are added to the model.\n', 'favoriteAlgorithmAdded': 'Emitted whenever favorite algorithms are added to the model.\n'}
+except NameError:
+    pass
+try:
+    QgsProcessingToolboxModelNode.__group__ = ['processing']
+except NameError:
+    pass
+try:
+    QgsProcessingToolboxModelRecentNode.__group__ = ['processing']
+except NameError:
+    pass
+try:
+    QgsProcessingToolboxModelFavoriteNode.__group__ = ['processing']
+except NameError:
+    pass
+try:
+    QgsProcessingToolboxModelProviderNode.__group__ = ['processing']
+except NameError:
+    pass
+try:
+    QgsProcessingToolboxModelGroupNode.__group__ = ['processing']
+except NameError:
+    pass
+try:
+    QgsProcessingToolboxModelAlgorithmNode.__group__ = ['processing']
+except NameError:
+    pass
+try:
+    QgsProcessingToolboxModel.__group__ = ['processing']
+except NameError:
+    pass
+try:
+    QgsProcessingToolboxProxyModel.__group__ = ['processing']
+except NameError:
+    pass

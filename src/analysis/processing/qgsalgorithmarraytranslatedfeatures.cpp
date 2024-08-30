@@ -60,6 +60,11 @@ QString QgsArrayTranslatedFeaturesAlgorithm::shortDescription() const
   return QObject::tr( "Creates multiple translated copies of features in a layer." );
 }
 
+Qgis::ProcessingAlgorithmDocumentationFlags QgsArrayTranslatedFeaturesAlgorithm::documentationFlags() const
+{
+  return Qgis::ProcessingAlgorithmDocumentationFlag::RegeneratesPrimaryKey;
+}
+
 QgsArrayTranslatedFeaturesAlgorithm *QgsArrayTranslatedFeaturesAlgorithm::createInstance() const
 {
   return new QgsArrayTranslatedFeaturesAlgorithm();
@@ -212,7 +217,7 @@ Qgis::WkbType QgsArrayTranslatedFeaturesAlgorithm::outputWkbType( Qgis::WkbType 
 QgsFields QgsArrayTranslatedFeaturesAlgorithm::outputFields( const QgsFields &inputFields ) const
 {
   QgsFields output;
-  output.append( QgsField( QStringLiteral( "instance" ), QVariant::Int ) );
+  output.append( QgsField( QStringLiteral( "instance" ), QMetaType::Type::Int ) );
   return QgsProcessingUtils::combineFields( inputFields, output );
 }
 

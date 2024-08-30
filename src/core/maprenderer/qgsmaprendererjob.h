@@ -41,6 +41,7 @@ class QgsFeatureFilterProvider;
 class QgsRenderedItemResults;
 class QgsElevationMap;
 class QgsSettingsEntryBool;
+class QgsSettingsEntryString;
 
 #ifndef SIP_RUN
 /// @cond PRIVATE
@@ -55,10 +56,7 @@ class LayerRenderJob
 
     LayerRenderJob() = default;
 
-    //! LayerRenderJob cannot be copied
     LayerRenderJob( const LayerRenderJob & ) = delete;
-
-    //! LayerRenderJob cannot be copied
     LayerRenderJob &operator=( const LayerRenderJob & ) = delete;
 
     LayerRenderJob( LayerRenderJob && );
@@ -481,6 +479,13 @@ class CORE_EXPORT QgsMapRendererJob : public QObject SIP_ABSTRACT
 #ifndef SIP_RUN
     //! Settings entry log canvas refresh event
     static const QgsSettingsEntryBool *settingsLogCanvasRefreshEvent;
+
+    /**
+     * Settings entry for mask painting backend engine.
+     *
+     * \since QGIS 3.38
+     */
+    static const QgsSettingsEntryString *settingsMaskBackend;
 #endif
 
   signals:

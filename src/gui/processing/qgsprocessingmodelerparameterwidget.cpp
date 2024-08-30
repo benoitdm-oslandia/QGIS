@@ -215,12 +215,12 @@ QVariant QgsProcessingModelerParameterWidget::value() const
     {
       const QVariant v = mStaticWidgetWrapper->parameterValue();
 
-      if ( v.type() == QVariant::List )
+      if ( v.userType() == QMetaType::Type::QVariantList )
       {
         const QVariantList vList = v.toList();
         if ( std::all_of( vList.begin(), vList.end(), []( const QVariant & val )
       {
-        return val.userType() == QMetaType::type( "QgsProcessingModelChildParameterSource" );
+        return val.userType() == qMetaTypeId<QgsProcessingModelChildParameterSource>();
         } ) )
         {
           return v;

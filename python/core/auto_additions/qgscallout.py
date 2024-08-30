@@ -50,3 +50,40 @@ QgsCallout.BlendMode.is_monkey_patched = True
 QgsCallout.BlendMode.__doc__ = "Callout blend mode (since QGIS 3.20)"
 QgsCallout.Property.__doc__ = "Data definable properties.\n\n" + '* ``MinimumCalloutLength``: ' + QgsCallout.Property.MinimumCalloutLength.__doc__ + '\n' + '* ``OffsetFromAnchor``: ' + QgsCallout.Property.OffsetFromAnchor.__doc__ + '\n' + '* ``OffsetFromLabel``: ' + QgsCallout.Property.OffsetFromLabel.__doc__ + '\n' + '* ``DrawCalloutToAllParts``: ' + QgsCallout.Property.DrawCalloutToAllParts.__doc__ + '\n' + '* ``AnchorPointPosition``: ' + QgsCallout.Property.AnchorPointPosition.__doc__ + '\n' + '* ``LabelAnchorPointPosition``: ' + QgsCallout.Property.LabelAnchorPointPosition.__doc__ + '\n' + '* ``OriginX``: ' + QgsCallout.Property.OriginX.__doc__ + '\n' + '* ``OriginY``: ' + QgsCallout.Property.OriginY.__doc__ + '\n' + '* ``DestinationX``: ' + QgsCallout.Property.DestinationX.__doc__ + '\n' + '* ``DestinationY``: ' + QgsCallout.Property.DestinationY.__doc__ + '\n' + '* ``Curvature``: ' + QgsCallout.Property.Curvature.__doc__ + '\n' + '* ``Orientation``: ' + QgsCallout.Property.Orientation.__doc__ + '\n' + '* ``Margins``: ' + QgsCallout.Property.Margins.__doc__ + '\n' + '* ``WedgeWidth``: ' + QgsCallout.Property.WedgeWidth.__doc__ + '\n' + '* ``CornerRadius``: ' + QgsCallout.Property.CornerRadius.__doc__ + '\n' + '* ``BlendMode``: ' + QgsCallout.Property.BlendMode.__doc__
 # --
+try:
+    QgsCallout.QgsCalloutContext.__attribute_docs__ = {'allFeaturePartsLabeled': '``True`` if all parts of associated feature were labeled', 'originalFeatureCrs': 'Contains the CRS of the original feature associated with this callout.\n\n.. versionadded:: 3.20'}
+except NameError:
+    pass
+QgsCallout.propertyDefinitions = staticmethod(QgsCallout.propertyDefinitions)
+QgsCallout.encodeAnchorPoint = staticmethod(QgsCallout.encodeAnchorPoint)
+QgsCallout.decodeAnchorPoint = staticmethod(QgsCallout.decodeAnchorPoint)
+QgsCallout.encodeLabelAnchorPoint = staticmethod(QgsCallout.encodeLabelAnchorPoint)
+QgsCallout.decodeLabelAnchorPoint = staticmethod(QgsCallout.decodeLabelAnchorPoint)
+QgsSimpleLineCallout.create = staticmethod(QgsSimpleLineCallout.create)
+QgsManhattanLineCallout.create = staticmethod(QgsManhattanLineCallout.create)
+QgsCurvedLineCallout.create = staticmethod(QgsCurvedLineCallout.create)
+QgsBalloonCallout.create = staticmethod(QgsBalloonCallout.create)
+try:
+    QgsCallout.__group__ = ['callouts']
+except NameError:
+    pass
+try:
+    QgsCallout.QgsCalloutContext.__group__ = ['callouts']
+except NameError:
+    pass
+try:
+    QgsSimpleLineCallout.__group__ = ['callouts']
+except NameError:
+    pass
+try:
+    QgsManhattanLineCallout.__group__ = ['callouts']
+except NameError:
+    pass
+try:
+    QgsCurvedLineCallout.__group__ = ['callouts']
+except NameError:
+    pass
+try:
+    QgsBalloonCallout.__group__ = ['callouts']
+except NameError:
+    pass

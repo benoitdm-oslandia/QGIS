@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/symbology/qgssymbollayerutils.h                             *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -18,6 +18,9 @@ typedef QMap<QString, QgsSymbol * > QgsSymbolMap;
 
 class QgsSymbolLayerUtils
 {
+%Docstring(signature="appended")
+Contains utility functions for working with symbols and symbol layers.
+%End
 
 %TypeHeaderCode
 #include "qgssymbollayerutils.h"
@@ -169,7 +172,6 @@ Converts a ``value`` to a point.
 :return: - converted point
          - ok: will be set to ``True`` if value was successfully converted
 
-
 .. seealso:: :py:func:`decodePoint`
 
 .. seealso:: :py:func:`toSize`
@@ -203,7 +205,6 @@ Converts a ``value`` to a size.
 
 :return: - converted size
          - ok: will be set to ``True`` if value was successfully converted
-
 
 .. seealso:: :py:func:`decodeSize`
 
@@ -796,6 +797,15 @@ Determines an SVG symbol's name from its ``path``.
 .. seealso:: :py:func:`svgSymbolNameToPath`
 %End
 
+    static QList< QList< QPolygonF > > toQPolygonF( const QgsGeometry &geometry, Qgis::SymbolType type );
+%Docstring
+Converts a ``geometry`` to a set of QPolygonF objects representing
+how the geometry should be drawn for a symbol of the given ``type``,
+as a list of geometry parts and rings.
+
+.. versionadded:: 3.40
+%End
+
     static QPointF polygonCentroid( const QPolygonF &points );
 %Docstring
 Calculate the centroid point of a QPolygonF
@@ -1001,6 +1011,18 @@ Regenerate recursively unique id from ``symbolLayer`` and its children
 .. versionadded:: 3.30
 %End
 
+    static QVector< QgsGeometry > collectSymbolLayerClipGeometries( const QgsRenderContext &context, const QString &symbolLayerId, const QRectF &bounds );
+%Docstring
+Returns a list of the symbol layer clip geometries to be used for the symbol layer with the specified
+ID.
+
+The ``bounds`` argument specifies the target bounds (in painter coordinates) for matching geometries. Only mask
+geometries which intersect ``bounds`` will be returned. If ``bounds`` is a null QRectF then all clip geometries
+for the symbol layer will be returned.
+
+.. versionadded:: 3.38
+%End
+
 
 };
 
@@ -1011,5 +1033,5 @@ Regenerate recursively unique id from ``symbolLayer`` and its children
  *                                                                      *
  * src/core/symbology/qgssymbollayerutils.h                             *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

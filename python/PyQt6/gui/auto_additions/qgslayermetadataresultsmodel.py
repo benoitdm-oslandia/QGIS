@@ -12,3 +12,7 @@ QgsLayerMetadataResultsModel.Title = QgsLayerMetadataResultsModel.Sections.Title
 QgsLayerMetadataResultsModel.Abstract = QgsLayerMetadataResultsModel.Sections.Abstract
 QgsLayerMetadataResultsModel.DataProviderName = QgsLayerMetadataResultsModel.Sections.DataProviderName
 QgsLayerMetadataResultsModel.GeometryType = QgsLayerMetadataResultsModel.Sections.GeometryType
+try:
+    QgsLayerMetadataResultsModel.__attribute_docs__ = {'progressChanged': 'Emitted when the progress changed to ``progress``.\n'}
+except NameError:
+    pass

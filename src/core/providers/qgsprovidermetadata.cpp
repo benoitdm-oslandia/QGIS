@@ -134,7 +134,7 @@ QList<QgsProviderSublayerDetails> QgsProviderMetadata::querySublayers( const QSt
 
 QgsDataProvider *QgsProviderMetadata::createProvider( const QString &uri,
     const QgsDataProvider::ProviderOptions &options,
-    QgsDataProvider::ReadFlags flags )
+    Qgis::DataProviderReadFlags flags )
 {
   if ( mCreateFunction )
   {
@@ -225,14 +225,16 @@ QgsRasterDataProvider *QgsProviderMetadata::createRasterDataProvider(
 bool QgsProviderMetadata::createMeshData( const QgsMesh &,
     const QString &,
     const QString &,
-    const QgsCoordinateReferenceSystem & ) const
+    const QgsCoordinateReferenceSystem &,
+    const QMap<QString, QString> & ) const
 {
   return false;
 }
 
 bool QgsProviderMetadata::createMeshData( const QgsMesh &,
     const QString &,
-    const QgsCoordinateReferenceSystem & ) const
+    const QgsCoordinateReferenceSystem &,
+    const QMap<QString, QString> & ) const
 {
   return false;
 }

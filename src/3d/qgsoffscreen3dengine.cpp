@@ -15,7 +15,7 @@
 
 #include "qgsoffscreen3dengine.h"
 
-#include "qgsframegraph.h"
+#include "framegraph/qgsframegraph.h"
 
 #include <QCoreApplication>
 #include <QOffscreenSurface>
@@ -28,7 +28,6 @@
 #include <Qt3DRender/QCameraSelector>
 #include <Qt3DRender/QClearBuffers>
 #include <Qt3DRender/QRenderAspect>
-#include <Qt3DRender/QRenderCapture>
 #include <Qt3DRender/QRenderSettings>
 #include <Qt3DRender/QRenderTarget>
 #include <Qt3DRender/QRenderTargetOutput>
@@ -36,6 +35,7 @@
 #include <Qt3DRender/QRenderSurfaceSelector>
 #include <Qt3DRender/QTexture>
 #include <Qt3DRender/QViewport>
+#include "framegraph/qgsabstractrenderview.h"
 
 QgsOffscreen3DEngine::QgsOffscreen3DEngine()
 {
@@ -102,8 +102,9 @@ QgsOffscreen3DEngine::QgsOffscreen3DEngine()
   mOffscreenSurface->create();
 
   mFrameGraph = new QgsFrameGraph( mOffscreenSurface, mSize, mCamera, mRoot );
-  mFrameGraph->setRenderCaptureEnabled( true );
-  mFrameGraph->setShadowRenderingEnabled( false );
+  // to activatex image capture for unit tests:
+  mFrameGraph->setOffScreenRenderCaptureEnabled( true );
+  mFrameGraph->setEnableRenderView( QgsFrameGraph::SHADOW_RENDERVIEW, false );
   // Set this frame graph to be in use.
   // the render settings also sets itself as the parent of mSurfaceSelector
   mRenderSettings->setActiveFrameGraph( mFrameGraph->frameGraphRoot() );
@@ -149,8 +150,10 @@ void QgsOffscreen3DEngine::setRootEntity( Qt3DCore::QEntity *root )
   // Parent the incoming scene root to our current root entity.
   mSceneRoot = root;
   mSceneRoot->setParent( mRoot );
-  root->addComponent( mFrameGraph->forwardRenderLayer() );
-  root->addComponent( mFrameGraph->castShadowsLayer() );
+  if ( mFrameGraph->renderView( QgsFrameGraph::FORWARD_RENDERVIEW ) )
+    root->addComponent( mFrameGraph->filterLayer( QgsFrameGraph::FORWARD_RENDERVIEW ) );
+  if ( mFrameGraph->renderView( QgsFrameGraph::SHADOW_RENDERVIEW ) )
+    root->addComponent( mFrameGraph->filterLayer( QgsFrameGraph::SHADOW_RENDERVIEW ) );
 }
 
 Qt3DRender::QRenderSettings *QgsOffscreen3DEngine::renderSettings()

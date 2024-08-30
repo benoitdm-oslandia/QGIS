@@ -62,7 +62,7 @@ const QString ORACLE_KEY = "oracle";
 const QString ORACLE_DESCRIPTION = "Oracle data provider";
 
 QgsOracleProvider::QgsOracleProvider( QString const &uri, const ProviderOptions &options,
-                                      QgsDataProvider::ReadFlags flags )
+                                      Qgis::DataProviderReadFlags flags )
   : QgsVectorDataProvider( uri, options, flags )
   , mValid( false )
   , mIsQuery( false )
@@ -91,7 +91,7 @@ QgsOracleProvider::QgsOracleProvider( QString const &uri, const ProviderOptions 
   mSrid = mUri.srid().toInt();
   mRequestedGeomType = mUri.wkbType();
   mUseEstimatedMetadata = mUri.useEstimatedMetadata();
-  if ( mReadFlags & QgsDataProvider::FlagTrustDataSource )
+  if ( mReadFlags & Qgis::DataProviderReadFlag::TrustDataSource )
   {
     mUseEstimatedMetadata = true;
   }
@@ -737,7 +737,7 @@ bool QgsOracleProvider::loadFields()
     if ( !mGeometryColumn.isEmpty() )
       mSpatialIndexName = conn->getSpatialIndexName( mOwnerName, mTableName, mGeometryColumn, mHasSpatialIndex );
 
-    mEnabledCapabilities |= QgsVectorDataProvider::CreateSpatialIndex;
+    mEnabledCapabilities |= Qgis::VectorProviderCapability::CreateSpatialIndex;
   }
 
   if ( !mGeometryColumn.isEmpty() )
@@ -785,7 +785,7 @@ bool QgsOracleProvider::loadFields()
     if ( !mIsQuery && !types.contains( field.name() ) )
       continue;
 
-    QVariant::Type type = field.type();
+    QMetaType::Type type = QgsVariantUtils::variantTypeToMetaType( field.type() );
     QgsField newField( field.name(), type, types.value( field.name() ), field.length(), field.precision(), comments.value( field.name() ) );
     newField.setReadOnly( alwaysGenerated.value( field.name(), false ) );
 
@@ -808,17 +808,17 @@ bool QgsOracleProvider::hasSufficientPermsAndCapabilities()
 {
   QgsDebugMsgLevel( QStringLiteral( "Checking for permissions on the relation" ), 2 );
 
-  mEnabledCapabilities = QgsVectorDataProvider::SelectAtId | QgsVectorDataProvider::TransactionSupport;
+  mEnabledCapabilities = Qgis::VectorProviderCapability::SelectAtId | Qgis::VectorProviderCapability::TransactionSupport;
 
   // supports circular geometries
-  mEnabledCapabilities |= QgsVectorDataProvider::CircularGeometries;
+  mEnabledCapabilities |= Qgis::VectorProviderCapability::CircularGeometries;
 
   QgsOracleConn *conn = connectionRO();
 
   QSqlQuery qry( *conn );
   if ( !mIsQuery )
   {
-    if ( mReadFlags & QgsDataProvider::ForceReadOnly )
+    if ( mReadFlags & Qgis::DataProviderReadFlag::ForceReadOnly )
     {
       // Does not check editable capabilities
       qry.finish();
@@ -828,13 +828,13 @@ bool QgsOracleProvider::hasSufficientPermsAndCapabilities()
     if ( conn->currentUser() == mOwnerName )
     {
       // full set of privileges for the owner
-      mEnabledCapabilities |= QgsVectorDataProvider::DeleteFeatures
-                              |  QgsVectorDataProvider::ChangeAttributeValues
-                              |  QgsVectorDataProvider::AddFeatures
-                              |  QgsVectorDataProvider::AddAttributes
-                              |  QgsVectorDataProvider::DeleteAttributes
-                              |  QgsVectorDataProvider::ChangeGeometries
-                              |  QgsVectorDataProvider::RenameAttributes
+      mEnabledCapabilities |= Qgis::VectorProviderCapability::DeleteFeatures
+                              |  Qgis::VectorProviderCapability::ChangeAttributeValues
+                              |  Qgis::VectorProviderCapability::AddFeatures
+                              |  Qgis::VectorProviderCapability::AddAttributes
+                              |  Qgis::VectorProviderCapability::DeleteAttributes
+                              |  Qgis::VectorProviderCapability::ChangeGeometries
+                              |  Qgis::VectorProviderCapability::RenameAttributes
                               ;
     }
     else
@@ -849,19 +849,19 @@ bool QgsOracleProvider::hasSufficientPermsAndCapabilities()
 
           if ( priv == "DELETE" )
           {
-            mEnabledCapabilities |= QgsVectorDataProvider::DeleteFeatures;
+            mEnabledCapabilities |= Qgis::VectorProviderCapability::DeleteFeatures;
           }
           else if ( priv == "UPDATE" )
           {
-            mEnabledCapabilities |= QgsVectorDataProvider::ChangeAttributeValues;
+            mEnabledCapabilities |= Qgis::VectorProviderCapability::ChangeAttributeValues;
           }
           else if ( priv == "INSERT" )
           {
-            mEnabledCapabilities |= QgsVectorDataProvider::AddFeatures;
+            mEnabledCapabilities |= Qgis::VectorProviderCapability::AddFeatures;
           }
           else if ( priv == "ALTER TABLE" )
           {
-            mEnabledCapabilities |= QgsVectorDataProvider::AddAttributes | QgsVectorDataProvider::DeleteAttributes | QgsVectorDataProvider::RenameAttributes;
+            mEnabledCapabilities |= Qgis::VectorProviderCapability::AddAttributes | Qgis::VectorProviderCapability::DeleteAttributes | Qgis::VectorProviderCapability::RenameAttributes;
           }
         }
 
@@ -872,7 +872,7 @@ bool QgsOracleProvider::hasSufficientPermsAndCapabilities()
                                  QVariantList() << mOwnerName << mTableName << mGeometryColumn, mUri.uri() ) )
           {
             if ( qry.next() )
-              mEnabledCapabilities |= QgsVectorDataProvider::ChangeGeometries;
+              mEnabledCapabilities |= Qgis::VectorProviderCapability::ChangeGeometries;
           }
           else
           {
@@ -952,9 +952,9 @@ bool QgsOracleProvider::determinePrimaryKey()
       QgsField fld = mAttributeFields.at( idx );
 
       if ( isInt &&
-           fld.type() != QVariant::Int &&
-           fld.type() != QVariant::LongLong &&
-           !( fld.type() == QVariant::Double && fld.precision() == 0 ) )
+           fld.type() != QMetaType::Type::Int &&
+           fld.type() != QMetaType::Type::LongLong &&
+           !( fld.type() == QMetaType::Type::Double && fld.precision() == 0 ) )
         isInt = false;
 
       mPrimaryKeyAttrs << idx;
@@ -1022,9 +1022,9 @@ void QgsOracleProvider::determinePrimaryKeyFromUriKeyColumn()
 
       if ( mUseEstimatedMetadata || uniqueData( mQuery, primaryKey ) )
       {
-        if ( fld.type() == QVariant::Int ||
-             fld.type() == QVariant::LongLong ||
-             ( fld.type() == QVariant::Double && fld.precision() == 0 ) )
+        if ( fld.type() == QMetaType::Type::Int ||
+             fld.type() == QMetaType::Type::LongLong ||
+             ( fld.type() == QMetaType::Type::Double && fld.precision() == 0 ) )
         {
           mPrimaryKeyType = PktInt;
         }
@@ -1263,11 +1263,11 @@ bool QgsOracleProvider::skipConstraintCheck( int fieldIndex, QgsFieldConstraints
   }
 }
 
-QVariant QgsOracleProvider::evaluateDefaultExpression( const QString &value, const QVariant::Type &fieldType ) const
+QVariant QgsOracleProvider::evaluateDefaultExpression( const QString &value, const QMetaType::Type &fieldType ) const
 {
   if ( value.isEmpty() )
   {
-    return QVariant( fieldType );
+    return QgsVariantUtils::createNullVariant( fieldType );
   }
 
   QgsOracleConn *conn = connectionRO();
@@ -1472,7 +1472,7 @@ bool QgsOracleProvider::addFeatures( QgsFeatureList &flist, QgsFeatureSink::Flag
               QgsField fld = field( idx );
 
               QVariant v = getfid.value( col++ );
-              if ( v.type() != fld.type() )
+              if ( v.userType() != fld.type() )
                 v = QgsVectorDataProvider::convertValue( fld.type(), v.toString() );
               features->setAttribute( idx, v );
             }
@@ -2453,7 +2453,7 @@ bool QgsOracleProvider::changeGeometryValues( const QgsGeometryMap &geometry_map
   return returnvalue;
 }
 
-QgsVectorDataProvider::Capabilities QgsOracleProvider::capabilities() const
+Qgis::VectorProviderCapabilities QgsOracleProvider::capabilities() const
 {
   return mEnabledCapabilities;
 }
@@ -2810,7 +2810,7 @@ bool QgsOracleProvider::getGeometryDetails()
   }
 
   // Trust the datasource config means that we used requested geometry type and srid
-  if ( mReadFlags & QgsDataProvider::FlagTrustDataSource )
+  if ( mReadFlags & Qgis::DataProviderReadFlag::TrustDataSource )
   {
     mDetectedGeomType = mRequestedGeomType;
     return true;
@@ -3040,7 +3040,7 @@ bool QgsOracleProvider::createSpatialIndex()
 
 
       if ( !LoggedExecStatic( qry, sql,
-                              QVariantList() << mTableName << mGeometryColumn << ( mSrid < 1 ? QVariant( QVariant::Int ) : mSrid )
+                              QVariantList() << mTableName << mGeometryColumn << ( mSrid < 1 ? QgsVariantUtils::createNullVariant( QMetaType::Type::Int ) : mSrid )
                               << r.xMinimum() << r.xMaximum() << r.yMinimum() << r.yMaximum(), mUri.uri() )
          )
       {
@@ -3092,36 +3092,36 @@ bool QgsOracleProvider::convertField( QgsField &field )
   int fieldPrec = field.precision();
   switch ( field.type() )
   {
-    case QVariant::LongLong:
+    case QMetaType::Type::LongLong:
       fieldType = "NUMBER(20,0)";
       fieldSize = -1;
       fieldPrec = 0;
       break;
 
-    case QVariant::DateTime:
+    case QMetaType::Type::QDateTime:
       fieldType = "TIMESTAMP";
       fieldPrec = 0;
       break;
 
 
-    case QVariant::Time:
-    case QVariant::String:
+    case QMetaType::Type::QTime:
+    case QMetaType::Type::QString:
       fieldType = "VARCHAR2(2047)";
       fieldPrec = 0;
       break;
 
-    case QVariant::Date:
+    case QMetaType::Type::QDate:
       fieldType = "DATE";
       fieldPrec = 0;
       break;
 
-    case QVariant::Int:
+    case QMetaType::Type::Int:
       fieldType = "NUMBER(10,0)";
       fieldSize = -1;
       fieldPrec = 0;
       break;
 
-    case QVariant::Double:
+    case QMetaType::Type::Double:
       if ( fieldSize <= 0 || fieldPrec <= 0 )
       {
         fieldType = "BINARY_DOUBLE";
@@ -3629,7 +3629,7 @@ QString  QgsOracleProvider::description() const
 QgsOracleProvider *QgsOracleProviderMetadata::createProvider(
   const QString &uri,
   const QgsDataProvider::ProviderOptions &options,
-  QgsDataProvider::ReadFlags flags )
+  Qgis::DataProviderReadFlags flags )
 {
   return new QgsOracleProvider( uri, options, flags );
 }

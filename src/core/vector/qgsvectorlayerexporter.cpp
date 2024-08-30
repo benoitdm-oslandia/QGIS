@@ -149,7 +149,7 @@ QgsVectorLayerExporter::QgsVectorLayerExporter( const QString &uri,
 
   const QgsDataProvider::ProviderOptions providerOptions;
   QgsVectorDataProvider *vectorProvider = qobject_cast< QgsVectorDataProvider * >( pReg->createProvider( providerKey, uriUpdated, providerOptions ) );
-  if ( !vectorProvider || !vectorProvider->isValid() || ( vectorProvider->capabilities() & QgsVectorDataProvider::AddFeatures ) == 0 )
+  if ( !vectorProvider || !vectorProvider->isValid() || ( vectorProvider->capabilities() & Qgis::VectorProviderCapability::AddFeatures ) == 0 )
   {
     mError = Qgis::VectorExportResult::ErrorInvalidLayer;
     mErrorMessage = QObject::tr( "Loading of layer failed" );
@@ -285,7 +285,7 @@ bool QgsVectorLayerExporter::flushBuffer()
 bool QgsVectorLayerExporter::createSpatialIndex()
 {
   mCreateSpatialIndex = false;
-  if ( mProvider && ( mProvider->capabilities() & QgsVectorDataProvider::CreateSpatialIndex ) != 0 )
+  if ( mProvider && ( mProvider->capabilities() & Qgis::VectorProviderCapability::CreateSpatialIndex ) != 0 )
   {
     return mProvider->createSpatialIndex();
   }
@@ -336,16 +336,6 @@ Qgis::VectorExportResult QgsVectorLayerExporter::exportLayer( QgsVectorLayer *la
   QgsFields fields = layer->fields();
 
   Qgis::WkbType wkbType = layer->wkbType();
-
-  // Special handling for Shapefiles
-  if ( layer->providerType() == QLatin1String( "ogr" ) && layer->storageType() == QLatin1String( "ESRI Shapefile" ) )
-  {
-    // convert field names to lowercase
-    for ( int fldIdx = 0; fldIdx < fields.count(); ++fldIdx )
-    {
-      fields.rename( fldIdx, fields.at( fldIdx ).name().toLower() );
-    }
-  }
 
   bool convertGeometryToSinglePart = false;
   if ( forceSinglePartGeom && QgsWkbTypes::isMultiType( wkbType ) )
@@ -439,7 +429,7 @@ Qgis::VectorExportResult QgsVectorLayerExporter::exportLayer( QgsVectorLayer *la
       {
         delete writer;
 
-        const QString msg = QObject::tr( "Failed to transform a point while drawing a feature with ID '%1'. Writing stopped. (Exception: %2)" )
+        const QString msg = QObject::tr( "Failed to transform feature with ID '%1'. Writing stopped. (Exception: %2)" )
                             .arg( fet.id() ).arg( e.what() );
         QgsMessageLog::logMessage( msg, QObject::tr( "Vector import" ) );
         if ( errorMessage )

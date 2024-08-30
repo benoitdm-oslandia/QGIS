@@ -24,6 +24,7 @@
 #include "qgsvertexid.h"
 #include "qgslinestring.h"
 #include "qgssymbollayer.h"
+#include "qgs3dmapsettings.h"
 
 #include <Qt3DCore/QEntity>
 
@@ -41,14 +42,17 @@
 #include <Qt3DRender/QMaterial>
 #include <QColor>
 
+#include "framegraph/qgsframegraph.h"
 
 /// @cond PRIVATE
 
 
-QgsRubberBand3D::QgsRubberBand3D( Qgs3DMapSettings &map, QgsWindow3DEngine *engine, Qt3DCore::QEntity *parentEntity )
+QgsRubberBand3D::QgsRubberBand3D( Qgs3DMapSettings &map, QgsWindow3DEngine *engine )
 {
   mMapSettings = &map;
   mEngine = engine;
+
+  Qt3DCore::QEntity *parentEntity = engine->frameGraph()->rubberBandsRootEntity();
 
   // Rubberband line
   mLineEntity = new Qt3DCore::QEntity( parentEntity );
@@ -167,7 +171,7 @@ void QgsRubberBand3D::updateGeometry()
 {
   QgsLineVertexData lineData;
   lineData.withAdjacency = true;
-  lineData.init( Qgis::AltitudeClamping::Absolute, Qgis::AltitudeBinding::Vertex, 0, mMapSettings );
+  lineData.init( Qgis::AltitudeClamping::Absolute, Qgis::AltitudeBinding::Vertex, 0, Qgs3DRenderContext::fromMapSettings( mMapSettings ) );
   lineData.addLineString( mLineString );
 
   mPositionAttribute->buffer()->setData( lineData.createVertexBuffer() );
@@ -189,7 +193,7 @@ void QgsRubberBand3D::updateMarkerMaterial()
 {
   delete mMarkerMaterial;
   mMarkerMaterial = new QgsPoint3DBillboardMaterial();
-  mMarkerMaterial->setTexture2DFromSymbol( mMarkerSymbol, *mMapSettings );
+  mMarkerMaterial->setTexture2DFromSymbol( mMarkerSymbol, Qgs3DRenderContext::fromMapSettings( mMapSettings ) );
   mMarkerEntity->addComponent( mMarkerMaterial );
 
   //TODO: QgsAbstract3DEngine::sizeChanged should have const QSize &size param

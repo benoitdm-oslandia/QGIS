@@ -27,7 +27,6 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingParameterEnum,
                        QgsProcessingParameterField,
                        QgsProcessingParameterString,
-                       QgsProcessingParameterNumber,
                        QgsProcessingParameterBoolean,
                        QgsProcessingParameterVectorDestination)
 from processing.algs.gdal.GdalAlgorithm import GdalAlgorithm
@@ -111,7 +110,7 @@ class OneSideBuffer(GdalAlgorithm):
             raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
 
         fields = source.fields()
-        ogrLayer, layerName = self.getOgrCompatibleSource(self.INPUT, parameters, context, feedback, executing)
+        input_details = self.getOgrCompatibleSource(self.INPUT, parameters, context, feedback, executing)
         geometry = self.parameterAsString(parameters, self.GEOMETRY, context)
         distance = self.parameterAsDouble(parameters, self.DISTANCE, context)
         side = self.parameterAsEnum(parameters, self.BUFFER_SIDE, context)
@@ -121,7 +120,7 @@ class OneSideBuffer(GdalAlgorithm):
         outFile = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
         self.setOutputValue(self.OUTPUT, outFile)
 
-        output, outputFormat = GdalUtils.ogrConnectionStringAndFormat(outFile, context)
+        output_details = GdalUtils.gdal_connection_details_from_uri(outFile, context)
 
         other_fields_exist = any(
             True for f in fields
@@ -131,17 +130,17 @@ class OneSideBuffer(GdalAlgorithm):
         other_fields = ',*' if other_fields_exist else ''
 
         arguments = [
-            output,
-            ogrLayer,
+            output_details.connection_string,
+            input_details.connection_string,
             '-dialect',
             'sqlite',
             '-sql'
         ]
 
         if dissolve or fieldName:
-            sql = f'SELECT ST_Union(ST_SingleSidedBuffer({geometry}, {distance}, {side})) AS {geometry}{other_fields} FROM "{layerName}"'
+            sql = f'SELECT ST_Union(ST_SingleSidedBuffer({geometry}, {distance}, {side})) AS {geometry}{other_fields} FROM "{input_details.layer_name}"'
         else:
-            sql = f'SELECT ST_SingleSidedBuffer({geometry}, {distance}, {side}) AS {geometry}{other_fields} FROM "{layerName}"'
+            sql = f'SELECT ST_SingleSidedBuffer({geometry}, {distance}, {side}) AS {geometry}{other_fields} FROM "{input_details.layer_name}"'
 
         if fieldName:
             sql = f'{sql} GROUP BY "{fieldName}"'
@@ -151,10 +150,16 @@ class OneSideBuffer(GdalAlgorithm):
         if self.parameterAsBoolean(parameters, self.EXPLODE_COLLECTIONS, context):
             arguments.append('-explodecollections')
 
+        if input_details.open_options:
+            arguments.extend(input_details.open_options_as_arguments())
+
+        if input_details.credential_options:
+            arguments.extend(input_details.credential_options_as_arguments())
+
         if options:
             arguments.append(options)
 
-        if outputFormat:
-            arguments.append(f'-f {outputFormat}')
+        if output_details.format:
+            arguments.append(f'-f {output_details.format}')
 
         return ['ogr2ogr', GdalUtils.escapeAndJoin(arguments)]

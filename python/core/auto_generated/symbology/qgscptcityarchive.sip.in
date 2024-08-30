@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/symbology/qgscptcityarchive.h                               *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -13,6 +13,9 @@
 
 class QgsCptCityArchive
 {
+%Docstring(signature="appended")
+Represents a CPT City color scheme.
+%End
 
 %TypeHeaderCode
 #include "qgscptcityarchive.h"
@@ -260,6 +263,9 @@ An "All ramps item", which contains all items in a flat hierarchy
 
 class QgsCptCityBrowserModel : QAbstractItemModel
 {
+%Docstring(signature="appended")
+A custom item model for display of CPT City color palettes.
+%End
 
 %TypeHeaderCode
 #include "qgscptcityarchive.h"
@@ -347,5 +353,5 @@ Returns index of a path
  *                                                                      *
  * src/core/symbology/qgscptcityarchive.h                               *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

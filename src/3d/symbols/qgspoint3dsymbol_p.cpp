@@ -57,8 +57,6 @@ typedef Qt3DCore::QGeometry Qt3DQGeometry;
 #include <QVector3D>
 
 #include "qgspoint3dsymbol.h"
-#include "qgs3dmapsettings.h"
-
 #include "qgsapplication.h"
 #include "qgsvectorlayer.h"
 #include "qgs3dutils.h"
@@ -85,7 +83,7 @@ class QgsInstancedPoint3DSymbolHandler : public QgsFeature3DHandler
 
   private:
 
-    static Qt3DRender::QMaterial *material( const QgsPoint3DSymbol *symbol );
+    static Qt3DRender::QMaterial *material( const QgsPoint3DSymbol *symbol, const QgsMaterialContext &materialContext );
     static Qt3DRender::QGeometryRenderer *renderer( const QgsPoint3DSymbol *symbol, const QVector<QVector3D> &positions );
     static Qt3DQGeometry *symbolGeometry( const QgsPoint3DSymbol *symbol );
 
@@ -122,7 +120,7 @@ void QgsInstancedPoint3DSymbolHandler::processFeature( const QgsFeature &feature
   if ( feature.geometry().isNull() )
     return;
 
-  Qgs3DUtils::extractPointPositions( feature, context.map(), mSymbol->altitudeClamping(), out.positions );
+  Qgs3DUtils::extractPointPositions( feature, context, mSymbol->altitudeClamping(), out.positions );
   mFeatureCount++;
 }
 
@@ -204,19 +202,10 @@ void QgsInstancedPoint3DSymbolHandler::finalize( Qt3DCore::QEntity *parent, cons
 void QgsInstancedPoint3DSymbolHandler::makeEntity( Qt3DCore::QEntity *parent, const Qgs3DRenderContext &context, PointData &out, bool selected )
 {
   // build the default material
-  Qt3DRender::QMaterial *mat = material( mSymbol.get() );
-
-  if ( selected )
-  {
-    // update the material with selection colors
-    for ( Qt3DRender::QParameter *param : mat->effect()->parameters() )
-    {
-      if ( param->name() == QLatin1String( "diffuseColor" ) )
-        param->setValue( context.map().selectionColor() );
-      else if ( param->name() == QLatin1String( "ambientColor" ) )
-        param->setValue( context.map().selectionColor().darker() );
-    }
-  }
+  QgsMaterialContext materialContext;
+  materialContext.setIsSelected( selected );
+  materialContext.setSelectionColor( context.selectionColor() );
+  Qt3DRender::QMaterial *mat = material( mSymbol.get(), materialContext );
 
   // build the entity
   Qt3DCore::QEntity *entity = new Qt3DCore::QEntity;
@@ -230,7 +219,7 @@ void QgsInstancedPoint3DSymbolHandler::makeEntity( Qt3DCore::QEntity *parent, co
 
 
 
-Qt3DRender::QMaterial *QgsInstancedPoint3DSymbolHandler::material( const QgsPoint3DSymbol *symbol )
+Qt3DRender::QMaterial *QgsInstancedPoint3DSymbolHandler::material( const QgsPoint3DSymbol *symbol, const QgsMaterialContext &materialContext )
 {
   Qt3DRender::QFilterKey *filterKey = new Qt3DRender::QFilterKey;
   filterKey->setName( QStringLiteral( "renderingStyle" ) );
@@ -238,7 +227,7 @@ Qt3DRender::QMaterial *QgsInstancedPoint3DSymbolHandler::material( const QgsPoin
 
   Qt3DRender::QShaderProgram *shaderProgram = new Qt3DRender::QShaderProgram;
   shaderProgram->setVertexShaderCode( Qt3DRender::QShaderProgram::loadSource( QUrl( QStringLiteral( "qrc:/shaders/instanced.vert" ) ) ) );
-  shaderProgram->setFragmentShaderCode( Qt3DRender::QShaderProgram::loadSource( QUrl( QStringLiteral( "qrc:/shaders/phongConstant.frag" ) ) ) );
+  shaderProgram->setFragmentShaderCode( Qt3DRender::QShaderProgram::loadSource( QUrl( QStringLiteral( "qrc:/shaders/phong.frag" ) ) ) );
 
   Qt3DRender::QRenderPass *renderPass = new Qt3DRender::QRenderPass;
   renderPass->setShaderProgram( shaderProgram );
@@ -275,7 +264,7 @@ Qt3DRender::QMaterial *QgsInstancedPoint3DSymbolHandler::material( const QgsPoin
   effect->addParameter( paramInst );
   effect->addParameter( paramInstNormal );
 
-  symbol->materialSettings()->addParametersToEffect( effect );
+  symbol->materialSettings()->addParametersToEffect( effect, materialContext );
 
   Qt3DRender::QMaterial *material = new Qt3DRender::QMaterial;
   material->setEffect( effect );
@@ -418,8 +407,8 @@ class QgsModelPoint3DSymbolHandler : public QgsFeature3DHandler
 
   private:
 
-    static void addSceneEntities( const Qgs3DMapSettings &map, const QVector<QVector3D> &positions, const QgsPoint3DSymbol *symbol, Qt3DCore::QEntity *parent );
-    static void addMeshEntities( const Qgs3DMapSettings &map, const QVector<QVector3D> &positions, const QgsPoint3DSymbol *symbol, Qt3DCore::QEntity *parent, bool are_selected );
+    static void addSceneEntities( const Qgs3DRenderContext &context, const QVector<QVector3D> &positions, const QgsPoint3DSymbol *symbol, Qt3DCore::QEntity *parent );
+    static void addMeshEntities( const Qgs3DRenderContext &context, const QVector<QVector3D> &positions, const QgsPoint3DSymbol *symbol, Qt3DCore::QEntity *parent, bool are_selected );
     static Qt3DCore::QTransform *transform( QVector3D position, const QgsPoint3DSymbol *symbol );
 
     //! temporary data we will pass to the tessellator
@@ -454,7 +443,7 @@ void QgsModelPoint3DSymbolHandler::processFeature( const QgsFeature &feature, co
   if ( feature.geometry().isNull() )
     return;
 
-  Qgs3DUtils::extractPointPositions( feature, context.map(), mSymbol->altitudeClamping(), out.positions );
+  Qgs3DUtils::extractPointPositions( feature, context, mSymbol->altitudeClamping(), out.positions );
   mFeatureCount++;
 }
 
@@ -476,7 +465,7 @@ void QgsModelPoint3DSymbolHandler::makeEntity( Qt3DCore::QEntity *parent, const 
 {
   if ( selected )
   {
-    addMeshEntities( context.map(), out.positions, mSymbol.get(), parent, true );
+    addMeshEntities( context, out.positions, mSymbol.get(), parent, true );
   }
   else
   {
@@ -484,20 +473,19 @@ void QgsModelPoint3DSymbolHandler::makeEntity( Qt3DCore::QEntity *parent, const 
     if ( mSymbol->shapeProperty( QStringLiteral( "overwriteMaterial" ) ).toBool()
          || ( mSymbol->materialSettings() && mSymbol->materialSettings()->type() != QLatin1String( "null" ) ) )
     {
-      addMeshEntities( context.map(), out.positions, mSymbol.get(), parent, false );
+      addMeshEntities( context, out.positions, mSymbol.get(), parent, false );
     }
     else
     {
-      addSceneEntities( context.map(), out.positions, mSymbol.get(), parent );
+      addSceneEntities( context, out.positions, mSymbol.get(), parent );
     }
   }
 }
 
 
 
-void QgsModelPoint3DSymbolHandler::addSceneEntities( const Qgs3DMapSettings &map, const QVector<QVector3D> &positions, const QgsPoint3DSymbol *symbol, Qt3DCore::QEntity *parent )
+void QgsModelPoint3DSymbolHandler::addSceneEntities( const Qgs3DRenderContext &, const QVector<QVector3D> &positions, const QgsPoint3DSymbol *symbol, Qt3DCore::QEntity *parent )
 {
-  Q_UNUSED( map )
   for ( const QVector3D &position : positions )
   {
     const QString source = QgsApplication::sourceCache()->localFilePath( symbol->shapeProperty( QStringLiteral( "model" ) ).toString() );
@@ -521,7 +509,7 @@ void QgsModelPoint3DSymbolHandler::addSceneEntities( const Qgs3DMapSettings &map
   }
 }
 
-void QgsModelPoint3DSymbolHandler::addMeshEntities( const Qgs3DMapSettings &map, const QVector<QVector3D> &positions, const QgsPoint3DSymbol *symbol, Qt3DCore::QEntity *parent, bool are_selected )
+void QgsModelPoint3DSymbolHandler::addMeshEntities( const Qgs3DRenderContext &context, const QVector<QVector3D> &positions, const QgsPoint3DSymbol *symbol, Qt3DCore::QEntity *parent, bool are_selected )
 {
   if ( positions.empty() )
     return;
@@ -529,7 +517,7 @@ void QgsModelPoint3DSymbolHandler::addMeshEntities( const Qgs3DMapSettings &map,
   // build the default material
   QgsMaterialContext materialContext;
   materialContext.setIsSelected( are_selected );
-  materialContext.setSelectionColor( map.selectionColor() );
+  materialContext.setSelectionColor( context.selectionColor() );
   Qt3DRender::QMaterial *mat = symbol->materialSettings()->toMaterial( QgsMaterialSettingsRenderingTechnique::Triangles, materialContext );
 
   // get nodes
@@ -613,7 +601,7 @@ void QgsPoint3DBillboardSymbolHandler::processFeature( const QgsFeature &feature
   if ( feature.geometry().isNull() )
     return;
 
-  Qgs3DUtils::extractPointPositions( feature, context.map(), mSymbol->altitudeClamping(), out.positions );
+  Qgs3DUtils::extractPointPositions( feature, context, mSymbol->altitudeClamping(), out.positions );
   mFeatureCount++;
 }
 
@@ -649,11 +637,11 @@ void QgsPoint3DBillboardSymbolHandler::makeEntity( Qt3DCore::QEntity *parent, co
 
   if ( symbol )
   {
-    billboardMaterial->setTexture2DFromSymbol( symbol, context.map(), selected );
+    billboardMaterial->setTexture2DFromSymbol( symbol, context, selected );
   }
   else
   {
-    billboardMaterial->useDefaultSymbol( context.map(), selected );
+    billboardMaterial->useDefaultSymbol( context, selected );
   }
 
   // Billboard Transform
@@ -689,14 +677,6 @@ namespace Qgs3DSymbolImpl
       return new QgsPoint3DBillboardSymbolHandler( pointSymbol, layer->selectedFeatureIds() );
     else
       return new QgsInstancedPoint3DSymbolHandler( pointSymbol, layer->selectedFeatureIds() );
-  }
-
-  Qt3DCore::QEntity *entityForPoint3DSymbol( const Qgs3DMapSettings &map, QgsVectorLayer *layer, const QgsPoint3DSymbol &symbol )
-  {
-    QgsFeature3DHandler *handler = handlerForPoint3DSymbol( layer, &symbol );
-    Qt3DCore::QEntity *e = entityFromHandler( handler, map, layer );
-    delete handler;
-    return e;
   }
 }
 

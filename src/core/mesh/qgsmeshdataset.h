@@ -22,17 +22,21 @@
 #include <QString>
 #include <QMap>
 #include <QPair>
+#include <QDateTime>
+#include <QDomElement>
 
 #include <limits>
+#include <memory>
 
 #include "qgis_core.h"
 #include "qgis_sip.h"
-#include "qgspoint.h"
-#include "qgsdataprovider.h"
 
 class QgsMeshLayer;
 class QgsMeshDatasetGroup;
 class QgsRectangle;
+class QDomDocument;
+class QgsReadWriteContext;
+
 struct QgsMesh;
 
 /**
@@ -56,9 +60,8 @@ class CORE_EXPORT QgsMeshDatasetIndex
     int dataset() const;
     //! Returns whether index is valid, ie at least groups is set
     bool isValid() const;
-    //! Equality operator
+
     bool operator == ( QgsMeshDatasetIndex other ) const;
-    //! Inequality operator
     bool operator != ( QgsMeshDatasetIndex other ) const;
   private:
     int mGroupIndex = -1;
@@ -89,7 +92,6 @@ class CORE_EXPORT QgsMeshDatasetValue
     //! Default Ctor, initialize to NaN
     QgsMeshDatasetValue() = default;
 
-    //! Dtor
     ~QgsMeshDatasetValue() = default;
 
     //! Sets scalar value
@@ -251,8 +253,6 @@ class CORE_EXPORT QgsMesh3DDataBlock
   public:
     //! Constructs an invalid block
     QgsMesh3DDataBlock();
-
-    //! Dtor
     ~QgsMesh3DDataBlock();
 
     //! Constructs a new block for count faces
@@ -398,6 +398,16 @@ class CORE_EXPORT QgsMeshDatasetGroupMetadata
     QString name() const;
 
     /**
+     * Returns the name of the dataset's parent quantity, if available.
+     *
+     * The quantity can be used to collect dataset groups which represent a single quantity
+     * but at different values (e.g. groups which represent different elevations).
+     *
+     * \since QGIS 3.38
+     */
+    QString parentQuantityName() const;
+
+    /**
      * Returns the uri of the source
      *
      * \since QGIS 3.16
@@ -457,6 +467,7 @@ class CORE_EXPORT QgsMeshDatasetGroupMetadata
 
   private:
     QString mName;
+    QString mParentQuantityName;
     QString mUri;
     bool mIsScalar = false;
     DataType mDataType = DataType::DataOnFaces;
@@ -546,10 +557,9 @@ class CORE_EXPORT QgsMeshDatasetMetadata
 class CORE_EXPORT QgsMeshDataset
 {
   public:
-    //! Constructor
+
     QgsMeshDataset() = default;
 
-    //! Destructor
     virtual ~QgsMeshDataset() = default;
 
     //! Returns the value with index \a valueIndex
@@ -589,13 +599,12 @@ class CORE_EXPORT QgsMeshDatasetGroup
      */
     enum Type
     {
-      None, //! Generic type used for non typed dataset group
+      Unknown, //! Generic type used for non typed dataset group
       Persistent, //! Dataset group store in a file
       Memory, //! Temporary dataset group in memory
       Virtual, //! Virtual Dataset group defined by a formula
     };
 
-    //! Default constructor
     QgsMeshDatasetGroup() = default;
     virtual ~QgsMeshDatasetGroup();
 
@@ -707,7 +716,7 @@ class CORE_EXPORT QgsMeshDatasetGroup
 class CORE_EXPORT QgsMeshMemoryDataset: public QgsMeshDataset
 {
   public:
-    //! Constructor
+
     QgsMeshMemoryDataset() = default;
 
     QgsMeshDatasetValue datasetValue( int valueIndex ) const override;
@@ -740,7 +749,7 @@ class CORE_EXPORT QgsMeshMemoryDataset: public QgsMeshDataset
 class CORE_EXPORT QgsMeshMemoryDatasetGroup: public QgsMeshDatasetGroup
 {
   public:
-    //! Constructor
+
     QgsMeshMemoryDatasetGroup() = default;
     //! Constructor with the \a name of the group
     QgsMeshMemoryDatasetGroup( const QString &name );
@@ -1056,7 +1065,7 @@ class CORE_EXPORT QgsMeshDatasetGroupTreeItem
     QString mUserName;
     QString mOriginalName;
     QString mSourceName;
-    QgsMeshDatasetGroup::Type mDatasetGroupType = QgsMeshDatasetGroup::None;
+    QgsMeshDatasetGroup::Type mDatasetGroupType = QgsMeshDatasetGroup::Unknown;
     QString mDescription;
 
     bool mIsVector = false;

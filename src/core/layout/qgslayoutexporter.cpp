@@ -337,6 +337,7 @@ class LayoutContextSettingsRestorer
       , mPreviousTextFormat( layout->renderContext().textRenderFormat() )
       , mPreviousExportLayer( layout->renderContext().currentExportLayer() )
       , mPreviousSimplifyMethod( layout->renderContext().simplifyMethod() )
+      , mPreviousMaskSettings( layout->renderContext().maskSettings() )
       , mExportThemes( layout->renderContext().exportThemes() )
       , mPredefinedScales( layout->renderContext().predefinedScales() )
     {
@@ -352,6 +353,7 @@ class LayoutContextSettingsRestorer
       mLayout->renderContext().setCurrentExportLayer( mPreviousExportLayer );
       Q_NOWARN_DEPRECATED_POP
       mLayout->renderContext().setSimplifyMethod( mPreviousSimplifyMethod );
+      mLayout->renderContext().setMaskSettings( mPreviousMaskSettings );
       mLayout->renderContext().setExportThemes( mExportThemes );
       mLayout->renderContext().setPredefinedScales( mPredefinedScales );
     }
@@ -366,6 +368,7 @@ class LayoutContextSettingsRestorer
     Qgis::TextRenderFormat mPreviousTextFormat = Qgis::TextRenderFormat::AlwaysOutlines;
     int mPreviousExportLayer = 0;
     QgsVectorSimplifyMethod mPreviousSimplifyMethod;
+    QgsMaskRenderSettings mPreviousMaskSettings;
     QStringList mExportThemes;
     QVector< double > mPredefinedScales;
 
@@ -499,7 +502,7 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::exportToImage( QgsAbstractLay
       if ( total > 0 )
         feedback->setProperty( "progress", QObject::tr( "Exporting %1 of %2" ).arg( i + 1 ).arg( total ) );
       else
-        feedback->setProperty( "progress", QObject::tr( "Exporting section %1" ).arg( i + 1 ).arg( total ) );
+        feedback->setProperty( "progress", QObject::tr( "Exporting section %1" ).arg( i + 1 ) );
       feedback->setProgress( step * i );
     }
     if ( feedback && feedback->isCanceled() )
@@ -515,6 +518,8 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::exportToImage( QgsAbstractLay
     {
       if ( result == FileError )
         error = QObject::tr( "Cannot write to %1. This file may be open in another application or may be an invalid path." ).arg( QDir::toNativeSeparators( filePath ) );
+      else
+        error = exporter.errorMessage();
       iterator->endRender();
       return result;
     }
@@ -547,6 +552,7 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::exportToPdf( const QString &f
   ( void )contextRestorer;
   mLayout->renderContext().setDpi( settings.dpi );
   mLayout->renderContext().setPredefinedScales( settings.predefinedMapScales );
+  mLayout->renderContext().setMaskSettings( createExportMaskSettings() );
 
   if ( settings.simplifyGeometries )
   {
@@ -589,7 +595,9 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::exportToPdf( const QString &f
     const QDir baseDir = settings.exportLayersAsSeperateFiles ? QFileInfo( filePath ).dir() : QDir();  //#spellok
     const QString baseFileName = settings.exportLayersAsSeperateFiles ? QFileInfo( filePath ).completeBaseName() : QString();  //#spellok
 
-    auto exportFunc = [this, &subSettings, &pdfComponents, &geoPdfExporter, &settings, &baseDir, &baseFileName]( unsigned int layerId, const QgsLayoutItem::ExportLayerDetail & layerDetail )->QgsLayoutExporter::ExportResult
+    QSet<QString> mutuallyExclusiveGroups;
+
+    auto exportFunc = [this, &subSettings, &pdfComponents, &geoPdfExporter, &settings, &baseDir, &baseFileName, &mutuallyExclusiveGroups]( unsigned int layerId, const QgsLayoutItem::ExportLayerDetail & layerDetail )->QgsLayoutExporter::ExportResult
     {
       ExportResult layerExportResult = Success;
       QgsLayoutGeoPdfExporter::ComponentLayerDetail component;
@@ -597,7 +605,13 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::exportToPdf( const QString &f
       component.mapLayerId = layerDetail.mapLayerId;
       component.opacity = layerDetail.opacity;
       component.compositionMode = layerDetail.compositionMode;
-      component.group = layerDetail.mapTheme;
+      component.group = layerDetail.groupName;
+      if ( !layerDetail.mapTheme.isEmpty() )
+      {
+        component.group = layerDetail.mapTheme;
+        mutuallyExclusiveGroups.insert( layerDetail.mapTheme );
+      }
+
       component.sourcePdfPath = settings.writeGeoPdf ? geoPdfExporter->generateTemporaryFilepath( QStringLiteral( "layer_%1.pdf" ).arg( layerId ) ) : baseDir.filePath( QStringLiteral( "%1_%2.pdf" ).arg( baseFileName ).arg( layerId, 4, 10, QChar( '0' ) ) );
       pdfComponents << component;
       QPdfWriter printer = QPdfWriter( component.sourcePdfPath );
@@ -614,7 +628,11 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::exportToPdf( const QString &f
       p.end();
       return layerExportResult;
     };
-    result = handleLayeredExport( items, exportFunc );
+    auto getExportGroupNameFunc = []( QgsLayoutItem * item )->QString
+    {
+      return item->customProperty( QStringLiteral( "pdfExportGroup" ) ).toString();
+    };
+    result = handleLayeredExport( items, exportFunc, getExportGroupNameFunc );
     if ( result != Success )
       return result;
 
@@ -626,6 +644,7 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::exportToPdf( const QString &f
       QgsLayoutSize pageSize = mLayout->pageCollection()->page( 0 )->sizeWithUnits();
       QgsLayoutSize pageSizeMM = mLayout->renderContext().measurementConverter().convert( pageSize, Qgis::LayoutUnit::Millimeters );
       details.pageSizeMm = pageSizeMM.toQSizeF();
+      details.mutuallyExclusiveGroups = mutuallyExclusiveGroups;
 
       if ( settings.exportMetadata )
       {
@@ -688,12 +707,16 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::exportToPdf( const QString &f
       details.customLayerTreeGroups = geoPdfExporter->customLayerTreeGroups();
       details.initialLayerVisibility = geoPdfExporter->initialLayerVisibility();
       details.layerOrder = geoPdfExporter->layerOrder();
+      details.layerTreeGroupOrder = geoPdfExporter->layerTreeGroupOrder();
       details.includeFeatures = settings.includeGeoPdfFeatures;
       details.useOgcBestPracticeFormatGeoreferencing = settings.useOgcBestPracticeFormatGeoreferencing;
       details.useIso32000ExtensionFormatGeoreferencing = settings.useIso32000ExtensionFormatGeoreferencing;
 
       if ( !geoPdfExporter->finalize( pdfComponents, filePath, details ) )
+      {
         result = PrintError;
+        mErrorMessage = geoPdfExporter->errorMessage();
+      }
     }
     else
     {
@@ -768,6 +791,7 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::exportToPdf( QgsAbstractLayou
 
     iterator->layout()->renderContext().setFlags( settings.flags );
     iterator->layout()->renderContext().setPredefinedScales( settings.predefinedMapScales );
+    iterator->layout()->renderContext().setMaskSettings( createExportMaskSettings() );
 
     if ( settings.simplifyGeometries )
     {
@@ -803,6 +827,9 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::exportToPdf( QgsAbstractLayou
     {
       if ( result == FileError )
         error = QObject::tr( "Cannot write to %1. This file may be open in another application or may be an invalid path." ).arg( QDir::toNativeSeparators( fileName ) );
+      else
+        error = exporter.errorMessage();
+
       iterator->endRender();
       return result;
     }
@@ -836,7 +863,7 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::exportToPdfs( QgsAbstractLayo
       if ( total > 0 )
         feedback->setProperty( "progress", QObject::tr( "Exporting %1 of %2" ).arg( i + 1 ).arg( total ) );
       else
-        feedback->setProperty( "progress", QObject::tr( "Exporting section %1" ).arg( i + 1 ).arg( total ) );
+        feedback->setProperty( "progress", QObject::tr( "Exporting section %1" ).arg( i + 1 ) );
       feedback->setProgress( step * i );
     }
     if ( feedback && feedback->isCanceled() )
@@ -853,6 +880,8 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::exportToPdfs( QgsAbstractLayo
     {
       if ( result == FileError )
         error = QObject::tr( "Cannot write to %1. This file may be open in another application or may be an invalid path." ).arg( QDir::toNativeSeparators( filePath ) );
+      else
+        error = exporter.errorMessage();
       iterator->endRender();
       return result;
     }
@@ -930,7 +959,7 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::print( QgsAbstractLayoutItera
       if ( total > 0 )
         feedback->setProperty( "progress", QObject::tr( "Printing %1 of %2" ).arg( i + 1 ).arg( total ) );
       else
-        feedback->setProperty( "progress", QObject::tr( "Printing section %1" ).arg( i + 1 ).arg( total ) );
+        feedback->setProperty( "progress", QObject::tr( "Printing section %1" ).arg( i + 1 ) );
       feedback->setProgress( step * i );
     }
     if ( feedback && feedback->isCanceled() )
@@ -974,6 +1003,7 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::print( QgsAbstractLayoutItera
     if ( result != Success )
     {
       iterator->endRender();
+      error = exporter.errorMessage();
       return result;
     }
     first = false;
@@ -1011,6 +1041,7 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::exportToSvg( const QString &f
   mLayout->renderContext().setFlag( QgsLayoutRenderContext::FlagForceVectorOutput, settings.forceVectorOutput );
   mLayout->renderContext().setTextRenderFormat( s.textRenderFormat );
   mLayout->renderContext().setPredefinedScales( settings.predefinedMapScales );
+  mLayout->renderContext().setMaskSettings( createExportMaskSettings() );
 
   if ( settings.simplifyGeometries )
   {
@@ -1086,7 +1117,11 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::exportToSvg( const QString &f
       {
         return renderToLayeredSvg( settings, width, height, i, bounds, fileName, layerId, layerDetail.name, svg, svgDocRoot, settings.exportMetadata );
       };
-      ExportResult res = handleLayeredExport( items, exportFunc );
+      auto getExportGroupNameFunc = []( QgsLayoutItem * )->QString
+      {
+        return QString();
+      };
+      ExportResult res = handleLayeredExport( items, exportFunc, getExportGroupNameFunc );
       if ( res != Success )
         return res;
 
@@ -1181,7 +1216,7 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::exportToSvg( QgsAbstractLayou
       if ( total > 0 )
         feedback->setProperty( "progress", QObject::tr( "Exporting %1 of %2" ).arg( i + 1 ).arg( total ) );
       else
-        feedback->setProperty( "progress", QObject::tr( "Exporting section %1" ).arg( i + 1 ).arg( total ) );
+        feedback->setProperty( "progress", QObject::tr( "Exporting section %1" ).arg( i + 1 ) );
 
       feedback->setProgress( step * i );
     }
@@ -1199,6 +1234,8 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::exportToSvg( QgsAbstractLayou
     {
       if ( result == FileError )
         error = QObject::tr( "Cannot write to %1. This file may be open in another application or may be an invalid path." ).arg( QDir::toNativeSeparators( filePath ) );
+      else
+        error = exporter.errorMessage();
       iterator->endRender();
       return result;
     }
@@ -1742,13 +1779,15 @@ QString nameForLayerWithItems( const QList< QGraphicsItem * > &items, unsigned i
 }
 
 QgsLayoutExporter::ExportResult QgsLayoutExporter::handleLayeredExport( const QList<QGraphicsItem *> &items,
-    const std::function<QgsLayoutExporter::ExportResult( unsigned int, const QgsLayoutItem::ExportLayerDetail & )> &exportFunc )
+    const std::function<QgsLayoutExporter::ExportResult( unsigned int, const QgsLayoutItem::ExportLayerDetail & )> &exportFunc,
+    const std::function<QString( QgsLayoutItem *item )> &getItemExportGroupFunc )
 {
   LayoutItemHider itemHider( items );
   ( void )itemHider;
 
   int prevType = -1;
   QgsLayoutItem::ExportLayerBehavior prevItemBehavior = QgsLayoutItem::CanGroupWithAnyOtherItem;
+  QString previousItemGroup;
   unsigned int layerId = 1;
   QgsLayoutItem::ExportLayerDetail layerDetails;
   itemHider.hideAll();
@@ -1759,9 +1798,20 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::handleLayeredExport( const QL
     QgsLayoutItem *layoutItem = dynamic_cast<QgsLayoutItem *>( item );
 
     bool canPlaceInExistingLayer = false;
+    QString thisItemExportGroupName;
     if ( layoutItem )
     {
-      switch ( layoutItem->exportLayerBehavior() )
+      QgsLayoutItem::ExportLayerBehavior itemExportBehavior = layoutItem->exportLayerBehavior();
+      thisItemExportGroupName = getItemExportGroupFunc( layoutItem );
+      if ( !thisItemExportGroupName.isEmpty() )
+      {
+        if ( thisItemExportGroupName != previousItemGroup && !currentLayerItems.empty() )
+          itemExportBehavior = QgsLayoutItem::MustPlaceInOwnLayer;
+        else
+          layerDetails.groupName = thisItemExportGroupName;
+      }
+
+      switch ( itemExportBehavior )
       {
         case QgsLayoutItem::CanGroupWithAnyOtherItem:
         {
@@ -1810,12 +1860,14 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::handleLayeredExport( const QL
           canPlaceInExistingLayer = false;
           break;
       }
-      prevItemBehavior = layoutItem->exportLayerBehavior();
+      prevItemBehavior = itemExportBehavior;
       prevType = layoutItem->type();
+      previousItemGroup = thisItemExportGroupName;
     }
     else
     {
       prevItemBehavior = QgsLayoutItem::MustPlaceInOwnLayer;
+      previousItemGroup.clear();
     }
 
     if ( canPlaceInExistingLayer )
@@ -1871,6 +1923,7 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::handleLayeredExport( const QL
       {
         currentLayerItems << item;
       }
+      layerDetails.groupName = thisItemExportGroupName;
     }
   }
   if ( !currentLayerItems.isEmpty() )
@@ -1886,12 +1939,21 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::handleLayeredExport( const QL
 QgsVectorSimplifyMethod QgsLayoutExporter::createExportSimplifyMethod()
 {
   QgsVectorSimplifyMethod simplifyMethod;
-  simplifyMethod.setSimplifyHints( QgsVectorSimplifyMethod::GeometrySimplification );
+  simplifyMethod.setSimplifyHints( Qgis::VectorRenderingSimplificationFlag::GeometrySimplification );
   simplifyMethod.setForceLocalOptimization( true );
   // we use SnappedToGridGlobal, because it avoids gaps and slivers between previously adjacent polygons
-  simplifyMethod.setSimplifyAlgorithm( QgsVectorSimplifyMethod::SnappedToGridGlobal );
+  simplifyMethod.setSimplifyAlgorithm( Qgis::VectorSimplificationAlgorithm::SnappedToGridGlobal );
   simplifyMethod.setThreshold( 0.1f ); // (pixels). We are quite conservative here. This could possibly be bumped all the way up to 1. But let's play it safe.
   return simplifyMethod;
+}
+
+QgsMaskRenderSettings QgsLayoutExporter::createExportMaskSettings()
+{
+  QgsMaskRenderSettings settings;
+  // this is quite a conservative setting -- I think we could make this more aggressive and get smaller file sizes
+  // without too much loss of quality...
+  settings.setSimplificationTolerance( 0.5 );
+  return settings;
 }
 
 void QgsLayoutExporter::computeWorldFileParameters( double &a, double &b, double &c, double &d, double &e, double &f, double dpi ) const

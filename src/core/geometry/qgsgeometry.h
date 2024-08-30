@@ -38,7 +38,7 @@ email                : morb at ozemail dot com dot au
 #include "qgsvertexid.h"
 
 #ifndef SIP_RUN
-#include "json_fwd.hpp"
+#include <nlohmann/json_fwd.hpp>
 using namespace nlohmann;
 #endif
 
@@ -166,14 +166,13 @@ class CORE_EXPORT QgsGeometry
 
   public:
 
-    //! Constructor
     QgsGeometry() SIP_HOLDGIL;
 
-    //! Copy constructor will prompt a deep copy of the object
+    //! Copy constructor will prompt a shallow copy of the geometry
     QgsGeometry( const QgsGeometry & );
 
     /**
-     * Creates a deep copy of the object
+     * Creates a shallow copy of the geometry
      * \note not available in Python bindings
      */
     QgsGeometry &operator=( QgsGeometry const &rhs ) SIP_SKIP;
@@ -241,7 +240,7 @@ class CORE_EXPORT QgsGeometry
     bool isNull() const SIP_HOLDGIL;
 
     //! Creates a new geometry from a WKT string
-    static QgsGeometry fromWkt( const QString &wkt );
+    Q_INVOKABLE static QgsGeometry fromWkt( const QString &wkt );
     //! Creates a new geometry from a QgsPointXY object
     static QgsGeometry fromPointXY( const QgsPointXY &point ) SIP_HOLDGIL;
 
@@ -376,7 +375,7 @@ class CORE_EXPORT QgsGeometry
      * return TRUE for isEmpty().
      * \see isNull()
      */
-    bool isEmpty() const;
+    bool isEmpty() const SIP_HOLDGIL;
 
     //! Returns TRUE if WKB of the geometry is of WKBMulti* type
     bool isMultipart() const SIP_HOLDGIL;
@@ -751,12 +750,12 @@ class CORE_EXPORT QgsGeometry
      *
      * This function takes into account the following factors:
      *
-     * # If the given vertex index is at the end of a linestring,
-     *    the adjacent index will be -1 (for "no adjacent vertex")
-     * # If the given vertex index is at the end of a linear ring
-     *    (such as in a polygon), the adjacent index will take into
-     *    account the first vertex is equal to the last vertex (and will
-     *    skip equal vertex positions).
+     * - If the given vertex index is at the end of a linestring,
+     *   the adjacent index will be -1 (for "no adjacent vertex")
+     * - If the given vertex index is at the end of a linear ring
+     *   (such as in a polygon), the adjacent index will take into
+     *   account the first vertex is equal to the last vertex (and will
+     *   skip equal vertex positions).
      */
     void adjacentVertices( int atVertex, int &beforeVertex SIP_OUT, int &afterVertex SIP_OUT ) const;
 
@@ -908,24 +907,54 @@ class CORE_EXPORT QgsGeometry
      * \param points points describing part to add
      * \param geomType default geometry type to create if no existing geometry
      * \returns OperationResult a result code: success or reason of failure
+     * \deprecated since QGIS 3.38 - will be removed in QGIS 4.0. Use addPartV2 which accepts Qgis::WkbType geometry type instead of Qgis::GeometryType.
      */
-    Qgis::GeometryOperationResult addPart( const QVector<QgsPointXY> &points, Qgis::GeometryType geomType = Qgis::GeometryType::Unknown ) SIP_PYNAME( addPointsXY );
+    Q_DECL_DEPRECATED Qgis::GeometryOperationResult addPart( const QVector<QgsPointXY> &points, Qgis::GeometryType geomType = Qgis::GeometryType::Unknown ) SIP_PYNAME( addPointsXY ) SIP_DEPRECATED;
+
+    /**
+     * Adds a new part to a the geometry.
+     * \param points points describing part to add
+     * \param wkbType default WKB type to create if no existing geometry
+     * \returns OperationResult a result code: success or reason of failure
+     * \since QGIS 3.38
+     */
+    Qgis::GeometryOperationResult addPartV2( const QVector<QgsPointXY> &points, Qgis::WkbType wkbType = Qgis::WkbType::Unknown ) SIP_PYNAME( addPointsXYV2 );
 
     /**
      * Adds a new part to a the geometry.
      * \param points points describing part to add
      * \param geomType default geometry type to create if no existing geometry
      * \returns OperationResult a result code: success or reason of failure
+     * \deprecated since QGIS 3.38 - will be removed in QGIS 4.0. Use addPartV2 which accepts Qgis::WkbType geometry type instead of Qgis::GeometryType.
      */
-    Qgis::GeometryOperationResult addPart( const QgsPointSequence &points, Qgis::GeometryType geomType = Qgis::GeometryType::Unknown ) SIP_PYNAME( addPoints );
+    Q_DECL_DEPRECATED Qgis::GeometryOperationResult addPart( const QgsPointSequence &points, Qgis::GeometryType geomType = Qgis::GeometryType::Unknown ) SIP_PYNAME( addPoints ) SIP_DEPRECATED;
+
+    /**
+     * Adds a new part to a the geometry.
+     * \param points points describing part to add
+     * \param wkbType default WKB type to create if no existing geometry
+     * \returns OperationResult a result code: success or reason of failure
+     * \since QGIS 3.38
+     */
+    Qgis::GeometryOperationResult addPartV2( const QgsPointSequence &points, Qgis::WkbType wkbType = Qgis::WkbType::Unknown ) SIP_PYNAME( addPointsV2 );
 
     /**
      * Adds a new part to this geometry.
      * \param part part to add (ownership is transferred)
      * \param geomType default geometry type to create if no existing geometry
      * \returns OperationResult a result code: success or reason of failure
+     * \deprecated since QGIS 3.38 - will be removed in QGIS 4.0. Use addPartV2 which accepts Qgis::WkbType geometry type instead of Qgis::GeometryType.
      */
-    Qgis::GeometryOperationResult addPart( QgsAbstractGeometry *part SIP_TRANSFER, Qgis::GeometryType geomType = Qgis::GeometryType::Unknown );
+    Q_DECL_DEPRECATED Qgis::GeometryOperationResult addPart( QgsAbstractGeometry *part SIP_TRANSFER, Qgis::GeometryType geomType = Qgis::GeometryType::Unknown ) SIP_DEPRECATED;
+
+    /**
+     * Adds a new part to this geometry.
+     * \param part part to add (ownership is transferred)
+     * \param wkbType default WKB type to create if no existing geometry
+     * \returns OperationResult a result code: success or reason of failure
+     * \since QGIS 3.38
+     */
+    Qgis::GeometryOperationResult addPartV2( QgsAbstractGeometry *part SIP_TRANSFER, Qgis::WkbType wkbType = Qgis::WkbType::Unknown );
 
     /**
      * Adds a new island polygon to a multipolygon feature
@@ -1416,6 +1445,13 @@ class CORE_EXPORT QgsGeometry
      * Returns TRUE if the geometry contains the point \a p.
      */
     bool contains( const QgsPointXY *p ) const;
+
+    /**
+     * Returns TRUE if the geometry contains the point at (\a x, \a y).
+     *
+     * \since QGIS 3.38
+     */
+    bool contains( double x, double y ) const;
 
     /**
      * Returns TRUE if the geometry completely contains another \a geometry.
@@ -2125,7 +2161,7 @@ class CORE_EXPORT QgsGeometry
      * \returns TRUE in case of success and FALSE else
      * \note precision parameter added in QGIS 2.4
      */
-    QString asWkt( int precision = 17 ) const;
+    Q_INVOKABLE QString asWkt( int precision = 17 ) const;
 
 #ifdef SIP_RUN
     SIP_PYOBJECT __repr__();

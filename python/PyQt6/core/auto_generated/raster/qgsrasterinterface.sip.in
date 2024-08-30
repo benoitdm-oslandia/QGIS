@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/raster/qgsrasterinterface.h                                 *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -125,6 +125,7 @@ Base class for processing filters like renderers, reprojector, resampler etc.
 #include <qgssinglebandcolordatarenderer.h>
 #include <qgssinglebandgrayrenderer.h>
 #include <qgssinglebandpseudocolorrenderer.h>
+#include <qgsrastersinglecolorrenderer.h>
 #include <qgsrastercontourrenderer.h>
 %End
 %ConvertToSubClassCode
@@ -157,6 +158,8 @@ Base class for processing filters like renderers, reprojector, resampler etc.
         sipType = sipType_QgsSingleBandGrayRenderer;
       else if ( dynamic_cast<QgsSingleBandPseudoColorRenderer *>( sipCpp ) )
         sipType = sipType_QgsSingleBandPseudoColorRenderer;
+      else if ( dynamic_cast<QgsRasterSingleColorRenderer *>( sipCpp ) )
+        sipType = sipType_QgsRasterSingleColorRenderer;
       else if ( dynamic_cast<QgsRasterContourRenderer *>( sipCpp ) )
         sipType = sipType_QgsRasterContourRenderer;
       else
@@ -168,20 +171,6 @@ Base class for processing filters like renderers, reprojector, resampler etc.
       sipType = 0;
 %End
   public:
-    enum Capability /BaseType=IntEnum/
-    {
-      NoCapabilities,
-      Size,
-      Create,
-      Remove,
-      BuildPyramids,
-      Identify,
-      IdentifyValue,
-      IdentifyText,
-      IdentifyHtml,
-      IdentifyFeature,
-      Prefetch,
-    };
 
     QgsRasterInterface( QgsRasterInterface *input = 0 );
 
@@ -192,14 +181,18 @@ Base class for processing filters like renderers, reprojector, resampler etc.
 Clone itself, create deep copy
 %End
 
-    virtual int capabilities() const;
+
+    virtual Qgis::RasterInterfaceCapabilities capabilities() const;
 %Docstring
-Returns a bitmask containing the supported capabilities
+Returns the capabilities supported by the interface.
 %End
 
-    QString capabilitiesString() const;
+ QString capabilitiesString() const /Deprecated/;
 %Docstring
 Returns the raster interface capabilities in friendly format.
+
+.. deprecated::
+   will be removed in QGIS 4.0
 %End
 
     virtual Qgis::DataType dataType( int bandNo ) const = 0;
@@ -570,5 +563,5 @@ Fill in statistics defaults if not specified
  *                                                                      *
  * src/core/raster/qgsrasterinterface.h                                 *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

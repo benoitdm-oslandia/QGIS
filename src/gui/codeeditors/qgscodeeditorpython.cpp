@@ -50,6 +50,7 @@ const QgsSettingsEntryInteger *QgsCodeEditorPython::settingMaxLineLength = new Q
 const QgsSettingsEntryBool *QgsCodeEditorPython::settingSortImports = new QgsSettingsEntryBool( QStringLiteral( "sort-imports" ), sTreePythonCodeEditor, true, QStringLiteral( "Whether imports should be sorted when auto-formatting code" ) );
 const QgsSettingsEntryInteger *QgsCodeEditorPython::settingAutopep8Level = new QgsSettingsEntryInteger( QStringLiteral( "autopep8-level" ), sTreePythonCodeEditor, 1, QStringLiteral( "Autopep8 aggressive level" ) );
 const QgsSettingsEntryBool *QgsCodeEditorPython::settingBlackNormalizeQuotes = new QgsSettingsEntryBool( QStringLiteral( "black-normalize-quotes" ), sTreePythonCodeEditor, true, QStringLiteral( "Whether quotes should be normalized when auto-formatting code using black" ) );
+const QgsSettingsEntryString *QgsCodeEditorPython::settingExternalPythonEditorCommand = new QgsSettingsEntryString( QStringLiteral( "external-editor" ), sTreePythonCodeEditor, QString(), QStringLiteral( "Command to launch an external Python code editor. Use the token <file> to insert the filename, <line> to insert line number, and <col> to insert the column number." ) );
 ///@endcond PRIVATE
 
 
@@ -93,6 +94,8 @@ void QgsCodeEditorPython::initializeLexer()
 
   setWhitespaceVisibility( QsciScintilla::WsVisibleAfterIndent );
 
+  SendScintilla( QsciScintillaBase::SCI_SETPROPERTY, "highlight.current.word", "1" );
+
   QFont font = lexerFont();
   const QColor defaultColor = lexerColor( QgsCodeEditorColorScheme::ColorRole::Default );
 
@@ -117,6 +120,7 @@ void QgsCodeEditorPython::initializeLexer()
   pyLexer->setFont( font, QsciLexerPython::DoubleQuotedString );
 
   pyLexer->setColor( defaultColor, QsciLexerPython::Default );
+  pyLexer->setColor( lexerColor( QgsCodeEditorColorScheme::ColorRole::Error ), QsciLexerPython::UnclosedString );
   pyLexer->setColor( lexerColor( QgsCodeEditorColorScheme::ColorRole::Class ), QsciLexerPython::ClassName );
   pyLexer->setColor( lexerColor( QgsCodeEditorColorScheme::ColorRole::Method ), QsciLexerPython::FunctionMethodName );
   pyLexer->setColor( lexerColor( QgsCodeEditorColorScheme::ColorRole::Number ), QsciLexerPython::Number );
@@ -127,7 +131,9 @@ void QgsCodeEditorPython::initializeLexer()
   pyLexer->setColor( lexerColor( QgsCodeEditorColorScheme::ColorRole::Keyword ), QsciLexerPython::Keyword );
   pyLexer->setColor( lexerColor( QgsCodeEditorColorScheme::ColorRole::Decoration ), QsciLexerPython::Decorator );
   pyLexer->setColor( lexerColor( QgsCodeEditorColorScheme::ColorRole::SingleQuote ), QsciLexerPython::SingleQuotedString );
+  pyLexer->setColor( lexerColor( QgsCodeEditorColorScheme::ColorRole::SingleQuote ), QsciLexerPython::SingleQuotedFString );
   pyLexer->setColor( lexerColor( QgsCodeEditorColorScheme::ColorRole::DoubleQuote ), QsciLexerPython::DoubleQuotedString );
+  pyLexer->setColor( lexerColor( QgsCodeEditorColorScheme::ColorRole::DoubleQuote ), QsciLexerPython::DoubleQuotedFString );
   pyLexer->setColor( lexerColor( QgsCodeEditorColorScheme::ColorRole::TripleSingleQuote ), QsciLexerPython::TripleSingleQuotedString );
   pyLexer->setColor( lexerColor( QgsCodeEditorColorScheme::ColorRole::TripleDoubleQuote ), QsciLexerPython::TripleDoubleQuotedString );
 

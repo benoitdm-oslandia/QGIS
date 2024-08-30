@@ -64,6 +64,11 @@ QString QgsSplitFeaturesByAttributeCharacterAlgorithm::shortDescription() const
   return QObject::tr( "Splits features into multiple output features by splitting a field by a character." );
 }
 
+Qgis::ProcessingAlgorithmDocumentationFlags QgsSplitFeaturesByAttributeCharacterAlgorithm::documentationFlags() const
+{
+  return Qgis::ProcessingAlgorithmDocumentationFlag::RegeneratesPrimaryKey;
+}
+
 QList<int> QgsSplitFeaturesByAttributeCharacterAlgorithm::inputLayerTypes() const
 {
   return QList<int>() << static_cast< int >( Qgis::ProcessingSourceType::Vector );
@@ -101,7 +106,7 @@ QgsFields QgsSplitFeaturesByAttributeCharacterAlgorithm::outputFields( const Qgs
     else
     {
       // we need to convert the split field to a string field
-      outputFields.append( QgsField( inputFields.at( i ).name(), QVariant::String ) );
+      outputFields.append( QgsField( inputFields.at( i ).name(), QMetaType::Type::QString ) );
     }
   }
   return outputFields;

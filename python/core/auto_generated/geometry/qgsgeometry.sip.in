@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/geometry/qgsgeometry.h                                      *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -78,14 +78,14 @@ so making copies of geometries is inexpensive. The geometry container class can 
 a QVariant object.
 
 The actual geometry representation is stored as a :py:class:`QgsAbstractGeometry` within the container, and
-can be accessed via the :py:func:`~QgsGeometryParameters.get` method or set using the :py:func:`~QgsGeometryParameters.set` method. This gives access to the underlying
+can be accessed via the :py:func:`~get` method or set using the :py:func:`~set` method. This gives access to the underlying
 raw geometry primitive, such as the point, line, polygon, curve or other geometry subclasses.
 
 .. note::
 
    :py:class:`QgsGeometry` objects are inherently Cartesian/planar geometries. They have no concept of geodesy, and none
    of the methods or properties exposed from the :py:class:`QgsGeometry` API (or :py:class:`QgsAbstractGeometry` subclasses) utilize
-   geodesic calculations. Accordingly, properties like :py:func:`~QgsGeometryParameters.length` and :py:func:`~QgsGeometryParameters.area` or spatial operations like :py:func:`~QgsGeometryParameters.buffer`
+   geodesic calculations. Accordingly, properties like :py:func:`~length` and :py:func:`~area` or spatial operations like :py:func:`~buffer`
    are always calculated using strictly Cartesian mathematics. In contrast, the :py:class:`QgsDistanceArea` class exposes
    methods for working with geodesic calculations and spatial operations on geometries,
    and should be used whenever calculations which account for the curvature of the Earth (or any other celestial body)
@@ -101,13 +101,10 @@ raw geometry primitive, such as the point, line, polygon, curve or other geometr
   public:
 
     QgsGeometry() /HoldGIL/;
-%Docstring
-Constructor
-%End
 
     QgsGeometry( const QgsGeometry & );
 %Docstring
-Copy constructor will prompt a deep copy of the object
+Copy constructor will prompt a shallow copy of the geometry
 %End
 
 
@@ -240,7 +237,7 @@ The first list of :py:class:`QgsPointXY` objects specifies the exterior ring of 
 lists specify any interior rings.
 
 Example
--------
+-------------------------------------
 
 .. code-block:: python
 
@@ -313,7 +310,7 @@ Returns type of the geometry as a :py:class:`Qgis`.GeometryType
 .. seealso:: :py:func:`wkbType`
 %End
 
-    bool isEmpty() const;
+    bool isEmpty() const /HoldGIL/;
 %Docstring
 Returns ``True`` if the geometry is empty (eg a linestring with no vertices,
 or a collection with no geometries). A null geometry will always
@@ -451,7 +448,7 @@ Returns a read-only, Java-style iterator for traversal of vertices of all the ge
    modified using the iterator. See :py:func:`~QgsGeometry.transformVertices` for a safe method to modify vertices "in-place".
 
 Example
--------
+-------------------------------------
 
 .. code-block:: python
 
@@ -464,8 +461,6 @@ Example
        geometry = QgsGeometry.fromWkt( 'MultiPolygon((( 0 0, 0 10, 10 10, 10 0, 0 0 ),( 5 5, 5 6, 6 6, 6 5, 5 5)),((20 2, 22 2, 22 4, 20 4, 20 2)))' )
        for v in geometry.vertices():
            print(v.x(), v.y())
-
-
 
 .. seealso:: :py:func:`parts`
 %End
@@ -480,7 +475,7 @@ This method forces a detach. Use :py:func:`~QgsGeometry.constParts` to avoid the
 if the parts are not going to be modified.
 
 Example
--------
+-------------------------------------
 
 .. code-block:: python
 
@@ -521,7 +516,7 @@ Unlike :py:func:`~QgsGeometry.parts`, this method does not force a detach and is
 iteration only is required.
 
 Example
--------
+-------------------------------------
 
 .. code-block:: python
 
@@ -674,9 +669,9 @@ Returns the indexes of the vertices before and after the given vertex index.
 
 This function takes into account the following factors:
 
-# If the given vertex index is at the end of a linestring,
+- If the given vertex index is at the end of a linestring,
   the adjacent index will be -1 (for "no adjacent vertex")
-# If the given vertex index is at the end of a linear ring
+- If the given vertex index is at the end of a linear ring
   (such as in a polygon), the adjacent index will take into
   account the first vertex is equal to the last vertex (and will
   skip equal vertex positions).
@@ -841,7 +836,7 @@ Adds a new ring to this geometry. This makes only sense for polygon and multipol
 :return: OperationResult a result code: success or reason of failure
 %End
 
-    Qgis::GeometryOperationResult addPart( const QVector<QgsPointXY> &points, Qgis::GeometryType geomType = Qgis::GeometryType::Unknown ) /PyName=addPointsXY/;
+ Qgis::GeometryOperationResult addPart( const QVector<QgsPointXY> &points, Qgis::GeometryType geomType = Qgis::GeometryType::Unknown ) /PyName=addPointsXY,Deprecated/;
 %Docstring
 Adds a new part to a the geometry.
 
@@ -849,9 +844,24 @@ Adds a new part to a the geometry.
 :param geomType: default geometry type to create if no existing geometry
 
 :return: OperationResult a result code: success or reason of failure
+
+.. deprecated:: QGIS 3.38
+   - will be removed in QGIS 4.0. Use addPartV2 which accepts :py:class:`Qgis`.WkbType geometry type instead of :py:class:`Qgis`.GeometryType.
 %End
 
-    Qgis::GeometryOperationResult addPart( const QgsPointSequence &points, Qgis::GeometryType geomType = Qgis::GeometryType::Unknown ) /PyName=addPoints/;
+    Qgis::GeometryOperationResult addPartV2( const QVector<QgsPointXY> &points, Qgis::WkbType wkbType = Qgis::WkbType::Unknown ) /PyName=addPointsXYV2/;
+%Docstring
+Adds a new part to a the geometry.
+
+:param points: points describing part to add
+:param wkbType: default WKB type to create if no existing geometry
+
+:return: OperationResult a result code: success or reason of failure
+
+.. versionadded:: 3.38
+%End
+
+ Qgis::GeometryOperationResult addPart( const QgsPointSequence &points, Qgis::GeometryType geomType = Qgis::GeometryType::Unknown ) /PyName=addPoints,Deprecated/;
 %Docstring
 Adds a new part to a the geometry.
 
@@ -859,9 +869,24 @@ Adds a new part to a the geometry.
 :param geomType: default geometry type to create if no existing geometry
 
 :return: OperationResult a result code: success or reason of failure
+
+.. deprecated:: QGIS 3.38
+   - will be removed in QGIS 4.0. Use addPartV2 which accepts :py:class:`Qgis`.WkbType geometry type instead of :py:class:`Qgis`.GeometryType.
 %End
 
-    Qgis::GeometryOperationResult addPart( QgsAbstractGeometry *part /Transfer/, Qgis::GeometryType geomType = Qgis::GeometryType::Unknown );
+    Qgis::GeometryOperationResult addPartV2( const QgsPointSequence &points, Qgis::WkbType wkbType = Qgis::WkbType::Unknown ) /PyName=addPointsV2/;
+%Docstring
+Adds a new part to a the geometry.
+
+:param points: points describing part to add
+:param wkbType: default WKB type to create if no existing geometry
+
+:return: OperationResult a result code: success or reason of failure
+
+.. versionadded:: 3.38
+%End
+
+ Qgis::GeometryOperationResult addPart( QgsAbstractGeometry *part /Transfer/, Qgis::GeometryType geomType = Qgis::GeometryType::Unknown ) /Deprecated/;
 %Docstring
 Adds a new part to this geometry.
 
@@ -869,6 +894,21 @@ Adds a new part to this geometry.
 :param geomType: default geometry type to create if no existing geometry
 
 :return: OperationResult a result code: success or reason of failure
+
+.. deprecated:: QGIS 3.38
+   - will be removed in QGIS 4.0. Use addPartV2 which accepts :py:class:`Qgis`.WkbType geometry type instead of :py:class:`Qgis`.GeometryType.
+%End
+
+    Qgis::GeometryOperationResult addPartV2( QgsAbstractGeometry *part /Transfer/, Qgis::WkbType wkbType = Qgis::WkbType::Unknown );
+%Docstring
+Adds a new part to this geometry.
+
+:param part: part to add (ownership is transferred)
+:param wkbType: default WKB type to create if no existing geometry
+
+:return: OperationResult a result code: success or reason of failure
+
+.. versionadded:: 3.38
 %End
 
     Qgis::GeometryOperationResult addPart( const QgsGeometry &newPart ) /PyName=addPartGeometry/;
@@ -1324,6 +1364,13 @@ geometries.
 Returns ``True`` if the geometry contains the point ``p``.
 %End
 
+    bool contains( double x, double y ) const;
+%Docstring
+Returns ``True`` if the geometry contains the point at (``x``, ``y``).
+
+.. versionadded:: 3.38
+%End
+
     bool contains( const QgsGeometry &geometry ) const;
 %Docstring
 Returns ``True`` if the geometry completely contains another ``geometry``.
@@ -1624,7 +1671,6 @@ This method requires QGIS builds based on GEOS 3.9 or later.
    the ``tolerance`` value must be a value greater than 0, or the algorithm may never converge on a solution
 
 :raises QgsNotSupportedException: on QGIS builds based on GEOS 3.8 or earlier.
-
 
 .. versionadded:: 3.20
 %End
@@ -2403,7 +2449,6 @@ empty if none of the child geometries match the desired type.
 %End
 
  int avoidIntersections( const QList<QgsVectorLayer *> &avoidIntersectionsLayers ) /Deprecated/;
-
 %Docstring
 Modifies geometry to avoid intersections with the layers specified in project properties
 
@@ -2420,7 +2465,6 @@ Modifies geometry to avoid intersections with the layers specified in project pr
 %End
 
     Qgis::GeometryOperationResult avoidIntersectionsV2( const QList<QgsVectorLayer *> &avoidIntersectionsLayers );
-
 %Docstring
 Modifies geometry to avoid intersections with the layers specified in project properties
 
@@ -2485,7 +2529,6 @@ Returns True if the Polygon is counter-clockwise.
 
    returns false if the geometry is not a polygon type or empty
 
-
 .. seealso:: :py:func:`isPolygonClockwise`
 
 .. seealso:: :py:func:`forcePolygonClockwise`
@@ -2507,7 +2550,6 @@ Returns True if the Polygon is clockwise.
 .. warning::
 
    returns true if the geometry is not a polygon type or empty
-
 
 .. seealso:: :py:func:`isPolygonCounterClockwise`
 
@@ -2909,7 +2951,7 @@ a large number of spatial relationships will be tested (such as calling :py:func
 geometry should first be prepared by calling :py:func:`~QgsGeometry.prepareGeometry` before performing the tests.
 
 Example
--------
+-------------------------------------
 
 .. code-block:: python
 
@@ -2960,5 +3002,5 @@ Downgrades a point list from :py:class:`QgsPoint` to :py:class:`QgsPointXY`
  *                                                                      *
  * src/core/geometry/qgsgeometry.h                                      *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

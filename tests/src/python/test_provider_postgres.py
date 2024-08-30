@@ -115,6 +115,17 @@ class TestPyQgsPostgresProvider(QgisTestCase, ProviderTestCase):
         cur.close()
         self.con.commit()
 
+    def assertAcceptableEstimatedExtent(self, realExt, estmExt, msg):
+        # 1. test that the estimated extent contains the real one
+        self.assertTrue(estmExt.contains(realExt),
+                        "Estimated extent {} does not contain real extent {}"
+                        .format(estmExt, realExt))
+        # 2. test that the estimated extent is not larger than 10% of real extent
+        self.assertLess(estmExt.width() - realExt.width(), realExt.width() / 10,
+                        'extent width estimated {}, real {} ({})'.format(estmExt.width(), realExt.width(), msg))
+        self.assertLess(estmExt.height() - realExt.height(), realExt.height() / 10,
+                        'extent height estimated {}, real {} ({})'.format(estmExt.height(), realExt.height(), msg))
+
     # Create instances of this class for scoped backups,
     # example:
     #
@@ -2510,6 +2521,16 @@ class TestPyQgsPostgresProvider(QgisTestCase, ProviderTestCase):
             vl
         ]
 
+        for lyr in vls:
+            self.assertTrue(lyr.isValid())
+            QgsProject.instance().addMapLayer(lyr)
+        relations = vl.dataProvider().discoverRelations(vl, vls)
+        self.assertEqual(len(relations), 2)
+        for i, r in enumerate(relations):
+            self.assertEqual(r.referencedLayer(), vls[i])
+        self.assertEqual(len(relations[0].fieldPairs()), 1)
+        self.assertEqual(len(relations[1].fieldPairs()), 1)
+
     def testValidLayerDiscoverRelationsComposite(self):
         """
         Test implicit relations that can be discovered between tables, based on declared composite foreign keys.
@@ -3306,14 +3327,41 @@ class TestPyQgsPostgresProvider(QgisTestCase, ProviderTestCase):
 
         md = QgsProviderRegistry.instance().providerMetadata("postgres")
         conn = md.createConnection(self.dbconn, {})
-        conn.executeSql('DROP TABLE IF EXISTS public.test_extent')
-        conn.executeSql('CREATE TABLE qgis_test.test_extent (id SERIAL PRIMARY KEY, name VARCHAR(64))')
-        conn.executeSql("SELECT AddGeometryColumn('qgis_test', 'test_extent', 'geom', 4326, 'POINT', 2 )")
+        conn.executeSql('''
+DROP TABLE IF EXISTS public.test_ext;
+CREATE TABLE public.test_ext (id SERIAL PRIMARY KEY, g geometry);
+INSERT INTO public.test_ext(g)
+    SELECT ST_MakePoint(n,n*7)
+    FROM generate_series(2,10,1) n;
+        ''')
+        realExtent = QgsRectangle(2, 14, 10, 70)
 
-        uri = QgsDataSourceUri(self.dbconn +
-                               ' sslmode=disable  key=\'id\'srid=4326 type=POINT table="qgis_test"."test_extent" (geom) sql=')
-        vl = QgsVectorLayer(uri.uri(), 'test', 'postgres')
-        self.assertTrue(vl.isValid())
+        uri = QgsDataSourceUri(self.dbconn + ' table="public"."test_ext" (g)')
+
+        # Create layer with computed (not estimated) metadata
+        vlReal = QgsVectorLayer(uri.uri(), 'test', 'postgres')
+        self.assertTrue(vlReal.isValid())
+        self.assertEqual(vlReal.extent(), realExtent)
+
+        # Create layer with estimated metadata
+        vlEstm = QgsVectorLayer(uri.uri() + " estimatedmetadata='true'", 'estimated', 'postgres')
+        self.assertTrue(vlEstm.isValid())
+
+        # No stats
+        self.assertAcceptableEstimatedExtent(realExtent, vlEstm.extent(), 'with no stats')
+
+        # Add stats
+        conn.executeSql('ANALYZE public.test_ext')
+        vlEstm.updateExtents()
+        self.assertAcceptableEstimatedExtent(realExtent, vlEstm.extent(), 'with stats')
+
+        # Add index
+        conn.executeSql('CREATE INDEX ON public.test_ext using gist (g)')
+        vlEstm.updateExtents()
+        self.assertAcceptableEstimatedExtent(realExtent, vlEstm.extent(), 'with index')
+
+        # Cleanup
+        conn.executeSql('DROP TABLE IF EXISTS public.test_ext')
 
     def testExtent3D(self):
         def test_table(dbconn, table_name, wkt):
@@ -3340,6 +3388,48 @@ class TestPyQgsPostgresProvider(QgisTestCase, ProviderTestCase):
         test_table(self.dbconn, 'mls2d', [0, 0, float('nan'), 3, 3, float('nan')])
         test_table(self.dbconn, 'mls3d', [0, 0, 0, 3, 3, 3])
         test_table(self.dbconn, 'pt4d', [1, 2, 3, 1, 2, 3])
+
+    # See https://github.com/qgis/QGIS/issues/30294
+    def testGeographyExtent(self):
+        md = QgsProviderRegistry.instance().providerMetadata("postgres")
+        conn = md.createConnection(self.dbconn, {})
+
+        # Create a 10 rows table with extent -10 -10 to 10 10
+        conn.executeSql('''
+DROP TABLE IF EXISTS public.test_geog_ext;
+CREATE TABLE public.test_geog_ext (id SERIAL PRIMARY KEY, g geography);
+INSERT INTO public.test_geog_ext(g)
+    SELECT ST_MakePoint(n*4,n)
+    FROM generate_series(-10,10,1) n;
+        ''')
+        realExtent = QgsRectangle(-40, -10, 40, 10)
+
+        uri = QgsDataSourceUri(self.dbconn + ' table="public"."test_geog_ext" (g)')
+
+        # Create layer with computed (not estimated) metadata
+        vlReal = QgsVectorLayer(uri.uri(), 'real', 'postgres')
+        self.assertTrue(vlReal.isValid(), "Could not create test layer from qgis_test.test_geog_ext")
+        self.assertEqual(vlReal.extent(), realExtent)
+
+        # Create layer with estimated metadata
+        vlEstm = QgsVectorLayer(uri.uri() + " estimatedmetadata='true'", 'estimated', 'postgres')
+        self.assertTrue(vlEstm.isValid())
+
+        # No stats
+        self.assertAcceptableEstimatedExtent(realExtent, vlEstm.extent(), 'with no stats')
+
+        # Add stats
+        conn.executeSql('ANALYZE public.test_geog_ext')
+        vlEstm.updateExtents()
+        self.assertAcceptableEstimatedExtent(realExtent, vlEstm.extent(), 'with stats')
+
+        # Add index
+        conn.executeSql('CREATE INDEX ON public.test_geog_ext using gist (g)')
+        vlEstm.updateExtents()
+        self.assertAcceptableEstimatedExtent(realExtent, vlEstm.extent(), 'with index')
+
+        # Cleanup
+        conn.executeSql('DROP TABLE public.test_geog_ext')
 
     # See: https://github.com/qgis/QGIS/issues/55856
     def testPktLowerCase(self):
@@ -3384,6 +3474,38 @@ class TestPyQgsPostgresProvider(QgisTestCase, ProviderTestCase):
         )
         cur.execute(sql_pk)
         self.assertEqual(cur.fetchall(), [('dep', 'character varying')])
+
+    def testColumnRestrictedLayerIsEditable(self):
+        """
+            Test editability of table with partial column insert privs
+            See https://github.com/qgis/QGIS/issues/28835
+        """
+
+        md = QgsProviderRegistry.instance().providerMetadata("postgres")
+        conn = md.createConnection(self.dbconn, {})
+
+        conn.executeSql('''
+DROP TABLE IF EXISTS public.qgis_issue_gh_28835;
+CREATE UNLOGGED TABLE public.qgis_issue_gh_28835 (
+  id INT PRIMARY KEY,
+  restricted_column TEXT,
+  geom GEOMETRY(point, 4326)
+)
+            ''')
+
+        uri = QgsDataSourceUri(self.dbconn + ' table="public"."qgis_issue_gh_28835" (geom)')
+        uri.setUsername('qgis_test_unprivileged_user')
+        uri.setPassword('qgis_test_unprivileged_user_password')
+
+        conn.executeSql('GRANT SELECT ON public.qgis_issue_gh_28835 TO qgis_test_unprivileged_user')
+        vl = QgsVectorLayer(uri.uri(), 'test', 'postgres')
+        self.assertTrue(vl.isValid(), "qgis_issue_gh_28835 is an invalid layer")
+        self.assertFalse(vl.startEditing(), "qgis_issue_gh_28835 is unexpectedly editable by qgis_test_unprivileged_user before grants")
+
+        conn.executeSql('GRANT INSERT(geom) ON public.qgis_issue_gh_28835 TO qgis_test_unprivileged_user')
+        vl = QgsVectorLayer(uri.uri(), 'test', 'postgres')
+        self.assertTrue(vl.isValid(), "qgis_issue_gh_28835 is an invalid layer")
+        self.assertTrue(vl.startEditing(), "qgis_issue_gh_28835 is not editable by qgis_test_unprivileged_user after restricted-column insert grant")
 
 
 class TestPyQgsPostgresProviderCompoundKey(QgisTestCase, ProviderTestCase):

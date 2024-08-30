@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/geometry/qgsgeometryengine.h                                *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -26,7 +26,7 @@ a large number of spatial relationships will be tested (such as calling :py:func
 geometry should first be prepared by calling :py:func:`~prepareGeometry` before performing the tests.
 
 Example
--------
+-------------------------------------
 
 .. code-block:: python
 
@@ -316,5 +316,5 @@ Logs an error ``message`` encountered during an operation.
  *                                                                      *
  * src/core/geometry/qgsgeometryengine.h                                *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

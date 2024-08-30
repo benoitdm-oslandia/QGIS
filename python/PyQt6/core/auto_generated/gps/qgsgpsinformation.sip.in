@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/gps/qgsgpsinformation.h                                     *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -88,6 +88,24 @@ Returns the best fix status and corresponding constellation.
 
     bool satInfoComplete;
 
+    Qgis::GpsNavigationStatus navigationStatus() const;
+%Docstring
+Returns the navigation status.
+
+.. seealso:: :py:func:`setNavigationStatus`
+
+.. versionadded:: 3.38
+%End
+
+    void setNavigationStatus( Qgis::GpsNavigationStatus status );
+%Docstring
+Sets the navigation ``status``.
+
+.. seealso:: :py:func:`navigationStatus`
+
+.. versionadded:: 3.38
+%End
+
     bool isValid() const;
 %Docstring
 Returns whether the connection information is valid
@@ -125,5 +143,5 @@ Returns the value of the corresponding GPS information ``component``.
  *                                                                      *
  * src/core/gps/qgsgpsinformation.h                                     *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

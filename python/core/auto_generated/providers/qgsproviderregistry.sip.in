@@ -3,9 +3,8 @@
  *                                                                      *
  * src/core/providers/qgsproviderregistry.h                             *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
-
 
 
 
@@ -38,7 +37,7 @@ ogr and postgres.
     enum WidgetMode
     {
 
-      None,
+      Standalone,
 
       Embedded,
 
@@ -82,7 +81,7 @@ Sets library directory where to search for plugins
     QgsDataProvider *createProvider( const QString &providerKey,
                                      const QString &dataSource,
                                      const QgsDataProvider::ProviderOptions &options = QgsDataProvider::ProviderOptions(),
-                                     QgsDataProvider::ReadFlags flags = QgsDataProvider::ReadFlags() ) /TransferBack/;
+                                     Qgis::DataProviderReadFlags flags = Qgis::DataProviderReadFlags() ) /TransferBack/;
 %Docstring
 Creates a new instance of a provider.
 
@@ -204,7 +203,7 @@ If a provider does not work with paths, unmodified URI will be returned.
 .. versionadded:: 3.30
 %End
 
- QWidget *createSelectionWidget( const QString &providerKey, QWidget *parent = 0, Qt::WindowFlags fl = Qt::WindowFlags(), QgsProviderRegistry::WidgetMode widgetMode = QgsProviderRegistry::WidgetMode::None ) /Deprecated/;
+ QWidget *createSelectionWidget( const QString &providerKey, QWidget *parent = 0, Qt::WindowFlags fl = Qt::WindowFlags(), QgsProviderRegistry::WidgetMode widgetMode = QgsProviderRegistry::WidgetMode::Standalone ) /Deprecated/;
 %Docstring
 Returns a new widget for selecting layers from a provider.
 Either the ``parent`` widget must be set or the caller becomes
@@ -314,10 +313,8 @@ Saves ``metadata`` to the layer corresponding to the specified ``uri``.
 :return: - ``True`` if the metadata was successfully saved.
          - errorMessage: descriptive string of error if encountered
 
-
 :raises QgsNotSupportedException: if the provider does not support saving layer metadata for the
    specified ``uri``.
-
 
 .. versionadded:: 3.20
 %End
@@ -523,7 +520,6 @@ handled by any registered providers, and construct user-friendly warnings as to 
 
    ownership of the UnusableUriHandlerInterface instance is transferred to the registry
 
-
 .. versionadded:: 3.18.1
 %End
 
@@ -546,10 +542,8 @@ QGIS build.
 
 :param uri: URI to test
 
-
 :return: - ``True`` if the ``uri`` was matched to a registered QgsProviderRegistry.UnusableUriHandlerInterface.
          - details: will be populated with details allowing construction of a user-friendly warning message
-
 
 .. seealso:: :py:func:`registerUnusableUriHandler`
 
@@ -780,5 +774,5 @@ register a new vector data provider from its ``providerMetadata``
  *                                                                      *
  * src/core/providers/qgsproviderregistry.h                             *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

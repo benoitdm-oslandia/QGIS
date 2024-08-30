@@ -96,6 +96,11 @@ QString QgsJoinByAttributeAlgorithm::shortHelpString() const
                       "in each of them to define the join criteria." );
 }
 
+Qgis::ProcessingAlgorithmDocumentationFlags QgsJoinByAttributeAlgorithm::documentationFlags() const
+{
+  return Qgis::ProcessingAlgorithmDocumentationFlag::RegeneratesPrimaryKey;
+}
+
 QgsJoinByAttributeAlgorithm *QgsJoinByAttributeAlgorithm::createInstance() const
 {
   return new QgsJoinByAttributeAlgorithm();
@@ -121,9 +126,12 @@ QVariantMap QgsJoinByAttributeAlgorithm::processAlgorithm( const QVariantMap &pa
   const QStringList fieldsToCopy = parameterAsStrings( parameters, QStringLiteral( "FIELDS_TO_COPY" ), context );
 
   const int joinField1Index = input->fields().lookupField( field1Name );
+  if ( joinField1Index < 0 )
+    throw QgsProcessingException( QObject::tr( "Invalid join field from layer 1: “%1” does not exist" ).arg( field1Name ) );
+
   const int joinField2Index = input2->fields().lookupField( field2Name );
-  if ( joinField1Index < 0 || joinField2Index < 0 )
-    throw QgsProcessingException( QObject::tr( "Invalid join fields" ) );
+  if ( joinField2Index < 0 )
+    throw QgsProcessingException( QObject::tr( "Invalid join field from layer 2: “%1” does not exist" ).arg( field2Name ) );
 
   QgsFields outFields2;
   QgsAttributeList fields2Indices;
@@ -196,7 +204,8 @@ QVariantMap QgsJoinByAttributeAlgorithm::processAlgorithm( const QVariantMap &pa
 
     // only keep selected attributes
     QgsAttributes attributes;
-    for ( int j = 0; j < feat.attributes().count(); ++j )
+    const int attributeCount = feat.attributeCount();
+    for ( int j = 0; j < attributeCount; ++j )
     {
       if ( ! fields2Indices.contains( j ) )
         continue;

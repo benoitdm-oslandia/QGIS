@@ -57,7 +57,7 @@ QgsOgrDbSourceSelect::QgsOgrDbSourceSelect( const QString &theSettingsKey, const
   btnSave->hide();
   btnLoad->hide();
 
-  if ( widgetMode() != QgsProviderRegistry::WidgetMode::None )
+  if ( widgetMode() != QgsProviderRegistry::WidgetMode::Standalone )
   {
     mHoldDialogOpen->hide();
   }
@@ -229,7 +229,7 @@ void QgsOgrDbSourceSelect::addButtonClicked()
       Q_NOWARN_DEPRECATED_POP
       emit addLayer( Qgis::LayerType::Raster, info.first, info.second, QStringLiteral( "gdal" ) );
     }
-    if ( widgetMode() == QgsProviderRegistry::WidgetMode::None && ! mHoldDialogOpen->isChecked() )
+    if ( widgetMode() == QgsProviderRegistry::WidgetMode::Standalone && ! mHoldDialogOpen->isChecked() )
     {
       accept();
     }
@@ -385,13 +385,15 @@ bool QgsOgrDbSourceSelect::configureFromUri( const QString &uri )
   QString subsetString;
   OGRwkbGeometryType ogrGeometryType;
   QStringList openOptions;
+  QVariantMap credentialOptions;
   const QString filePath = QgsOgrProviderUtils::analyzeURI( uri,
                            isSubLayer,
                            layerIndex,
                            layerName,
                            subsetString,
                            ogrGeometryType,
-                           openOptions );
+                           openOptions,
+                           credentialOptions );
 
   QFileInfo pathInfo { filePath };
   const QString connectionName { pathInfo.fileName() };

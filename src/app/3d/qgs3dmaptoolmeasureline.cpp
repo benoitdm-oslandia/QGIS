@@ -24,7 +24,6 @@
 #include "qgs3dmeasuredialog.h"
 #include "qgsrubberband3d.h"
 #include "qgswindow3dengine.h"
-#include "qgsframegraph.h"
 
 
 Qgs3DMapToolMeasureLine::Qgs3DMapToolMeasureLine( Qgs3DMapCanvas *canvas )
@@ -40,7 +39,7 @@ Qgs3DMapToolMeasureLine::~Qgs3DMapToolMeasureLine() = default;
 
 void Qgs3DMapToolMeasureLine::activate()
 {
-  mRubberBand.reset( new QgsRubberBand3D( *mCanvas->mapSettings(), mCanvas->engine(), mCanvas->engine()->frameGraph()->rubberBandsRootEntity() ) );
+  mRubberBand.reset( new QgsRubberBand3D( *mCanvas->mapSettings(), mCanvas->engine() ) );
 
   if ( mIsAlreadyActivated )
   {

@@ -72,11 +72,11 @@ class QgsAmsProvider : public QgsRasterDataProvider
     static const QString AMS_PROVIDER_KEY;
     static const QString AMS_PROVIDER_DESCRIPTION;
 
-    QgsAmsProvider( const QString &uri, const QgsDataProvider::ProviderOptions &providerOptions, QgsDataProvider::ReadFlags flags = QgsDataProvider::ReadFlags() );
+    QgsAmsProvider( const QString &uri, const QgsDataProvider::ProviderOptions &providerOptions, Qgis::DataProviderReadFlags flags = Qgis::DataProviderReadFlags() );
 
     explicit QgsAmsProvider( const QgsAmsProvider &other, const QgsDataProvider::ProviderOptions &providerOptions );
     Qgis::DataProviderFlags flags() const override;
-    QgsRasterDataProvider::ProviderCapabilities providerCapabilities() const override;
+    Qgis::RasterProviderCapabilities providerCapabilities() const override;
     /* Inherited from QgsDataProvider */
     bool isValid() const override { return mValid; }
     QString name() const override;
@@ -94,7 +94,7 @@ class QgsAmsProvider : public QgsRasterDataProvider
 
     /* Inherited from QgsRasterInterface */
     int bandCount() const override { return 1; }
-    int capabilities() const override { return Identify | IdentifyText | IdentifyFeature | Prefetch; }
+    Qgis::RasterInterfaceCapabilities capabilities() const override;
 
     /* Inherited from QgsRasterDataProvider */
     QgsRectangle extent() const override { return mExtent; }
@@ -229,7 +229,7 @@ class QgsAmsProviderMetadata: public QgsProviderMetadata
   public:
     QgsAmsProviderMetadata();
     QIcon icon() const override;
-    QgsAmsProvider *createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, QgsDataProvider::ReadFlags flags = QgsDataProvider::ReadFlags() ) override;
+    QgsAmsProvider *createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, Qgis::DataProviderReadFlags flags = Qgis::DataProviderReadFlags() ) override;
     QVariantMap decodeUri( const QString &uri ) const override;
     QString encodeUri( const QVariantMap &parts ) const override;
     QList< Qgis::LayerType > supportedLayerTypes() const override;

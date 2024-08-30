@@ -1626,6 +1626,24 @@ class PyQgsOGRProvider(QgisTestCase):
         encodedUri = QgsProviderRegistry.instance().encodeUri('ogr', parts)
         self.assertEqual(encodedUri, uri)
 
+    def testDecodeEncodeUriCredentialOptions(self):
+        """Test decodeUri/encodeUri credential options support"""
+
+        uri = '/my/vector.shp|option:AN=OPTION|credential:ANOTHER=BBB|credential:SOMEKEY=AAAAA'
+        parts = QgsProviderRegistry.instance().decodeUri('ogr', uri)
+        self.assertEqual(parts, {
+            'path': '/my/vector.shp',
+            'layerId': None,
+            'layerName': None,
+            'credentialOptions': {
+                'ANOTHER': 'BBB',
+                'SOMEKEY': 'AAAAA'
+            },
+            'openOptions': ['AN=OPTION']
+        })
+        encodedUri = QgsProviderRegistry.instance().encodeUri('ogr', parts)
+        self.assertEqual(encodedUri, uri)
+
     @unittest.skipIf(int(gdal.VersionInfo('VERSION_NUM')) < GDAL_COMPUTE_VERSION(3, 3, 0), "GDAL 3.3 required")
     def testFieldDomains(self):
         """
@@ -2997,7 +3015,8 @@ class PyQgsOGRProvider(QgisTestCase):
         self.assertEqual(rel.cardinality(), Qgis.RelationshipCardinality.OneToOne)
         self.assertEqual(rel.forwardPathLabel(), 'my forward path label')
         self.assertEqual(rel.backwardPathLabel(), 'my backward path label')
-        self.assertEqual(rel.relatedTableType(), 'feature')
+        # result depends on gdal version
+        self.assertIn(rel.relatedTableType(), ('feature', 'features'))
 
         rel = [r for r in relationships if r.id() == 'composite_many_to_many'][0]
         self.assertEqual(rel.id(), 'composite_many_to_many')
@@ -3532,7 +3551,7 @@ class PyQgsOGRProvider(QgisTestCase):
         with open(datasource_2d, 'w') as f:
             f.write('id,WKT\n')
             for i in range(9):
-                f.write(f'{i},POINT ({2*i} {i-3})\n')
+                f.write(f'{i},POINT ({2 * i} {i - 3})\n')
 
         vl = QgsVectorLayer(f'{datasource_2d}|layerid=0', 'test', 'ogr')
         self.assertTrue(vl.isValid())
@@ -3549,7 +3568,7 @@ class PyQgsOGRProvider(QgisTestCase):
         with open(datasource_3d, 'w') as f:
             f.write('id,WKT\n')
             for i in range(13):
-                f.write(f'{i},POINT Z({2*i} {i-3} {i-5})\n')
+                f.write(f'{i},POINT Z({2 * i} {i - 3} {i - 5})\n')
 
         vl = QgsVectorLayer(f'{datasource_3d}|layerid=0', 'test', 'ogr')
         self.assertTrue(vl.isValid())
@@ -3595,6 +3614,18 @@ class PyQgsOGRProvider(QgisTestCase):
         self.assertAlmostEqual(vl.extent3D().yMaximum(), 130554.6, places=3)
         self.assertAlmostEqual(vl.extent3D().zMaximum(), 105.6, places=3)
         del vl
+
+    @unittest.skipIf(int(gdal.VersionInfo('VERSION_NUM')) < GDAL_COMPUTE_VERSION(3, 6, 0), "GDAL 3.6 required")
+    def testReadOnlyFieldsFileGeodatabase(self):
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            dest_file_name = os.path.join(temp_dir, 'testReadOnlyFieldsFileGeodatabase.gdb')
+            ds = ogr.GetDriverByName("OpenFileGDB").CreateDataSource(dest_file_name)
+            ds.CreateLayer("test", geom_type=ogr.wkbPolygon, options=["CREATE_SHAPE_AREA_AND_LENGTH_FIELDS=YES"])
+            ds = None
+
+            vl = QgsVectorLayer(dest_file_name, 'vl')
+            self.assertTrue(vl.fields()["Shape_Area"].isReadOnly())
 
 
 if __name__ == '__main__':

@@ -3,7 +3,7 @@
  *                                                                      *
  * src/gui/symbology/qgscategorizedsymbolrendererwidget.h               *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -34,6 +34,8 @@ class QgsCategorizedSymbolRendererWidget : QgsRendererWidget
     virtual QgsFeatureRenderer *renderer();
 
     virtual void setContext( const QgsSymbolWidgetContext &context );
+
+    virtual QgsExpressionContext createExpressionContext() const;
 
 
     int matchToSymbols( QgsStyle *style );
@@ -144,5 +146,5 @@ Applies current symbol to selected categories, or to all categories if none is s
  *                                                                      *
  * src/gui/symbology/qgscategorizedsymbolrendererwidget.h               *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

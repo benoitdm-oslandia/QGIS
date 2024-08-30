@@ -20,6 +20,7 @@
 #include "qgsauthmethodregistry.h"
 #include "qgsproviderregistry.h"
 #include "qgslogger.h"
+#include <QClipboard>
 #include <QDesktopServices>
 #include <QFile>
 #include <QTextStream>
@@ -43,6 +44,7 @@ QgsAbout::QgsAbout( QWidget *parent )
   setupUi( this );
   connect( btnQgisUser, &QPushButton::clicked, this, &QgsAbout::btnQgisUser_clicked );
   connect( btnQgisHome, &QPushButton::clicked, this, &QgsAbout::btnQgisHome_clicked );
+  connect( btnCopyToClipboard, &QPushButton::clicked, this, &QgsAbout::btnCopyToClipboard_clicked );
   if constexpr( QSysInfo::WordSize != 64 )
   {
     // 64 bit is the current standard. Only specify word size if it is not 64.
@@ -224,6 +226,7 @@ void QgsAbout::setVersion( const QString &v )
   txtVersion->setBackgroundRole( QPalette::NoRole );
   txtVersion->setAutoFillBackground( true );
   txtVersion->setHtml( v );
+  mVersionString = v;
 }
 
 void QgsAbout::setWhatsNew()
@@ -269,6 +272,11 @@ void QgsAbout::setPluginInfo()
   txtProviders->clear();
   txtProviders->document()->setDefaultStyleSheet( myStyle );
   txtProviders->setText( myString );
+}
+
+void QgsAbout::btnCopyToClipboard_clicked()
+{
+  QGuiApplication::clipboard()->setText( mVersionString );
 }
 
 void QgsAbout::btnQgisUser_clicked()

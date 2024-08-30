@@ -33,6 +33,7 @@
 #include <memory>
 
 class QgsLineSymbol;
+class QgsMarkerSymbol;
 class QgsFillSymbol;
 class QgsGeometry;
 class QgsRenderContext;
@@ -517,10 +518,6 @@ class CORE_EXPORT QgsSimpleLineCallout : public QgsCallout
     ~QgsSimpleLineCallout() override;
 
 #ifndef SIP_RUN
-
-    /**
-     * Copy constructor.
-     */
     QgsSimpleLineCallout( const QgsSimpleLineCallout &other );
     QgsSimpleLineCallout &operator=( const QgsSimpleLineCallout & ) = delete;
 #endif
@@ -753,12 +750,7 @@ class CORE_EXPORT QgsManhattanLineCallout : public QgsSimpleLineCallout
     QgsManhattanLineCallout();
 
 #ifndef SIP_RUN
-
-    /**
-     * Copy constructor.
-     */
     QgsManhattanLineCallout( const QgsManhattanLineCallout &other );
-
     QgsManhattanLineCallout &operator=( const QgsManhattanLineCallout & ) = delete;
 #endif
 
@@ -806,12 +798,7 @@ class CORE_EXPORT QgsCurvedLineCallout : public QgsSimpleLineCallout
     QgsCurvedLineCallout();
 
 #ifndef SIP_RUN
-
-    /**
-     * Copy constructor.
-     */
     QgsCurvedLineCallout( const QgsCurvedLineCallout &other );
-
     QgsCurvedLineCallout &operator=( const QgsCurvedLineCallout & ) = delete;
 #endif
 
@@ -897,10 +884,6 @@ class CORE_EXPORT QgsBalloonCallout : public QgsCallout
     ~QgsBalloonCallout() override;
 
 #ifndef SIP_RUN
-
-    /**
-     * Copy constructor.
-     */
     QgsBalloonCallout( const QgsBalloonCallout &other );
     QgsBalloonCallout &operator=( const QgsBalloonCallout & ) = delete;
 #endif
@@ -936,6 +919,33 @@ class CORE_EXPORT QgsBalloonCallout : public QgsCallout
      * \see fillSymbol()
      */
     void setFillSymbol( QgsFillSymbol *symbol SIP_TRANSFER );
+
+    /**
+     * Returns the marker symbol used to render the callout endpoint.
+     *
+     * May be NULLPTR, if no endpoint marker will be used.
+     *
+     * The marker will always be rendered below the fill symbol for the callout.
+     *
+     * Ownership is not transferred.
+     *
+     * \see setMarkerSymbol()
+     * \since QGIS 3.40
+     */
+    QgsMarkerSymbol *markerSymbol();
+
+    /**
+     * Sets the marker \a symbol used to render the callout endpoint. Ownership of \a symbol is
+     * transferred to the callout.
+     *
+     * Set to NULLPTR to disable the endpoint marker.
+     *
+     * The marker will always be rendered below the fill symbol for the callout.
+     *
+     * \see markerSymbol()
+     * \since QGIS 3.40
+     */
+    void setMarkerSymbol( QgsMarkerSymbol *symbol SIP_TRANSFER );
 
     /**
      * Returns the offset distance from the anchor point at which to start the line. Units are specified through offsetFromAnchorUnit().
@@ -1143,6 +1153,7 @@ class CORE_EXPORT QgsBalloonCallout : public QgsCallout
 #endif
 
     std::unique_ptr< QgsFillSymbol > mFillSymbol;
+    std::unique_ptr< QgsMarkerSymbol > mMarkerSymbol;
 
     double mOffsetFromAnchorDistance = 0;
     Qgis::RenderUnit mOffsetFromAnchorUnit = Qgis::RenderUnit::Millimeters;

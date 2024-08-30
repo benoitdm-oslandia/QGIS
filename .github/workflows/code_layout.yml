@@ -170,18 +170,19 @@ jobs:
       - name: Spell Test
         if: steps.changed_files.outputs.any_changed == 'true'
         env:
-          ALL_CHANGED_FILES: ${{ steps.changed_files.outputs.all_changed_files }}
-        run: echo "$ALL_CHANGED_FILES" | ./scripts/spell_check/check_spelling.sh
+          ALL_CHANGED_FILES: ${{ steps.changed_files.outputs.changed_files }}
+        run: ./scripts/spell_check/check_spelling.sh
 
   sip_check:
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Python 3.7
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: 3.7
+          python-version: '3.12'
       - name: Install Requirements
         run: |
+          sudo apt-get update
           sudo apt install -y \
               cpanminus \
               libyaml-tiny-perl \
@@ -199,7 +200,7 @@ jobs:
               libtry-tiny-perl \
               expect
           python -m pip install --upgrade pip
-          pip install autopep8 nose2 mock termcolor
+          pip install autopep8 nose2 mock termcolor pyyaml
       - name: Checkout
         uses: actions/checkout@v4
       - name: Sip Checks

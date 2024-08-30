@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/vector/qgsvectordataprovider.h                              *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -27,44 +27,11 @@ of feature and attribute information from a spatial datasource.
 %End
   public:
 
-
-    enum Capability /BaseType=IntEnum/
-    {
-      NoCapabilities,
-      AddFeatures,
-      DeleteFeatures,
-      ChangeAttributeValues,
-      AddAttributes,
-      DeleteAttributes,
-      CreateSpatialIndex,
-      SelectAtId,
-      ChangeGeometries,
-      SelectEncoding,
-      CreateAttributeIndex,
-      SimplifyGeometries,
-      SimplifyGeometriesWithTopologicalValidation,
-      TransactionSupport,
-      CircularGeometries,
-      ChangeFeatures,
-      RenameAttributes,
-      FastTruncate,
-      ReadLayerMetadata,
-      WriteLayerMetadata,
-      CancelSupport,
-      CreateRenderer,
-      CreateLabeling,
-      ReloadData,
-      FeatureSymbology,
-    };
-
-    typedef QFlags<QgsVectorDataProvider::Capability> Capabilities;
-
-
     static const int EditingCapabilities;
 
     QgsVectorDataProvider( const QString &uri = QString(),
                            const QgsDataProvider::ProviderOptions &providerOptions = QgsDataProvider::ProviderOptions(),
-                           QgsDataProvider::ReadFlags flags = QgsDataProvider::ReadFlags() );
+                           Qgis::DataProviderReadFlags flags = Qgis::DataProviderReadFlags() );
 %Docstring
 Constructor for a vector data provider.
 
@@ -406,7 +373,7 @@ Creates a spatial index on the datasource (if supported by the provider type).
 Create an attribute index on the datasource
 %End
 
-    virtual QgsVectorDataProvider::Capabilities capabilities() const;
+    virtual Qgis::VectorProviderCapabilities capabilities() const;
 %Docstring
 Returns flags containing the supported capabilities
 \note, some capabilities may change depending on whether
@@ -488,16 +455,19 @@ check if provider supports type of field
 
     struct NativeType
     {
-      NativeType( const QString &typeDesc, const QString &typeName, QVariant::Type type, int minLen = 0, int maxLen = 0, int minPrec = 0, int maxPrec = 0, QVariant::Type subType = QVariant::Invalid );
+      NativeType( const QString &typeDesc, const QString &typeName, QMetaType::Type type, int minLen = 0, int maxLen = 0, int minPrec = 0, int maxPrec = 0, QMetaType::Type subType = QMetaType::Type::UnknownType );
 
-      QString mTypeDesc;
+ NativeType( const QString &typeDesc, const QString &typeName, QVariant::Type type, int minLen = 0, int maxLen = 0, int minPrec = 0, int maxPrec = 0, QVariant::Type subType = QVariant::Type::Invalid );
+
+
+          QString mTypeDesc;
       QString mTypeName;
-      QVariant::Type mType;
+      QMetaType::Type mType;
       int mMinLen;
       int mMaxLen;
       int mMinPrec;
       int mMaxPrec;
-      QVariant::Type mSubType;
+      QMetaType::Type mSubType;
     };
 
     QList< QgsVectorDataProvider::NativeType > nativeTypes() const;
@@ -565,7 +535,18 @@ providers will return ``None``.
 .. versionadded:: 3.6
 %End
 
-    static QVariant convertValue( QVariant::Type type, const QString &value );
+    static QVariant convertValue( QMetaType::Type type, const QString &value );
+%Docstring
+Convert ``value`` to ``type``
+%End
+
+ static QVariant convertValue( QVariant::Type type, const QString &value ) /Deprecated/;
+%Docstring
+Convert ``value`` to ``type``
+
+.. deprecated:: QGIS 3.38
+  use the method with a QMetaType.Type argument instead
+%End
 
     virtual QgsTransaction *transaction() const;
 %Docstring
@@ -700,13 +681,10 @@ Converts the ``geometry`` to the provider geometry type ``providerGeometryType``
 
 };
 
-QFlags<QgsVectorDataProvider::Capability> operator|(QgsVectorDataProvider::Capability f1, QFlags<QgsVectorDataProvider::Capability> f2);
-
-
 /************************************************************************
  * This file has been generated automatically from                      *
  *                                                                      *
  * src/core/vector/qgsvectordataprovider.h                              *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

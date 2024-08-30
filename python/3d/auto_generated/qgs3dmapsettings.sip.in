@@ -3,7 +3,7 @@
  *                                                                      *
  * src/3d/qgs3dmapsettings.h                                            *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -16,20 +16,21 @@ class Qgs3DMapSettings : QObject, QgsTemporalRangeObject
 {
 %Docstring(signature="appended")
 Definition of the world.
+
+.. warning::
+
+   Qgs3DMapSettings are a QObject subclass, and accordingly are not
+   safe for access across different threads. See Qgs3DRenderContext instead
+   for a safe snapshot of settings from Qgs3DMapSettings.
 %End
 
 %TypeHeaderCode
 #include "qgs3dmapsettings.h"
 %End
   public:
+
     Qgs3DMapSettings();
-%Docstring
-Constructor for Qgs3DMapSettings
-%End
     Qgs3DMapSettings( const Qgs3DMapSettings &other );
-%Docstring
-Copy constructor
-%End
     ~Qgs3DMapSettings();
 
 
@@ -48,18 +49,22 @@ Resolves references to other objects (map layers) after the call to :py:func:`~Q
 
     QgsRectangle extent() const;
 %Docstring
-Returns the 3D scene's 2D extent in project's CRS
+Returns the 3D scene's 2D extent in the 3D scene's CRS
+
+.. seealso:: :py:func:`crs`
 
 .. versionadded:: 3.30
 %End
 
     void setExtent( const QgsRectangle &extent );
 %Docstring
-Sets the 3D scene's 2D ``extent`` in project's CRS, while also setting the scene's origin to the extent's center
+Sets the 3D scene's 2D ``extent`` in the 3D scene's CRS, while also setting the scene's origin to the extent's center
 This needs to be called during initialization, as terrain will only be generated
 within this extent and layer 3D data will only be loaded within this extent too.
 
 .. seealso:: :py:func:`setOrigin`
+
+.. seealso:: :py:func:`setCrs`
 
 .. versionadded:: 3.30
 %End
@@ -75,10 +80,15 @@ with scenes spanning hundreds of kilometers and zooming in a lot).
 
 Need to look into more advanced techniques like "relative to center" or "relative to eye"
 to improve the precision.
+
+.. seealso:: :py:func:`origin`
 %End
+
     QgsVector3D origin() const;
 %Docstring
-Returns coordinates in map CRS at which 3D scene has origin (0,0,0)
+Returns coordinates in map CRS at which 3D scene has origin (0,0,0).
+
+.. seealso:: :py:func:`setOrigin`
 %End
 
     QgsVector3D mapToWorldCoordinates( const QgsVector3D &mapCoords ) const;
@@ -92,11 +102,16 @@ Converts 3D world coordinates to map coordinates (applies offset and turns (x,y,
 
     void setCrs( const QgsCoordinateReferenceSystem &crs );
 %Docstring
-Sets coordinate reference system used in the 3D scene
+Sets coordinate reference system used in the 3D scene.
+
+.. seealso:: :py:func:`crs`
 %End
+
     QgsCoordinateReferenceSystem crs() const;
 %Docstring
-Returns coordinate reference system used in the 3D scene
+Returns coordinate reference system used in the 3D scene.
+
+.. seealso:: :py:func:`setCrs`
 %End
 
     QgsCoordinateTransformContext transformContext() const;
@@ -529,7 +544,6 @@ Sets DPI used for conversion between real world units (e.g. mm) and pixels
 .. versionadded:: 3.10
 %End
 
-
     double outputDpi() const;
 %Docstring
 Returns DPI used for conversion between real world units (e.g. mm) and pixels
@@ -956,5 +970,5 @@ Emitted when the parameter to display 3d view's extent in the 2D canvas has chan
  *                                                                      *
  * src/3d/qgs3dmapsettings.h                                            *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

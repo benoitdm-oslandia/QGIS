@@ -39,12 +39,7 @@ class CORE_EXPORT QgsLayoutEffect : public QGraphicsEffect
 
   public:
 
-    /**
-     * Constructor for QgsLayoutEffect.
-     *
-     * \deprecated since QGIS 3.34 -- this class should not be used, it is non-stable and results in crashes. See https://bugreports.qt.io/browse/QTBUG-58501.
-     */
-    Q_DECL_DEPRECATED QgsLayoutEffect() SIP_DEPRECATED = default;
+    QgsLayoutEffect() = default;
 
     /**
      * Sets the composition (blending) \a mode used for rendering

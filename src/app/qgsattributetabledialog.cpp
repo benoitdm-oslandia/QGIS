@@ -217,16 +217,18 @@ QgsAttributeTableDialog::QgsAttributeTableDialog( QgsVectorLayer *layer, QgsAttr
   {
     request.setFilterExpression( filterExpression );
   }
+
+  // If sort expression requires geometry, we'll need to fetch it
+  needsGeom |= mLayer && QgsExpression( mLayer->attributeTableConfig().sortExpression() ).needsGeometry();
   if ( !needsGeom )
     request.setFlags( Qgis::FeatureRequestFlag::NoGeometry );
-
 
   // Initialize dual view
   if ( mLayer )
   {
     request.setSubsetOfAttributes( mMainView->requiredAttributes( mLayer ) );
     mMainView->init( mLayer, QgisApp::instance()->mapCanvas(), request, editorContext, false );
-    QgsAttributeTableConfig config = mLayer->attributeTableConfig();
+    const QgsAttributeTableConfig config = mLayer->attributeTableConfig();
     mMainView->setAttributeTableConfig( config );
     mFeatureFilterWidget->init( mLayer, editorContext, mMainView, QgisApp::instance()->messageBar(), QgsMessageBar::defaultMessageTimeout() );
   }
@@ -325,13 +327,13 @@ QgsAttributeTableDialog::QgsAttributeTableDialog( QgsVectorLayer *layer, QgsAttr
   mActionFeatureActions->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mAction.svg" ) ) );
 
   // toggle editing
-  QgsVectorDataProvider::Capabilities capabilities = ( mLayer && mLayer->dataProvider() ) ? mLayer->dataProvider()->capabilities() : QgsVectorDataProvider::Capabilities();
-  bool canChangeAttributes = capabilities & QgsVectorDataProvider::ChangeAttributeValues;
-  bool canDeleteFeatures = capabilities & QgsVectorDataProvider::DeleteFeatures;
-  bool canAddAttributes = capabilities & QgsVectorDataProvider::AddAttributes;
-  bool canDeleteAttributes = capabilities & QgsVectorDataProvider::DeleteAttributes;
-  bool canAddFeatures = capabilities & QgsVectorDataProvider::AddFeatures;
-  bool canReload = capabilities & QgsVectorDataProvider::ReloadData;
+  Qgis::VectorProviderCapabilities capabilities = ( mLayer && mLayer->dataProvider() ) ? mLayer->dataProvider()->capabilities() : Qgis::VectorProviderCapabilities();
+  bool canChangeAttributes = capabilities & Qgis::VectorProviderCapability::ChangeAttributeValues;
+  bool canDeleteFeatures = capabilities & Qgis::VectorProviderCapability::DeleteFeatures;
+  bool canAddAttributes = capabilities & Qgis::VectorProviderCapability::AddAttributes;
+  bool canDeleteAttributes = capabilities & Qgis::VectorProviderCapability::DeleteAttributes;
+  bool canAddFeatures = capabilities & Qgis::VectorProviderCapability::AddFeatures;
+  bool canReload = capabilities & Qgis::VectorProviderCapability::ReloadData;
 
   mActionToggleEditing->blockSignals( true );
   mActionToggleEditing->setCheckable( true );
@@ -454,7 +456,7 @@ void QgsAttributeTableDialog::updateTitle()
   else
     mRunFieldCalc->setText( tr( "Update Filtered" ) );
 
-  bool canDeleteFeatures = mLayer->dataProvider()->capabilities() & QgsVectorDataProvider::DeleteFeatures;
+  bool canDeleteFeatures = mLayer->dataProvider()->capabilities() & Qgis::VectorProviderCapability::DeleteFeatures;
   bool enabled = mLayer->selectedFeatureCount() > 0;
   mRunFieldCalcSelected->setEnabled( enabled );
   mActionDeleteSelected->setEnabled( canDeleteFeatures && mLayer->isEditable() && enabled );
@@ -886,11 +888,11 @@ void QgsAttributeTableDialog::editingToggled()
   mActionToggleEditing->blockSignals( false );
 
   const auto caps = mLayer->dataProvider()->capabilities();
-  const bool canChangeAttributes = caps & QgsVectorDataProvider::ChangeAttributeValues;
-  const bool canDeleteFeatures = caps & QgsVectorDataProvider::DeleteFeatures;
-  const bool canAddAttributes = caps & QgsVectorDataProvider::AddAttributes;
-  const bool canDeleteAttributes = caps & QgsVectorDataProvider::DeleteAttributes;
-  const bool canAddFeatures = caps & QgsVectorDataProvider::AddFeatures;
+  const bool canChangeAttributes = caps & Qgis::VectorProviderCapability::ChangeAttributeValues;
+  const bool canDeleteFeatures = caps & Qgis::VectorProviderCapability::DeleteFeatures;
+  const bool canAddAttributes = caps & Qgis::VectorProviderCapability::AddAttributes;
+  const bool canDeleteAttributes = caps & Qgis::VectorProviderCapability::DeleteAttributes;
+  const bool canAddFeatures = caps & Qgis::VectorProviderCapability::AddFeatures;
   mActionAddAttribute->setEnabled( ( canChangeAttributes || canAddAttributes ) && isEditable );
   mActionRemoveAttribute->setEnabled( canDeleteAttributes && isEditable );
   mActionDeleteSelected->setEnabled( canDeleteFeatures && isEditable && mLayer->selectedFeatureCount() > 0 );

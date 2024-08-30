@@ -237,9 +237,9 @@ QgsGrassProvider::QgsGrassProvider( const QString &uri )
 
   // TODO: types according to database
   setNativeTypes( QList<NativeType>()
-                  << QgsVectorDataProvider::NativeType( tr( "Whole number (integer)" ), QStringLiteral( "integer" ), QVariant::Int, -1, -1, -1, -1 )
-                  << QgsVectorDataProvider::NativeType( tr( "Decimal number (real)" ), QStringLiteral( "double precision" ), QVariant::Double, -1, -1, -1, -1 )
-                  << QgsVectorDataProvider::NativeType( tr( "Text" ), QStringLiteral( "text" ), QVariant::String )
+                  << QgsVectorDataProvider::NativeType( tr( "Whole number (integer)" ), QStringLiteral( "integer" ), QMetaType::Type::Int, -1, -1, -1, -1 )
+                  << QgsVectorDataProvider::NativeType( tr( "Decimal number (real)" ), QStringLiteral( "double precision" ), QMetaType::Type::Double, -1, -1, -1, -1 )
+                  << QgsVectorDataProvider::NativeType( tr( "Text" ), QStringLiteral( "text" ), QMetaType::Type::QString )
                   // TODO:
                   // << QgsVectorDataProvider::NativeType( tr( "Date" ), "date", QVariant::Date, 8, 8 );
                 );
@@ -269,22 +269,22 @@ QgsGrassProvider::~QgsGrassProvider()
   }
 }
 
-QgsVectorDataProvider::Capabilities QgsGrassProvider::capabilities() const
+Qgis::VectorProviderCapabilities QgsGrassProvider::capabilities() const
 {
   // Because of bug in GRASS https://trac.osgeo.org/grass/ticket/2775 it is not possible
   // close db drivers in random order on Unix and probably Mac -> disable editing if another layer is edited
 #ifndef Q_OS_WIN
   if ( sEditedCount > 0 && !mEditBuffer )
   {
-    return QgsVectorDataProvider::Capabilities();
+    return Qgis::VectorProviderCapabilities();
   }
 #endif
   // for now, only one map may be edited at time
   if ( mEditBuffer || ( mLayer && mLayer->map() && !mLayer->map()->isEdited() ) )
   {
-    return AddFeatures | DeleteFeatures | ChangeGeometries | AddAttributes | DeleteAttributes | ChangeAttributeValues;
+    return Qgis::VectorProviderCapability::AddFeatures | Qgis::VectorProviderCapability::DeleteFeatures | Qgis::VectorProviderCapability::ChangeGeometries | Qgis::VectorProviderCapability::AddAttributes | Qgis::VectorProviderCapability::DeleteAttributes | Qgis::VectorProviderCapability::ChangeAttributeValues;
   }
-  return QgsVectorDataProvider::Capabilities();
+  return Qgis::VectorProviderCapabilities();
 }
 
 bool QgsGrassProvider::openLayer()
@@ -1039,24 +1039,24 @@ bool QgsGrassProvider::isTopoType( int layerType )
 
 void QgsGrassProvider::setTopoFields()
 {
-  mTopoFields.append( QgsField( QStringLiteral( "id" ), QVariant::Int ) );
+  mTopoFields.append( QgsField( QStringLiteral( "id" ), QMetaType::Type::Int ) );
 
   if ( mLayerType == TopoPoint )
   {
-    mTopoFields.append( QgsField( QStringLiteral( "type" ), QVariant::String ) );
-    mTopoFields.append( QgsField( QStringLiteral( "node" ), QVariant::Int ) );
+    mTopoFields.append( QgsField( QStringLiteral( "type" ), QMetaType::Type::QString ) );
+    mTopoFields.append( QgsField( QStringLiteral( "node" ), QMetaType::Type::Int ) );
   }
   else if ( mLayerType == TopoLine )
   {
-    mTopoFields.append( QgsField( QStringLiteral( "type" ), QVariant::String ) );
-    mTopoFields.append( QgsField( QStringLiteral( "node1" ), QVariant::Int ) );
-    mTopoFields.append( QgsField( QStringLiteral( "node2" ), QVariant::Int ) );
-    mTopoFields.append( QgsField( QStringLiteral( "left" ), QVariant::Int ) );
-    mTopoFields.append( QgsField( QStringLiteral( "right" ), QVariant::Int ) );
+    mTopoFields.append( QgsField( QStringLiteral( "type" ), QMetaType::Type::QString ) );
+    mTopoFields.append( QgsField( QStringLiteral( "node1" ), QMetaType::Type::Int ) );
+    mTopoFields.append( QgsField( QStringLiteral( "node2" ), QMetaType::Type::Int ) );
+    mTopoFields.append( QgsField( QStringLiteral( "left" ), QMetaType::Type::Int ) );
+    mTopoFields.append( QgsField( QStringLiteral( "right" ), QMetaType::Type::Int ) );
   }
   else if ( mLayerType == TopoNode )
   {
-    mTopoFields.append( QgsField( QStringLiteral( "lines" ), QVariant::String ) );
+    mTopoFields.append( QgsField( QStringLiteral( "lines" ), QMetaType::Type::QString ) );
   }
 }
 

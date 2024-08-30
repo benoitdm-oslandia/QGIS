@@ -17,7 +17,6 @@
 
 #include "qgsmaplayermodel.h"
 #include "qgsproject.h"
-#include "qgsapplication.h"
 #include "qgsvectorlayer.h"
 #include "qgsiconutils.h"
 #include "qgsmaplayerlistutils_p.h"
@@ -368,21 +367,27 @@ QVariant QgsMapLayerModel::data( const QModelIndex &index, int role ) const
       if ( layer )
       {
         QStringList parts;
-        QString title = layer->title().isEmpty() ? layer->shortName() : layer->title();
+        QString title = !layer->metadata().title().isEmpty() ? layer->metadata().title() : ( layer->serverProperties()->title().isEmpty() ? layer->serverProperties()->shortName() : layer->serverProperties()->title() );
         if ( title.isEmpty() )
           title = layer->name();
         title = "<b>" + title + "</b>";
         if ( layer->isSpatial() && layer->crs().isValid() )
         {
+          QString layerCrs = layer->crs().authid();
+          if ( !std::isnan( layer->crs().coordinateEpoch() ) )
+          {
+            layerCrs += QStringLiteral( " @ %1" ).arg( qgsDoubleToString( layer->crs().coordinateEpoch(), 3 ) );
+          }
           if ( QgsVectorLayer *vl = qobject_cast<QgsVectorLayer *>( layer ) )
-            title = tr( "%1 (%2 - %3)" ).arg( title, QgsWkbTypes::displayString( vl->wkbType() ), layer->crs().authid() );
+            title = tr( "%1 (%2 - %3)" ).arg( title, QgsWkbTypes::displayString( vl->wkbType() ), layerCrs );
           else
-            title = tr( "%1 (%2) " ).arg( title, layer->crs().authid() );
+            title = tr( "%1 (%2)" ).arg( title, layerCrs );
         }
         parts << title;
 
-        if ( !layer->abstract().isEmpty() )
-          parts << "<br/>" + layer->abstract().replace( QLatin1String( "\n" ), QLatin1String( "<br/>" ) );
+        QString abstract = !layer->metadata().abstract().isEmpty() ? layer->metadata().abstract() : layer->serverProperties()->abstract();
+        if ( !abstract.isEmpty() )
+          parts << "<br/>" + abstract.replace( QLatin1String( "\n" ), QLatin1String( "<br/>" ) );
         parts << "<i>" + layer->publicSource() + "</i>";
         return parts.join( QLatin1String( "<br/>" ) );
       }

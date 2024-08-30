@@ -73,10 +73,7 @@ class CORE_EXPORT QgsSymbolLayerId
       : mSymbolKey( key ), mIndexPath( { indexPath } )
     {}
 
-    //! Default copy constructor
     QgsSymbolLayerId( const QgsSymbolLayerId &other ) = default;
-
-    //! Default assignment operator
     QgsSymbolLayerId &operator=( const QgsSymbolLayerId &other ) = default;
 
     /**
@@ -91,7 +88,6 @@ class CORE_EXPORT QgsSymbolLayerId
 
     // TODO c++20 - replace with = default
 
-    //! Equality operator
     bool operator==( const QgsSymbolLayerId &other ) const
     {
       return ( mSymbolKey == other.mSymbolKey && mIndexPath == other.mIndexPath );
@@ -137,7 +133,7 @@ class CORE_EXPORT QgsSymbolLayerId
 class CORE_EXPORT QgsSymbolLayerReference
 {
   public:
-    //! Default constructor
+
     QgsSymbolLayerReference() = default;
 
     /**
@@ -177,7 +173,6 @@ class CORE_EXPORT QgsSymbolLayerReference
      */
     QString symbolLayerIdV2() const { return mSymbolLayerId; }
 
-    //! Comparison operator
     bool operator==( const QgsSymbolLayerReference &other ) const
     {
       return mLayerId == other.mLayerId
@@ -208,7 +203,7 @@ class CORE_EXPORT QgsSymbolLayerReference
     QString mSymbolLayerId;
 };
 
-Q_DECL_DEPRECATED inline uint qHash( const QgsSymbolLayerId &id )
+inline uint qHash( const QgsSymbolLayerId &id )
 {
   return qHash( id.symbolKey() ) ^ qHash( id.symbolLayerIndexPath() );
 }

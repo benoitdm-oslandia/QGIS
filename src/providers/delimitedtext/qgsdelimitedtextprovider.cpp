@@ -60,22 +60,22 @@ static const int SUBSET_ID_THRESHOLD_FACTOR = 10;
 QRegularExpression QgsDelimitedTextProvider::sWktPrefixRegexp( QStringLiteral( "^\\s*(?:\\d+\\s+|SRID\\=\\d+\\;)" ), QRegularExpression::CaseInsensitiveOption );
 QRegularExpression QgsDelimitedTextProvider::sCrdDmsRegexp( QStringLiteral( "^\\s*(?:([-+nsew])\\s*)?(\\d{1,3})(?:[^0-9.]+([0-5]?\\d))?[^0-9.]+([0-5]?\\d(?:\\.\\d+)?)[^0-9.]*([-+nsew])?\\s*$" ), QRegularExpression::CaseInsensitiveOption );
 
-QgsDelimitedTextProvider::QgsDelimitedTextProvider( const QString &uri, const ProviderOptions &options, QgsDataProvider::ReadFlags flags )
+QgsDelimitedTextProvider::QgsDelimitedTextProvider( const QString &uri, const ProviderOptions &options, Qgis::DataProviderReadFlags flags )
   : QgsVectorDataProvider( uri, options, flags )
 {
 
   // Add supported types to enable creating expression fields in field calculator
   setNativeTypes( QList< NativeType >()
-                  << QgsVectorDataProvider::NativeType( QgsVariantUtils::typeToDisplayString( QVariant::Int ), QStringLiteral( "integer" ), QVariant::Int, 0, 10 )
-                  << QgsVectorDataProvider::NativeType( QgsVariantUtils::typeToDisplayString( QVariant::LongLong ), QStringLiteral( "longlong" ), QVariant::LongLong )
-                  << QgsVectorDataProvider::NativeType( QgsVariantUtils::typeToDisplayString( QVariant::Double ), QStringLiteral( "double" ), QVariant::Double, -1, -1, -1, -1 )
-                  << QgsVectorDataProvider::NativeType( QgsVariantUtils::typeToDisplayString( QVariant::Bool ), QStringLiteral( "bool" ), QVariant::Bool, -1, -1, -1, -1 )
-                  << QgsVectorDataProvider::NativeType( tr( "Text, unlimited length (text)" ), QStringLiteral( "text" ), QVariant::String, -1, -1, -1, -1 )
+                  << QgsVectorDataProvider::NativeType( QgsVariantUtils::typeToDisplayString( QMetaType::Type::Int ), QStringLiteral( "integer" ), QMetaType::Type::Int, 0, 10 )
+                  << QgsVectorDataProvider::NativeType( QgsVariantUtils::typeToDisplayString( QMetaType::Type::LongLong ), QStringLiteral( "longlong" ), QMetaType::Type::LongLong )
+                  << QgsVectorDataProvider::NativeType( QgsVariantUtils::typeToDisplayString( QMetaType::Type::Double ), QStringLiteral( "double" ), QMetaType::Type::Double, -1, -1, -1, -1 )
+                  << QgsVectorDataProvider::NativeType( QgsVariantUtils::typeToDisplayString( QMetaType::Type::Bool ), QStringLiteral( "bool" ), QMetaType::Type::Bool, -1, -1, -1, -1 )
+                  << QgsVectorDataProvider::NativeType( tr( "Text, unlimited length (text)" ), QStringLiteral( "text" ), QMetaType::Type::QString, -1, -1, -1, -1 )
 
                   // date type
-                  << QgsVectorDataProvider::NativeType( QgsVariantUtils::typeToDisplayString( QVariant::Date ), QStringLiteral( "date" ), QVariant::Date, -1, -1, -1, -1 )
-                  << QgsVectorDataProvider::NativeType( QgsVariantUtils::typeToDisplayString( QVariant::Time ), QStringLiteral( "time" ), QVariant::Time, -1, -1, -1, -1 )
-                  << QgsVectorDataProvider::NativeType( QgsVariantUtils::typeToDisplayString( QVariant::DateTime ), QStringLiteral( "datetime" ), QVariant::DateTime, -1, -1, -1, -1 )
+                  << QgsVectorDataProvider::NativeType( QgsVariantUtils::typeToDisplayString( QMetaType::Type::QDate ), QStringLiteral( "date" ), QMetaType::Type::QDate, -1, -1, -1, -1 )
+                  << QgsVectorDataProvider::NativeType( QgsVariantUtils::typeToDisplayString( QMetaType::Type::QTime ), QStringLiteral( "time" ), QMetaType::Type::QTime, -1, -1, -1, -1 )
+                  << QgsVectorDataProvider::NativeType( QgsVariantUtils::typeToDisplayString( QMetaType::Type::QDateTime ), QStringLiteral( "datetime" ), QMetaType::Type::QDateTime, -1, -1, -1, -1 )
                 );
 
   QgsDebugMsgLevel( "Delimited text file uri is " + uri, 2 );
@@ -190,7 +190,7 @@ QgsDelimitedTextProvider::QgsDelimitedTextProvider( const QString &uri, const Pr
   // geometry type (for Wkt), extents, etc.  Parameter value subset.isEmpty()
   // avoid redundant building indexes if we will be building a subset string,
   // in which case indexes will be rebuilt.
-  scanFile( subset.isEmpty() && ! flags.testFlag( QgsDataProvider::ReadFlag::SkipGetExtent ), /* force full scan */ false );
+  scanFile( subset.isEmpty() && ! flags.testFlag( Qgis::DataProviderReadFlag::SkipGetExtent ), /* force full scan */ false );
 
   if ( ! subset.isEmpty() )
   {
@@ -743,7 +743,7 @@ void QgsDelimitedTextProvider::scanFile( bool buildIndexes, bool forceFullScan, 
     }
 
     // In case of fast scan we exit after the third record (to avoid detecting booleans)
-    if ( ! forceFullScan && mReadFlags.testFlag( ReadFlag::SkipFullScan ) && mNumberFeatures > 2 )
+    if ( ! forceFullScan && mReadFlags.testFlag( Qgis::DataProviderReadFlag::SkipFullScan ) && mNumberFeatures > 2 )
     {
       break;
     }
@@ -778,7 +778,7 @@ void QgsDelimitedTextProvider::scanFile( bool buildIndexes, bool forceFullScan, 
 
     // Add the field index lookup for the column
     attributeColumns.append( fieldIdx );
-    QVariant::Type fieldType = QVariant::String;
+    QMetaType::Type fieldType = QMetaType::Type::QString;
     QString typeName = QStringLiteral( "text" );
 
     // User-defined types take precedence over all
@@ -845,32 +845,32 @@ void QgsDelimitedTextProvider::scanFile( bool buildIndexes, bool forceFullScan, 
 
     if ( typeName == QLatin1String( "bool" ) )
     {
-      fieldType = QVariant::Bool;
+      fieldType = QMetaType::Type::Bool;
       mFieldBooleanLiterals.insert( fieldIdx - fieldIdxOffset, boolCandidates[fieldIdx] );
     }
     else if ( typeName == QLatin1String( "integer" ) )
     {
-      fieldType = QVariant::Int;
+      fieldType = QMetaType::Type::Int;
     }
     else if ( typeName == QLatin1String( "longlong" ) )
     {
-      fieldType = QVariant::LongLong;
+      fieldType = QMetaType::Type::LongLong;
     }
     else if ( typeName == QLatin1String( "double" ) )
     {
-      fieldType = QVariant::Double;
+      fieldType = QMetaType::Type::Double;
     }
     else if ( typeName == QLatin1String( "datetime" ) )
     {
-      fieldType = QVariant::DateTime;
+      fieldType = QMetaType::Type::QDateTime;
     }
     else if ( typeName == QLatin1String( "date" ) )
     {
-      fieldType = QVariant::Date;
+      fieldType = QMetaType::Type::QDate;
     }
     else if ( typeName == QLatin1String( "time" ) )
     {
-      fieldType = QVariant::Time;
+      fieldType = QMetaType::Type::QTime;
     }
     else
     {
@@ -1369,9 +1369,9 @@ bool QgsDelimitedTextProvider::isValid() const
   return mLayerValid;
 }
 
-QgsVectorDataProvider::Capabilities QgsDelimitedTextProvider::capabilities() const
+Qgis::VectorProviderCapabilities QgsDelimitedTextProvider::capabilities() const
 {
-  return SelectAtId | CreateSpatialIndex | CircularGeometries;
+  return Qgis::VectorProviderCapability::SelectAtId | Qgis::VectorProviderCapability::CreateSpatialIndex | Qgis::VectorProviderCapability::CircularGeometries;
 }
 
 QgsCoordinateReferenceSystem QgsDelimitedTextProvider::crs() const
@@ -1480,7 +1480,7 @@ QList<Qgis::LayerType> QgsDelimitedTextProviderMetadata::supportedLayerTypes() c
   return { Qgis::LayerType::Vector };
 }
 
-QgsDataProvider *QgsDelimitedTextProviderMetadata::createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, QgsDataProvider::ReadFlags flags )
+QgsDataProvider *QgsDelimitedTextProviderMetadata::createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, Qgis::DataProviderReadFlags flags )
 {
   return new QgsDelimitedTextProvider( uri, options, flags );
 }

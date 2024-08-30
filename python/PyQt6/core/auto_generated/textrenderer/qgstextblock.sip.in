@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/textrenderer/qgstextblock.h                                 *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -34,6 +34,16 @@ Constructor for an empty text block.
     explicit QgsTextBlock( const QgsTextFragment &fragment );
 %Docstring
 Constructor for a QgsTextBlock consisting of a single text ``fragment``.
+%End
+
+    static QgsTextBlock fromPlainText( const QString &text, const QgsTextCharacterFormat &format = QgsTextCharacterFormat() );
+%Docstring
+Constructor for QgsTextBlock consisting of a plain ``text``, and optional character ``format``.
+
+If ``text`` contains tab characters they will be appended as separate text fragments
+within the block, consisting of just the tab character.
+
+.. versionadded:: 3.38
 %End
 
     QString toPlainText() const;
@@ -112,5 +122,5 @@ Returns the fragment at the specified ``index``.
  *                                                                      *
  * src/core/textrenderer/qgstextblock.h                                 *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

@@ -3,7 +3,7 @@
  *                                                                      *
  * src/core/expression/qgsexpression.h                                  *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/
 
 
@@ -182,7 +182,6 @@ Gets list of columns referenced by the expression.
    pre-calculated nodes, regardless of their actual referenced columns.
    If you are seeking to use these functions to introspect an expression you must
    take care to do this with an unprepared expression.
-
 
 .. seealso:: :py:func:`referencedAttributeIndexes`
 %End
@@ -550,7 +549,7 @@ quotations where required.
 .. seealso:: :py:func:`quotedColumnRef`
 %End
 
-    static QString quotedValue( const QVariant &value, QVariant::Type type );
+    static QString quotedValue( const QVariant &value, QMetaType::Type type );
 %Docstring
 Returns a string representation of a literal value, including appropriate
 quotations where required.
@@ -561,6 +560,22 @@ quotations where required.
 .. seealso:: :py:func:`quotedString`
 
 .. seealso:: :py:func:`quotedColumnRef`
+%End
+
+ static QString quotedValue( const QVariant &value, QVariant::Type type ) /Deprecated/;
+%Docstring
+Returns a string representation of a literal value, including appropriate
+quotations where required.
+
+:param value: value to convert to a string representation
+:param type: value type
+
+.. seealso:: :py:func:`quotedString`
+
+.. seealso:: :py:func:`quotedColumnRef`
+
+.. deprecated:: QGIS 3.38
+  use the method with a QMetaType.Type argument instead
 %End
 
 
@@ -645,7 +660,7 @@ length, and presents text representations of non numeric/text types (e.g., geome
 :return: formatted string, may contain HTML formatting characters if ``htmlOutput`` is ``True``
 %End
 
-    static QString createFieldEqualityExpression( const QString &fieldName, const QVariant &value, QVariant::Type fieldType = QVariant::Type::Invalid );
+    static QString createFieldEqualityExpression( const QString &fieldName, const QVariant &value, QMetaType::Type fieldType = QMetaType::Type::UnknownType );
 %Docstring
 Create an expression allowing to evaluate if a field is equal to a
 value. The value may be null.
@@ -655,6 +670,21 @@ value. The value may be null.
 :param fieldType: the type of the field on the left side used to quote the value. If not given, the value type is used instead
 
 :return: the expression to evaluate field equality
+%End
+
+ static QString createFieldEqualityExpression( const QString &fieldName, const QVariant &value, QVariant::Type fieldType ) /Deprecated/;
+%Docstring
+Create an expression allowing to evaluate if a field is equal to a
+value. The value may be null.
+
+:param fieldName: the name of the field
+:param value: the value of the field
+:param fieldType: the type of the field on the left side used to quote the value. If not given, the value type is used instead
+
+:return: the expression to evaluate field equality
+
+.. deprecated:: QGIS 3.38
+  use the method with a QMetaType.Type argument instead
 %End
 
     static bool isFieldEqualityExpression( const QString &expression, QString &field /Out/, QVariant &value /Out/ );
@@ -701,5 +731,5 @@ Returns ``True`` if the given ``expressions`` could be converted to an IN type e
  *                                                                      *
  * src/core/expression/qgsexpression.h                                  *
  *                                                                      *
- * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ * Do not edit manually ! Edit header and run scripts/sipify.py again   *
  ************************************************************************/

@@ -32,7 +32,6 @@
 #include "qgsrenderedfeaturehandlerinterface.h"
 #include "qgspallabeling.h"
 #include "qgsvectorlayerlabeling.h"
-#include "qgstemporalrangeobject.h"
 #include "qgsfontutils.h"
 #include "qgsannotationlayer.h"
 #include "qgsannotationmarkeritem.h"
@@ -74,6 +73,7 @@ class TestQgsLayoutMap : public QgsTest
     void layoutToMapCoordsTransform();
     void labelBlockingRegions();
     void testSimplificationMethod();
+    void testMaskSettings();
     void testRenderedFeatureHandler();
     void testLayeredExport();
     void testLayeredExportLabelsByLayer();
@@ -880,24 +880,42 @@ void TestQgsLayoutMap::testSimplificationMethod()
   l.renderContext().mIsPreviewRender = false;
   QgsMapSettings settings = map->mapSettings( map->extent(), map->rect().size(), 300, false );
   // should default to no simplification during exports
-  QCOMPARE( settings.simplifyMethod().simplifyHints(), QgsVectorSimplifyMethod::NoSimplification );
+  QCOMPARE( settings.simplifyMethod().simplifyHints(), Qgis::VectorRenderingSimplificationFlags() );
   QVERIFY( !( settings.flags() & Qgis::MapSettingsFlag::UseRenderingOptimization ) );
   // set a simplification method to use
   QgsVectorSimplifyMethod method;
-  method.setSimplifyHints( QgsVectorSimplifyMethod::GeometrySimplification );
+  method.setSimplifyHints( Qgis::VectorRenderingSimplificationFlag::GeometrySimplification );
   l.renderContext().setSimplifyMethod( method );
 
   // should still have no simplification override for preview renders
   l.renderContext().mIsPreviewRender = true;
   settings = map->mapSettings( map->extent(), map->rect().size(), 300, false );
-  QCOMPARE( settings.simplifyMethod().simplifyHints(), QgsVectorSimplifyMethod::NoSimplification );
+  QCOMPARE( settings.simplifyMethod().simplifyHints(), Qgis::VectorRenderingSimplificationFlags() );
   QVERIFY( settings.flags() & Qgis::MapSettingsFlag::UseRenderingOptimization );
 
   // for exports, we respect the layout context's simplify method
   l.renderContext().mIsPreviewRender = false;
   settings = map->mapSettings( map->extent(), map->rect().size(), 300, false );
-  QCOMPARE( settings.simplifyMethod().simplifyHints(), QgsVectorSimplifyMethod::GeometrySimplification );
+  QCOMPARE( settings.simplifyMethod().simplifyHints(), Qgis::VectorRenderingSimplificationFlag::GeometrySimplification );
   QVERIFY( settings.flags() & Qgis::MapSettingsFlag::UseRenderingOptimization );
+}
+
+void TestQgsLayoutMap::testMaskSettings()
+{
+  // ensure map respects layout render context mask settings
+  const QgsRectangle extent( 2000, 2800, 2500, 2900 );
+  QgsLayout l( QgsProject::instance() );
+
+  QgsLayoutItemMap *map = new QgsLayoutItemMap( &l );
+  map->setCrs( QgsCoordinateReferenceSystem( QStringLiteral( "EPSG:4326" ) ) );
+  map->attemptSetSceneRect( QRectF( 30, 60, 200, 100 ) );
+  map->setExtent( extent );
+  l.addLayoutItem( map );
+
+  l.renderContext().mIsPreviewRender = false;
+  l.renderContext().maskSettings().setSimplificationTolerance( 11 );
+  QgsMapSettings settings = map->mapSettings( map->extent(), map->rect().size(), 300, false );
+  QCOMPARE( settings.maskSettings().simplifyTolerance(), 11 );
 }
 
 class TestHandler : public QgsRenderedFeatureHandlerInterface
