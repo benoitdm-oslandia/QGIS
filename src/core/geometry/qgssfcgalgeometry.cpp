@@ -269,9 +269,14 @@ QgsAbstractGeometry *QgsSfcgalGeometry::toCurveType() const
   return mQgsGeom->toCurveType();
 }
 
-QgsAbstractGeometry *QgsSfcgalGeometry::snappedToGrid( double hSpacing, double vSpacing, double dSpacing, double mSpacing ) const
+QgsAbstractGeometry *QgsSfcgalGeometry::snappedToGrid( double hSpacing, double vSpacing, double dSpacing, double mSpacing, bool removeRedundantPoints ) const
 {
-  return mQgsGeom->snappedToGrid( hSpacing, vSpacing, dSpacing, mSpacing );
+  return mQgsGeom->snappedToGrid( hSpacing, vSpacing, dSpacing, mSpacing, removeRedundantPoints );
+}
+
+QgsAbstractGeometry *QgsSfcgalGeometry::simplifyByDistance( double tolerance ) const
+{
+  return mQgsGeom->simplifyByDistance( tolerance );
 }
 
 bool QgsSfcgalGeometry::removeDuplicateNodes( double, bool )

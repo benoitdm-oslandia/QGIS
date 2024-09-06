@@ -81,7 +81,7 @@ class CORE_EXPORT QgsSfcgalGeometry: public QgsAbstractGeometry
     bool deleteVertex( QgsVertexId position ) override;
     double segmentLength( QgsVertexId startVertex ) const override;
     QgsAbstractGeometry *toCurveType() const override;
-    QgsAbstractGeometry *snappedToGrid( double hSpacing, double vSpacing, double dSpacing, double mSpacing ) const override;
+    QgsAbstractGeometry *snappedToGrid( double hSpacing, double vSpacing, double dSpacing, double mSpacing, bool removeRedundantPoints = false ) const override;
     bool removeDuplicateNodes( double epsilon, bool useZValues ) override;
     double vertexAngle( QgsVertexId vertex ) const override;
     int vertexCount( int part, int ring ) const override;
@@ -94,6 +94,7 @@ class CORE_EXPORT QgsSfcgalGeometry: public QgsAbstractGeometry
     void swapXy() override;
     bool isValid( QString &error, Qgis::GeometryValidityFlags flags ) const override;
     bool transform( QgsAbstractGeometryTransformer *transformer, QgsFeedback *feedback ) override;
+    QgsAbstractGeometry *simplifyByDistance( double tolerance ) const override;
 
 
     QgsSfcgalGeometry *intersection( const QgsAbstractGeometry *geom, QString *errorMsg = nullptr, const QgsGeometryParameters &parameters = QgsGeometryParameters() ) const;
