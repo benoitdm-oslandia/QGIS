@@ -146,27 +146,17 @@ QgsSfcgalEngine::QgsSfcgalEngine( sfcgal::shared_ptr geometry, double precision 
 
 std::unique_ptr<QgsAbstractGeometry> QgsSfcgalEngine::toAbsGeometry( const sfcgal::geometry *geom )
 {
-  sfcgal::errorHandler()->clearText();
   std::unique_ptr<QgsAbstractGeometry> out;
-  char *wkbHex;
-  size_t len = 0;
-  sfcgal_geometry_as_wkb( geom, &wkbHex, &len );
+  QgsConstWkbPtr ptr = QgsSfcgalEngine::toWkb( geom );
   if ( sfcgal::errorHandler()->hasFailed() )
     return nullptr;
 
-  wkbHex [len] = 0; // temp fix bad ended array
-
-  int byteLen = 0;
-  unsigned char *wkbBytesData = sfcgal::hex2bytes( wkbHex, &byteLen );
-
-  QgsConstWkbPtr ptr( ( const unsigned char * )wkbBytesData, byteLen );
   out = QgsGeometryFactory::geomFromWkb( ptr );
   if ( !out )
   {
-    QgsConstWkbPtr ptrError( ( const unsigned char * )wkbBytesData, byteLen );
+    QgsConstWkbPtr ptrError = QgsSfcgalEngine::toWkb( geom );
     QgsDebugError( QStringLiteral( "Wkb contains unmanaged geometry type %1" ).arg( static_cast<int>( ptrError.readHeader() ) ) );
   }
-  delete [] wkbBytesData;
 
   return out;
 }
@@ -768,7 +758,7 @@ bool QgsSfcgalEngine::isValid( QString *errorMsg, bool, QgsGeometry *errorLoc ) 
   if ( location && errorLoc )
   {
     std::unique_ptr<QgsAbstractGeometry> locationGeom = toAbsGeometry( location );
-    errorLoc->addPart( locationGeom.release() );
+    errorLoc->addPartV2( locationGeom.release() );
   }
 
   return result;
