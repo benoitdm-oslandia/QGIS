@@ -3302,7 +3302,7 @@ void TestQgsGeometry::sfcgalDifference3d()
   // second diff triangulated polygons
   {
     QgsSfcgalGeometry *scDiffGeom = scTriangulatedA->difference( scTriangulatedB, &errorMsg );
-    QCOMPARE( scDiffGeom->wkbType(), Qgis::WkbType::MultiSurfaceZ );
+    QCOMPARE( scDiffGeom->wkbType(), Qgis::WkbType::TINZ );
     QVERIFY2( scDiffGeom, ( QString( "diffGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
   }
   {
@@ -3315,7 +3315,7 @@ void TestQgsGeometry::sfcgalDifference3d()
     QGSCOMPARELONGSTR( "sfcgal", "difference3d_triangulated_c.wkt", prepareWkt( scTriangulatedC->asWkt() ) );
 
     QVERIFY2( scDiffGeom, ( QString( "diffGeom is NULL. sfcgal msg: '%1'" ).arg( errorMsg ) ).toStdString().c_str() );
-    QCOMPARE( scDiffGeom->wkbType(), Qgis::WkbType::MultiSurfaceZ );
+    QCOMPARE( scDiffGeom->wkbType(), Qgis::WkbType::TINZ );
 
     QGSCOMPARELONGSTR( "sfcgal", "difference3d_diff_geom.wkt", prepareWkt( scDiffGeom->asWkt() ) );
 
