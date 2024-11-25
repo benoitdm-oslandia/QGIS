@@ -141,6 +141,8 @@ QgsFcgiServerResponse::QgsFcgiServerResponse( QgsServerRequest::Method method )
   mBuffer.open( QIODevice::ReadWrite );
   setDefaultHeaders();
 
+  time_start = QDateTime::currentMSecsSinceEpoch();
+
   mSocketMonitoringThread = std::make_unique<QgsSocketMonitoringThread>( &mFinished, mFeedback.get() );
   mSocketMonitoringThread->start();
 }
@@ -148,8 +150,12 @@ QgsFcgiServerResponse::QgsFcgiServerResponse( QgsServerRequest::Method method )
 QgsFcgiServerResponse::~QgsFcgiServerResponse()
 {
   mFinished = true;
+  QgsDebugMsgLevel( QStringLiteral( "QgsFcgiServerResponse: wait and quit..." ), 2 );
   mSocketMonitoringThread->exit();
   mSocketMonitoringThread->wait();
+
+  time_end = QDateTime::currentMSecsSinceEpoch();
+  qDebug() << "=============================================== in time:" << time_end - time_start << "ms";
 }
 
 void QgsFcgiServerResponse::removeHeader( const QString &key )

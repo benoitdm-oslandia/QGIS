@@ -25,6 +25,8 @@
 #include "qgsserverrequest.h"
 #include "qgsserverresponse.h"
 
+#include <QDateTime>
+
 #include <QBuffer>
 #include <QThread>
 
@@ -119,6 +121,9 @@ class SERVER_EXPORT QgsFcgiServerResponse: public QgsServerResponse
 
     std::unique_ptr<QgsSocketMonitoringThread> mSocketMonitoringThread;
     std::unique_ptr<QgsFeedback> mFeedback;
+
+    qint64 time_start;
+    qint64 time_end;
 };
 
 #endif
