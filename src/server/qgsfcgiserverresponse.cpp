@@ -54,13 +54,11 @@ typedef struct QgsFCGXStreamData
 } QgsFCGXStreamData;
 #endif
 
-QgsSocketMonitoringThread::QgsSocketMonitoringThread( bool *isResponseFinished, QgsFeedback *feedback )
-  : mIsResponseFinished( isResponseFinished )
-  , mFeedback( feedback )
+QgsSocketMonitoringThread::QgsSocketMonitoringThread( QgsFeedback *feedback )
+  : mFeedback( feedback )
   , mIpcFd( -1 )
 {
   setObjectName( "FCGI socket monitor" );
-  Q_ASSERT( mIsResponseFinished );
   Q_ASSERT( mFeedback );
 
 #if defined(Q_OS_UNIX) && !defined(Q_OS_ANDROID)
@@ -84,7 +82,19 @@ QgsSocketMonitoringThread::QgsSocketMonitoringThread( bool *isResponseFinished, 
                                QStringLiteral( "FCGIServer" ),
                                Qgis::MessageLevel::Warning );
   }
+
+  connect( this, &QThread::finished, this, [this]
+  {
+    qDebug() << "before deleteLater";
+    deleteLater();
+  } );
+
 #endif
+}
+
+void QgsSocketMonitoringThread::setResponseFinished( bool responseFinished )
+{
+  mIsResponseFinished = responseFinished;
 }
 
 void QgsSocketMonitoringThread::run( )
@@ -99,7 +109,7 @@ void QgsSocketMonitoringThread::run( )
 
 #if defined(Q_OS_UNIX) && !defined(Q_OS_ANDROID)
   char c;
-  while ( !*mIsResponseFinished )
+  while ( !mIsResponseFinished )
   {
     const ssize_t x = recv( mIpcFd, &c, 1, MSG_PEEK | MSG_DONTWAIT ); // see https://stackoverflow.com/a/12402596
     if ( x < 0 )
@@ -118,7 +128,7 @@ void QgsSocketMonitoringThread::run( )
     QThread::msleep( 333L );
   }
 
-  if ( *mIsResponseFinished )
+  if ( mIsResponseFinished )
   {
     QgsDebugMsgLevel( QStringLiteral( "FCGIServer: socket monitoring quits normally." ), 2 );
   }
@@ -143,7 +153,7 @@ QgsFcgiServerResponse::QgsFcgiServerResponse( QgsServerRequest::Method method )
 
   time_start = QDateTime::currentMSecsSinceEpoch();
 
-  mSocketMonitoringThread = std::make_unique<QgsSocketMonitoringThread>( &mFinished, mFeedback.get() );
+  mSocketMonitoringThread = new QgsSocketMonitoringThread( mFeedback.get() );
   mSocketMonitoringThread->start();
 }
 
@@ -151,8 +161,8 @@ QgsFcgiServerResponse::~QgsFcgiServerResponse()
 {
   mFinished = true;
   QgsDebugMsgLevel( QStringLiteral( "QgsFcgiServerResponse: wait and quit..." ), 2 );
-  mSocketMonitoringThread->exit();
-  mSocketMonitoringThread->wait();
+  if ( mSocketMonitoringThread )
+    mSocketMonitoringThread->setResponseFinished( mFinished );
 
   time_end = QDateTime::currentMSecsSinceEpoch();
   qDebug() << "=============================================== in time:" << time_end - time_start << "ms";
