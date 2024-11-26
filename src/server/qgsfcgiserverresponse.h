@@ -25,6 +25,8 @@
 #include "qgsserverrequest.h"
 #include "qgsserverresponse.h"
 
+#include <QDateTime>
+
 #include <QBuffer>
 #include <QThread>
 
@@ -45,11 +47,13 @@ class QgsSocketMonitoringThread: public QThread
      * \param  isResponseFinished
      * \param  feedback
      */
-    QgsSocketMonitoringThread( bool *isResponseFinished, QgsFeedback *feedback );
+    QgsSocketMonitoringThread( QgsFeedback *feedback );
     void run( );
 
+    void setResponseFinished( bool responseFinished );
+
   private:
-    bool *mIsResponseFinished = nullptr;
+    bool mIsResponseFinished = false;
     QgsFeedback *mFeedback = nullptr;
     int mIpcFd = -1;
 };
@@ -117,8 +121,11 @@ class SERVER_EXPORT QgsFcgiServerResponse: public QgsServerResponse
     QgsServerRequest::Method mMethod;
     int mStatusCode = 0;
 
-    std::unique_ptr<QgsSocketMonitoringThread> mSocketMonitoringThread;
+    QgsSocketMonitoringThread *mSocketMonitoringThread;
     std::unique_ptr<QgsFeedback> mFeedback;
+
+    qint64 time_start;
+    qint64 time_end;
 };
 
 #endif

@@ -26,6 +26,8 @@
 
 #include <fcgi_stdio.h>
 #include <cstdlib>
+#include <QDateTime>
+
 
 #include <QFontDatabase>
 #include <QString>
@@ -83,9 +85,13 @@ int main( int argc, char *argv[] )
   QFontDatabase fontDB;
 #endif
 
+  qint64 time_start;
+  qint64 time_end;
+
   // Starts FCGI loop
   while ( fcgi_accept() >= 0 )
   {
+    time_start = QDateTime::currentMSecsSinceEpoch();
     QgsFcgiServerRequest  request;
     QgsFcgiServerResponse response( request.method() );
     if ( ! request.hasError() )
@@ -96,8 +102,9 @@ int main( int argc, char *argv[] )
     {
       response.sendError( 400, "Bad request" );
     }
+    time_end = QDateTime::currentMSecsSinceEpoch();
+    QgsDebugMsgLevel( QStringLiteral( "main time: %1 ms" ).arg( time_end - time_start ), 2 );
   }
   QgsApplication::exitQgis();
   return 0;
 }
-
