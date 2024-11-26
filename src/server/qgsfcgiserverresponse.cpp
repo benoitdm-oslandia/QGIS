@@ -54,13 +54,11 @@ typedef struct QgsFCGXStreamData
 } QgsFCGXStreamData;
 #endif
 
-QgsSocketMonitoringThread::QgsSocketMonitoringThread( bool *isResponseFinished, QgsFeedback *feedback )
-  : mIsResponseFinished( isResponseFinished )
-  , mFeedback( feedback )
+QgsSocketMonitoringThread::QgsSocketMonitoringThread( QgsFeedback *feedback )
+  : mFeedback( feedback )
   , mIpcFd( -1 )
 {
   setObjectName( "FCGI socket monitor" );
-  Q_ASSERT( mIsResponseFinished );
   Q_ASSERT( mFeedback );
 
 #if defined(Q_OS_UNIX) && !defined(Q_OS_ANDROID)
@@ -73,18 +71,27 @@ QgsSocketMonitoringThread::QgsSocketMonitoringThread( bool *isResponseFinished, 
     }
     else
     {
-      QgsMessageLog::logMessage( QStringLiteral( "FCGI_stdin stream data is null! Socket monitoring disable." ),
+      QgsMessageLog::logMessage( QStringLiteral( "FCGI_stdin stream data is null! Socket monitoring disabled." ),
                                  QStringLiteral( "FCGIServer" ),
                                  Qgis::MessageLevel::Warning );
     }
   }
   else
   {
-    QgsMessageLog::logMessage( QStringLiteral( "FCGI_stdin is null! Socket monitoring disable." ),
+    QgsMessageLog::logMessage( QStringLiteral( "FCGI_stdin is null! Socket monitoring disabled." ),
                                QStringLiteral( "FCGIServer" ),
                                Qgis::MessageLevel::Warning );
   }
+
+  // Suicide the thread when it ends
+  connect( this, &QThread::finished, this, &QThread::deleteLater );
+
 #endif
+}
+
+void QgsSocketMonitoringThread::setResponseFinished( bool responseFinished )
+{
+  mIsResponseFinished = responseFinished;
 }
 
 void QgsSocketMonitoringThread::run( )
@@ -99,7 +106,7 @@ void QgsSocketMonitoringThread::run( )
 
 #if defined(Q_OS_UNIX) && !defined(Q_OS_ANDROID)
   char c;
-  while ( !*mIsResponseFinished )
+  while ( !mIsResponseFinished )
   {
     const ssize_t x = recv( mIpcFd, &c, 1, MSG_PEEK | MSG_DONTWAIT ); // see https://stackoverflow.com/a/12402596
     if ( x < 0 )
@@ -118,7 +125,7 @@ void QgsSocketMonitoringThread::run( )
     QThread::msleep( 333L );
   }
 
-  if ( *mIsResponseFinished )
+  if ( mIsResponseFinished )
   {
     QgsDebugMsgLevel( QStringLiteral( "FCGIServer: socket monitoring quits normally." ), 2 );
   }
@@ -141,15 +148,39 @@ QgsFcgiServerResponse::QgsFcgiServerResponse( QgsServerRequest::Method method )
   mBuffer.open( QIODevice::ReadWrite );
   setDefaultHeaders();
 
-  mSocketMonitoringThread = std::make_unique<QgsSocketMonitoringThread>( &mFinished, mFeedback.get() );
+  // This is not a unique_ptr because we want the response to not depend on the thread lifecycle.
+  mSocketMonitoringThread = new QgsSocketMonitoringThread( mFeedback.get() );
   mSocketMonitoringThread->start();
+}
+
+QgsFcgiServerResponse::QgsFcgiServerResponse( const QgsFcgiServerResponse &copy )
+  : mFinished( copy.mFinished )
+  , mHeadersSent( copy.mHeadersSent )
+  , mMethod( copy.mMethod )
+  , mStatusCode( copy.mStatusCode )
+  , mSocketMonitoringThread( nullptr )
+  , mFeedback( nullptr )
+{
+}
+
+QgsFcgiServerResponse &QgsFcgiServerResponse::operator =( const QgsFcgiServerResponse &copy )
+{
+  mFinished = copy.mFinished;
+  mHeadersSent = copy.mHeadersSent;
+  mMethod = copy.mMethod;
+  mStatusCode = copy.mStatusCode;
+  mSocketMonitoringThread = nullptr;
+  mFeedback = nullptr;
+
+  return *this;
 }
 
 QgsFcgiServerResponse::~QgsFcgiServerResponse()
 {
   mFinished = true;
-  mSocketMonitoringThread->exit();
-  mSocketMonitoringThread->wait();
+  if ( mSocketMonitoringThread )
+    // This will allow the thread to finish sleeping and exit its while loop in the background, without us needing to wait for it to finish.
+    mSocketMonitoringThread->setResponseFinished( mFinished );
 }
 
 void QgsFcgiServerResponse::removeHeader( const QString &key )

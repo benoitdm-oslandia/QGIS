@@ -45,11 +45,13 @@ class QgsSocketMonitoringThread: public QThread
      * \param  isResponseFinished
      * \param  feedback
      */
-    QgsSocketMonitoringThread( bool *isResponseFinished, QgsFeedback *feedback );
+    QgsSocketMonitoringThread( QgsFeedback *feedback );
     void run( );
 
+    void setResponseFinished( bool responseFinished );
+
   private:
-    bool *mIsResponseFinished = nullptr;
+    bool mIsResponseFinished = false;
     QgsFeedback *mFeedback = nullptr;
     int mIpcFd = -1;
 };
@@ -68,7 +70,18 @@ class SERVER_EXPORT QgsFcgiServerResponse: public QgsServerResponse
      * \param method The HTTP method (Get by default)
      */
     QgsFcgiServerResponse( QgsServerRequest::Method method = QgsServerRequest::GetMethod );
-    virtual ~QgsFcgiServerResponse();
+
+    /**
+     *  Dummy copy constructor. Needed because of QgsSocketMonitoringThread ptr
+     */
+    QgsFcgiServerResponse( const QgsFcgiServerResponse &copy );
+
+    /**
+     * Dummy operator = . Needed because of QgsSocketMonitoringThread ptr
+     */
+    QgsFcgiServerResponse &operator = ( const QgsFcgiServerResponse &copy );
+
+    virtual ~QgsFcgiServerResponse() override;
 
     void setHeader( const QString &key, const QString &value ) override;
 
@@ -117,7 +130,7 @@ class SERVER_EXPORT QgsFcgiServerResponse: public QgsServerResponse
     QgsServerRequest::Method mMethod;
     int mStatusCode = 0;
 
-    std::unique_ptr<QgsSocketMonitoringThread> mSocketMonitoringThread;
+    QgsSocketMonitoringThread *mSocketMonitoringThread;
     std::unique_ptr<QgsFeedback> mFeedback;
 };
 
