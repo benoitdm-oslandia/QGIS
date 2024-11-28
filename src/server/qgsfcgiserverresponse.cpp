@@ -153,28 +153,6 @@ QgsFcgiServerResponse::QgsFcgiServerResponse( QgsServerRequest::Method method )
   mSocketMonitoringThread->start();
 }
 
-QgsFcgiServerResponse::QgsFcgiServerResponse( const QgsFcgiServerResponse &copy )
-  : mFinished( copy.mFinished )
-  , mHeadersSent( copy.mHeadersSent )
-  , mMethod( copy.mMethod )
-  , mStatusCode( copy.mStatusCode )
-  , mSocketMonitoringThread( nullptr )
-  , mFeedback( nullptr )
-{
-}
-
-QgsFcgiServerResponse &QgsFcgiServerResponse::operator =( const QgsFcgiServerResponse &copy )
-{
-  mFinished = copy.mFinished;
-  mHeadersSent = copy.mHeadersSent;
-  mMethod = copy.mMethod;
-  mStatusCode = copy.mStatusCode;
-  mSocketMonitoringThread = nullptr;
-  mFeedback = nullptr;
-
-  return *this;
-}
-
 QgsFcgiServerResponse::~QgsFcgiServerResponse()
 {
   mFinished = true;

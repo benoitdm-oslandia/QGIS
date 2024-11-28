@@ -71,16 +71,6 @@ class SERVER_EXPORT QgsFcgiServerResponse: public QgsServerResponse
      */
     QgsFcgiServerResponse( QgsServerRequest::Method method = QgsServerRequest::GetMethod );
 
-    /**
-     *  Dummy copy constructor. Needed because of QgsSocketMonitoringThread ptr
-     */
-    QgsFcgiServerResponse( const QgsFcgiServerResponse &copy );
-
-    /**
-     * Dummy operator = . Needed because of QgsSocketMonitoringThread ptr
-     */
-    QgsFcgiServerResponse &operator = ( const QgsFcgiServerResponse &copy );
-
     virtual ~QgsFcgiServerResponse() override;
 
     void setHeader( const QString &key, const QString &value ) override;
@@ -123,6 +113,8 @@ class SERVER_EXPORT QgsFcgiServerResponse: public QgsServerResponse
     QgsFeedback *feedback() const override { return mFeedback.get(); }
 
   private:
+    Q_DISABLE_COPY( QgsFcgiServerResponse )
+
     QMap<QString, QString> mHeaders;
     QBuffer mBuffer;
     bool mFinished    = false;
