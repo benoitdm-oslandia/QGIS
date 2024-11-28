@@ -54,7 +54,7 @@ typedef struct QgsFCGXStreamData
 } QgsFCGXStreamData;
 #endif
 
-QgsSocketMonitoringThread::QgsSocketMonitoringThread( QgsFeedback *feedback )
+QgsSocketMonitoringThread::QgsSocketMonitoringThread( std::shared_ptr<QgsFeedback> feedback )
   : mFeedback( feedback )
   , mIpcFd( -1 )
 {

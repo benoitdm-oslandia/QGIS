@@ -45,14 +45,14 @@ class QgsSocketMonitoringThread: public QThread
      * \param  isResponseFinished
      * \param  feedback
      */
-    QgsSocketMonitoringThread( QgsFeedback *feedback );
+    QgsSocketMonitoringThread( std::shared_ptr<QgsFeedback> feedback );
     void run( );
 
     void setResponseFinished( bool responseFinished );
 
   private:
     bool mIsResponseFinished = false;
-    QgsFeedback *mFeedback = nullptr;
+    std::shared_ptr<QgsFeedback> mFeedback;
     int mIpcFd = -1;
 };
 
@@ -123,7 +123,7 @@ class SERVER_EXPORT QgsFcgiServerResponse: public QgsServerResponse
     int mStatusCode = 0;
 
     QgsSocketMonitoringThread *mSocketMonitoringThread;
-    std::unique_ptr<QgsFeedback> mFeedback;
+    std::shared_ptr<QgsFeedback> mFeedback;
 };
 
 #endif
