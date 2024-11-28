@@ -149,7 +149,7 @@ QgsFcgiServerResponse::QgsFcgiServerResponse( QgsServerRequest::Method method )
   setDefaultHeaders();
 
   // This is not a unique_ptr because we want the response to not depend on the thread lifecycle.
-  mSocketMonitoringThread = new QgsSocketMonitoringThread( mFeedback.get() );
+  mSocketMonitoringThread = new QgsSocketMonitoringThread( mFeedback );
   mSocketMonitoringThread->start();
 }
 
