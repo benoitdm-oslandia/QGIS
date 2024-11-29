@@ -14,6 +14,7 @@ ccache -M 2.0G
 ccache -z
 
 cmake -GNinja \
+      -DCMAKE_BUILD_TYPE=Debug \
  -DUSE_CCACHE=ON \
  -DWITH_QUICK=OFF \
  -DWITH_3D=OFF \
