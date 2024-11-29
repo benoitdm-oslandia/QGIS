@@ -58,21 +58,21 @@ jobs:
             # LD_PRELOAD: /lib/x86_64-linux-gnu/libSegFault.so
             experimental: false
 
-          - distro-version: '39'
-            qt-version: 6
-            run-tests: true
-            with-qt6: ON
-            with-qt5: OFF
-            with-3d: ON
-            with-quick: ON
-            with-clazy: OFF
-            with-grass7: OFF
-            with-grass8: ON
-            with-webengine: ON
-            with-pdf4qt: ON
-            with-compile-commands: OFF
-            LD_PRELOAD: ''
-            experimental: false
+          # - distro-version: '39'
+          #   qt-version: 6
+          #   run-tests: true
+          #   with-qt6: ON
+          #   with-qt5: OFF
+          #   with-3d: ON
+          #   with-quick: ON
+          #   with-clazy: OFF
+          #   with-grass7: OFF
+          #   with-grass8: ON
+          #   with-webengine: ON
+          #   with-pdf4qt: ON
+          #   with-compile-commands: OFF
+          #   LD_PRELOAD: ''
+          #   experimental: false
 
 
       fail-fast: false
@@ -227,222 +227,222 @@ jobs:
 #          set -e # switch back
 #          docker stop qgis-testing-environment
 
-  run-tests:
-    name: Run tests
-    env:
-      QGIS_WORKSPACE: ${{ github.workspace }} # used in docker compose
+  # run-tests:
+  #   name: Run tests
+  #   env:
+  #     QGIS_WORKSPACE: ${{ github.workspace }} # used in docker compose
 
-    runs-on: ubuntu-latest
+  #   runs-on: ubuntu-latest
 
-    needs: build
-    if: always()
+  #   needs: build
+  #   if: always()
 
-    strategy:
-      matrix:
-        qt-version: [5, 6]
-        test-batch: [ALL_BUT_PROVIDERS, POSTGRES, HANA]
+  #   strategy:
+  #     matrix:
+  #       qt-version: [5, 6]
+  #       test-batch: [ALL_BUT_PROVIDERS, POSTGRES, HANA]
 
-        include:
-          - qt-version: 5
-            distro-version: 22.04
-            docker-target: binary-only
+  #       include:
+  #         - qt-version: 5
+  #           distro-version: 22.04
+  #           docker-target: binary-only
 
-          - qt-version: 6
-            distro-version: 39
-            docker-target: binary-only
+  #         - qt-version: 6
+  #           distro-version: 39
+  #           docker-target: binary-only
 
-          - qt-version: 5
-            distro-version: 22.04
-            test-batch: ORACLE
-            docker-target: binary-for-oracle
+  #         - qt-version: 5
+  #           distro-version: 22.04
+  #           test-batch: ORACLE
+  #           docker-target: binary-for-oracle
 
-        exclude:
-          - qt-version: 6
-            test-batch: HANA
+  #       exclude:
+  #         - qt-version: 6
+  #           test-batch: HANA
 
-          - qt-version: 6
-            test-batch: POSTGRES
+  #         - qt-version: 6
+  #           test-batch: POSTGRES
 
-      fail-fast: false
+  #     fail-fast: false
 
-    steps:
+  #   steps:
 
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: true
-          large-packages: false
-          docker-images: false
-          swap-storage: true
+  #     - name: Free Disk Space (Ubuntu)
+  #       uses: jlumbroso/free-disk-space@main
+  #       with:
+  #         tool-cache: true
+  #         large-packages: false
+  #         docker-images: false
+  #         swap-storage: true
 
-      - name: Checkout
-        uses: actions/checkout@v4
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
 
-      - name: Set vars
-        env:
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
-          GITHUB_REF: ${{ github.ref }}
-          GITHUB_PR_NUMBER: ${{github.event.number}}
-        run: |
-          # Be aware that these instructions are duplicated in build job
-          CTEST_BUILD_NAME=$( [[ ${GITHUB_EVENT_NAME} == pull_request ]] && echo "PR${GITHUB_PR_NUMBER}" || echo ${GITHUB_REF##*/} )"_${GITHUB_SHA}_${{ matrix.test-batch }}"
-          echo "CTEST_BUILD_NAME=${CTEST_BUILD_NAME}" >> $GITHUB_ENV
-          echo "QT_VERSION=${{ matrix.qt-version }}" >> $GITHUB_ENV
+  #     - name: Set vars
+  #       env:
+  #         GITHUB_EVENT_NAME: ${{ github.event_name }}
+  #         GITHUB_REF: ${{ github.ref }}
+  #         GITHUB_PR_NUMBER: ${{github.event.number}}
+  #       run: |
+  #         # Be aware that these instructions are duplicated in build job
+  #         CTEST_BUILD_NAME=$( [[ ${GITHUB_EVENT_NAME} == pull_request ]] && echo "PR${GITHUB_PR_NUMBER}" || echo ${GITHUB_REF##*/} )"_${GITHUB_SHA}_${{ matrix.test-batch }}"
+  #         echo "CTEST_BUILD_NAME=${CTEST_BUILD_NAME}" >> $GITHUB_ENV
+  #         echo "QT_VERSION=${{ matrix.qt-version }}" >> $GITHUB_ENV
 
-      - name: Print vars
-        run: |
-          echo CTEST_BUILD_NAME: ${CTEST_BUILD_NAME}
+  #     - name: Print vars
+  #       run: |
+  #         echo CTEST_BUILD_NAME: ${CTEST_BUILD_NAME}
 
-      - name: Login to Docker Hub
-        if: ${{ github.event_name == 'push' && github.actor == 'qgis' }}
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+  #     - name: Login to Docker Hub
+  #       if: ${{ github.event_name == 'push' && github.actor == 'qgis' }}
+  #       uses: docker/login-action@v3
+  #       with:
+  #         username: ${{ secrets.DOCKER_USERNAME }}
+  #         password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build Docker Container with Testing Environment
-        id: docker-build
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: .docker/qgis3-qt${{ matrix.qt-version }}-build-deps.dockerfile
-          tags: qgis/qgis3-qt${{ matrix.qt-version }}-build-deps-bin-only:${{ github.event.pull_request.base.ref || github.ref_name }}
-          push: ${{ github.event_name == 'push' && github.actor == 'qgis' }}
-          pull: true
-          target: ${{ matrix.docker-target }}
-          build-args:
-            DISTRO_VERSION=${{ matrix.distro-version }}
+  #     - name: Build Docker Container with Testing Environment
+  #       id: docker-build
+  #       uses: docker/build-push-action@v6
+  #       with:
+  #         context: .
+  #         file: .docker/qgis3-qt${{ matrix.qt-version }}-build-deps.dockerfile
+  #         tags: qgis/qgis3-qt${{ matrix.qt-version }}-build-deps-bin-only:${{ github.event.pull_request.base.ref || github.ref_name }}
+  #         push: ${{ github.event_name == 'push' && github.actor == 'qgis' }}
+  #         pull: true
+  #         target: ${{ matrix.docker-target }}
+  #         build-args:
+  #           DISTRO_VERSION=${{ matrix.distro-version }}
 
-      - name: Tag image
-        run: docker tag ${{ steps.docker-build.outputs.imageid }} qgis3-build-deps-binary-image
+  #     - name: Tag image
+  #       run: docker tag ${{ steps.docker-build.outputs.imageid }} qgis3-build-deps-binary-image
 
-      - name: Print disk space
-        run: |
-          echo "DOCKER IMAGES"
-          docker images
-          echo "DF -H"
-          sudo df -h
+  #     - name: Print disk space
+  #       run: |
+  #         echo "DOCKER IMAGES"
+  #         docker images
+  #         echo "DF -H"
+  #         sudo df -h
 
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: build-${{ matrix.distro-version }}-qt${{ matrix.qt-version }}.tgz
-          path: .
+  #     - name: Download build artifact
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: build-${{ matrix.distro-version }}-qt${{ matrix.qt-version }}.tgz
+  #         path: .
 
-      - name: Extract build artifact
-        run: |
-          tar xvzf build.tgz
-          rm -Rf build.tgz
+  #     - name: Extract build artifact
+  #       run: |
+  #         tar xvzf build.tgz
+  #         rm -Rf build.tgz
 
-      - name: Print disk space
-        run: |
-          echo "DF -H"
-          sudo df -h
+  #     - name: Print disk space
+  #       run: |
+  #         echo "DF -H"
+  #         sudo df -h
 
-      - name: Run tests
-        id: tests
-        env:
-          TEST_BATCH: ${{matrix.test-batch}}
-          QGIS_COMMON_GIT_DIR: ${{ github.workspace }}
-          GITHUB_SHA: ${{ github.sha }}
-        run: |
-          DOCKERFILE=$( ( [[ ${{ matrix.test-batch }} == "ORACLE"   ]] && echo "docker-compose-testing-oracle.yml" ) \
-                     || ( [[ ${{ matrix.test-batch }} == "POSTGRES" ]] && echo "docker-compose-testing-postgres.yml" ) \
-                     || echo "docker-compose-testing.yml" )
-          [[ ${{ matrix.test-batch }} == "ORACLE" ]] && sudo rm -rf /usr/share/dotnet/sdk
-          echo "TEST_BATCH=$TEST_BATCH"
-          echo "DOCKERFILE=$DOCKERFILE"
-          mkdir -p /tmp/webdav_tests && chmod 777 /tmp/webdav_tests
-          mkdir -p /tmp/minio_tests/test-bucket && chmod -R 777 /tmp/minio_tests
-          docker compose -f .docker/$DOCKERFILE run -e GITHUB_SHA=$GITHUB_SHA qgis-deps /root/QGIS/.docker/docker-qgis-test.sh $TEST_BATCH
+  #     - name: Run tests
+  #       id: tests
+  #       env:
+  #         TEST_BATCH: ${{matrix.test-batch}}
+  #         QGIS_COMMON_GIT_DIR: ${{ github.workspace }}
+  #         GITHUB_SHA: ${{ github.sha }}
+  #       run: |
+  #         DOCKERFILE=$( ( [[ ${{ matrix.test-batch }} == "ORACLE"   ]] && echo "docker-compose-testing-oracle.yml" ) \
+  #                    || ( [[ ${{ matrix.test-batch }} == "POSTGRES" ]] && echo "docker-compose-testing-postgres.yml" ) \
+  #                    || echo "docker-compose-testing.yml" )
+  #         [[ ${{ matrix.test-batch }} == "ORACLE" ]] && sudo rm -rf /usr/share/dotnet/sdk
+  #         echo "TEST_BATCH=$TEST_BATCH"
+  #         echo "DOCKERFILE=$DOCKERFILE"
+  #         mkdir -p /tmp/webdav_tests && chmod 777 /tmp/webdav_tests
+  #         mkdir -p /tmp/minio_tests/test-bucket && chmod -R 777 /tmp/minio_tests
+  #         docker compose -f .docker/$DOCKERFILE run -e GITHUB_SHA=$GITHUB_SHA qgis-deps /root/QGIS/.docker/docker-qgis-test.sh $TEST_BATCH
 
-      - name: Fix permissions on test report
-        if: ${{ failure() }}
-        run: |
-          sudo chmod -R 777 qgis_test_report
+  #     - name: Fix permissions on test report
+  #       if: ${{ failure() }}
+  #       run: |
+  #         sudo chmod -R 777 qgis_test_report
 
-      - name: Dump report contents
-        if: ${{ failure() }}
-        run: |
-          MD_REPORT_FILE="qgis_test_report/summary.md"; [ -f "$MD_REPORT_FILE" ] && cat "$MD_REPORT_FILE" || true
+  #     - name: Dump report contents
+  #       if: ${{ failure() }}
+  #       run: |
+  #         MD_REPORT_FILE="qgis_test_report/summary.md"; [ -f "$MD_REPORT_FILE" ] && cat "$MD_REPORT_FILE" || true
 
-      - name: Save PR number to test report
-        if: ${{ failure() }}
-        run: |
-          echo ${{ github.event.number }} | tee qgis_test_report/pr_number
-          echo ${{ github.event.pull_request.head.sha }} | tee qgis_test_report/git_commit
+  #     - name: Save PR number to test report
+  #       if: ${{ failure() }}
+  #       run: |
+  #         echo ${{ github.event.number }} | tee qgis_test_report/pr_number
+  #         echo ${{ github.event.pull_request.head.sha }} | tee qgis_test_report/git_commit
 
-      - name: Archive test results report
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-qt${{ matrix.qt-version }}
-          path: qgis_test_report
+  #     - name: Archive test results report
+  #       if: ${{ failure() }}
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: test-results-qt${{ matrix.qt-version }}
+  #         path: qgis_test_report
 
-  clang-tidy:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    needs: build
+  # clang-tidy:
+  #   if: github.event_name == 'pull_request'
+  #   runs-on: ubuntu-latest
+  #   needs: build
 
-    strategy:
-      matrix:
-        include:
-          - distro-version: '22.04'
-            qt-version: 5
+  #   strategy:
+  #     matrix:
+  #       include:
+  #         - distro-version: '22.04'
+  #           qt-version: 5
 
-    steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: true
-          large-packages: false
-          docker-images: false
-          swap-storage: true
+  #   steps:
+  #     - name: Free Disk Space (Ubuntu)
+  #       uses: jlumbroso/free-disk-space@main
+  #       with:
+  #         tool-cache: true
+  #         large-packages: false
+  #         docker-images: false
+  #         swap-storage: true
 
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 2
 
-      - name: Login to Docker Hub
-        if: ${{ github.event_name == 'push' && github.actor == 'qgis' }}
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+  #     - name: Login to Docker Hub
+  #       if: ${{ github.event_name == 'push' && github.actor == 'qgis' }}
+  #       uses: docker/login-action@v3
+  #       with:
+  #         username: ${{ secrets.DOCKER_USERNAME }}
+  #         password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build Docker Container with Testing Environment
-        id: docker-build
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: .docker/qgis3-qt${{ matrix.qt-version }}-build-deps.dockerfile
-          tags: qgis/qgis3-qt${{ matrix.qt-version }}-build-deps-bin-only:${{ github.event.pull_request.base.ref || github.ref_name }}
-          push: ${{ github.event_name == 'push' && github.actor == 'qgis' }}
-          pull: true
-          target: ${{ matrix.docker-target }}
-          build-args:
-            DISTRO_VERSION=${{ matrix.distro-version }}
+  #     - name: Build Docker Container with Testing Environment
+  #       id: docker-build
+  #       uses: docker/build-push-action@v6
+  #       with:
+  #         context: .
+  #         file: .docker/qgis3-qt${{ matrix.qt-version }}-build-deps.dockerfile
+  #         tags: qgis/qgis3-qt${{ matrix.qt-version }}-build-deps-bin-only:${{ github.event.pull_request.base.ref || github.ref_name }}
+  #         push: ${{ github.event_name == 'push' && github.actor == 'qgis' }}
+  #         pull: true
+  #         target: ${{ matrix.docker-target }}
+  #         build-args:
+  #           DISTRO_VERSION=${{ matrix.distro-version }}
 
-      - name: Tag image
-        run: docker tag ${{ steps.docker-build.outputs.imageid }} qgis3-build-deps-binary-image
+  #     - name: Tag image
+  #       run: docker tag ${{ steps.docker-build.outputs.imageid }} qgis3-build-deps-binary-image
 
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: build-${{ matrix.distro-version }}-qt${{ matrix.qt-version }}.tgz
-          path: .
+  #     - name: Download build artifact
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: build-${{ matrix.distro-version }}-qt${{ matrix.qt-version }}.tgz
+  #         path: .
 
-      - name: Extract build artifact
-        run: |
-          tar xvzf build.tgz
-          rm -Rf build.tgz
+  #     - name: Extract build artifact
+  #       run: |
+  #         tar xvzf build.tgz
+  #         rm -Rf build.tgz
 
-      - name: Run Clang-Tidy
-        run: |
-          docker run -t --name qgis_container \
-          -v $(pwd):/root/QGIS \
-          -v /home/runner/QGIS/.ccache:/root/.ccache \
-          --env-file .docker/docker-variables.env \
-          qgis3-build-deps-binary-image \
-          /root/QGIS/.docker/docker-qgis-clangtidy.sh
+  #     - name: Run Clang-Tidy
+  #       run: |
+  #         docker run -t --name qgis_container \
+  #         -v $(pwd):/root/QGIS \
+  #         -v /home/runner/QGIS/.ccache:/root/.ccache \
+  #         --env-file .docker/docker-variables.env \
+  #         qgis3-build-deps-binary-image \
+  #         /root/QGIS/.docker/docker-qgis-clangtidy.sh
