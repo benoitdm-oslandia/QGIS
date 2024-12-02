@@ -97,7 +97,7 @@ int main( int argc, char *argv[] )
       response.sendError( 400, "Bad request" );
     }
   }
+  QgsDebugMsgLevel( QStringLiteral( "FCGIServer: main quits." ), 2 );
   QgsApplication::exitQgis();
   return 0;
 }
-

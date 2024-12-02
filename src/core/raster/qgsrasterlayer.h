@@ -404,12 +404,6 @@ class CORE_EXPORT QgsRasterLayer : public QgsMapLayer, public QgsAbstractProfile
     void refreshContrastEnhancement( const QgsRectangle &extent ) SIP_SKIP;
 
     /**
-     * \brief Refresh renderer with new extent, if needed
-     *  \note not available in Python bindings
-     */
-    void refreshRendererIfNeeded( QgsRasterRenderer *rasterRenderer, const QgsRectangle &extent ) SIP_SKIP;
-
-    /**
      * Returns the string (typically sql) used to define a subset of the layer.
      * \returns The subset string or null QString if not implemented by the provider
      * \since QGIS 3.12
@@ -474,6 +468,20 @@ class CORE_EXPORT QgsRasterLayer : public QgsMapLayer, public QgsAbstractProfile
     QgsMapLayerTemporalProperties *temporalProperties() override;
     QgsMapLayerElevationProperties *elevationProperties() override;
 
+    /**
+     * Compute the \a min \a max values along \a band according to MinMaxOrigin parameters \a mmo
+     * and \a extent.
+     * \note not available in Python bindings
+     *
+     * \since QGIS 3.42
+     */
+    void computeMinMax( int band,
+                        const QgsRasterMinMaxOrigin &mmo,
+                        QgsRasterMinMaxOrigin::Limits limits,
+                        const QgsRectangle &extent,
+                        int sampleSize,
+                        double &min, double &max ) SIP_SKIP;
+
   public slots:
     void showStatusMessage( const QString &message );
 
@@ -523,16 +531,6 @@ class CORE_EXPORT QgsRasterLayer : public QgsMapLayer, public QgsAbstractProfile
                                  int sampleSize,
                                  bool generateLookupTableFlag,
                                  QgsRasterRenderer *rasterRenderer );
-
-    //! Refresh renderer
-    void refreshRenderer( QgsRasterRenderer *rasterRenderer, const QgsRectangle &extent );
-
-    void computeMinMax( int band,
-                        const QgsRasterMinMaxOrigin &mmo,
-                        QgsRasterMinMaxOrigin::Limits limits,
-                        const QgsRectangle &extent,
-                        int sampleSize,
-                        double &min, double &max );
 
     /**
      * Updates the data source of the layer. The layer's renderer and legend will be preserved only
@@ -584,9 +582,6 @@ class CORE_EXPORT QgsRasterLayer : public QgsMapLayer, public QgsAbstractProfile
     Qgis::RasterLayerType mRasterType = Qgis::RasterLayerType::GrayOrUndefined;
 
     std::unique_ptr< QgsRasterPipe > mPipe;
-
-    //! To save computations and possible infinite cycle of notifications
-    QgsRectangle mLastRectangleUsedByRefreshContrastEnhancementIfNeeded;
 
     QDomDocument mOriginalStyleDocument;
     QDomElement mOriginalStyleElement;

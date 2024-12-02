@@ -27,6 +27,7 @@
 
 #include <QBuffer>
 #include <QThread>
+#include <QPointer>
 
 /**
  * \ingroup server
@@ -34,10 +35,8 @@
  * \brief Thread used to monitor the fcgi socket
  * \since QGIS 3.36
  */
-class QgsSocketMonitoringThread: public QThread
+class QgsSocketMonitoringThread
 {
-    Q_OBJECT
-
   public:
 
     /**
@@ -45,13 +44,17 @@ class QgsSocketMonitoringThread: public QThread
      * \param  isResponseFinished
      * \param  feedback
      */
-    QgsSocketMonitoringThread( bool *isResponseFinished, QgsFeedback *feedback );
+    QgsSocketMonitoringThread( std::shared_ptr<QgsFeedback> feedback );
     void run( );
 
+    void setResponseFinished( bool responseFinished );
+    void setShared( std::shared_ptr<QgsSocketMonitoringThread> ptr );
+
   private:
-    bool *mIsResponseFinished = nullptr;
-    QgsFeedback *mFeedback = nullptr;
+    bool mIsResponseFinished = false;
+    std::shared_ptr<QgsFeedback> mFeedback;
     int mIpcFd = -1;
+    std::shared_ptr<QgsSocketMonitoringThread> mySelf;
 };
 
 /**
@@ -68,7 +71,8 @@ class SERVER_EXPORT QgsFcgiServerResponse: public QgsServerResponse
      * \param method The HTTP method (Get by default)
      */
     QgsFcgiServerResponse( QgsServerRequest::Method method = QgsServerRequest::GetMethod );
-    virtual ~QgsFcgiServerResponse();
+
+    virtual ~QgsFcgiServerResponse() override;
 
     void setHeader( const QString &key, const QString &value ) override;
 
@@ -110,6 +114,8 @@ class SERVER_EXPORT QgsFcgiServerResponse: public QgsServerResponse
     QgsFeedback *feedback() const override { return mFeedback.get(); }
 
   private:
+    Q_DISABLE_COPY( QgsFcgiServerResponse )
+
     QMap<QString, QString> mHeaders;
     QBuffer mBuffer;
     bool mFinished    = false;
@@ -117,8 +123,8 @@ class SERVER_EXPORT QgsFcgiServerResponse: public QgsServerResponse
     QgsServerRequest::Method mMethod;
     int mStatusCode = 0;
 
-    std::unique_ptr<QgsSocketMonitoringThread> mSocketMonitoringThread;
-    std::unique_ptr<QgsFeedback> mFeedback;
+    std::shared_ptr<QgsSocketMonitoringThread> mSocketMonitoringThread;
+    std::shared_ptr<QgsFeedback> mFeedback;
 };
 
 #endif
