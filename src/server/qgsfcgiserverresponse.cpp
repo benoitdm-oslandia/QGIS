@@ -58,7 +58,6 @@ QgsSocketMonitoringThread::QgsSocketMonitoringThread( std::shared_ptr<QgsFeedbac
   : mFeedback( feedback )
   , mIpcFd( -1 )
 {
-  setObjectName( "FCGI socket monitor" );
   Q_ASSERT( mFeedback );
 
 #if defined(Q_OS_UNIX) && !defined(Q_OS_ANDROID)
@@ -82,16 +81,17 @@ QgsSocketMonitoringThread::QgsSocketMonitoringThread( std::shared_ptr<QgsFeedbac
                                QStringLiteral( "FCGIServer" ),
                                Qgis::MessageLevel::Warning );
   }
-
-  // Suicide the thread when it ends
-  connect( this, &QThread::finished, this, &QThread::deleteLater );
-
 #endif
 }
 
 void QgsSocketMonitoringThread::setResponseFinished( bool responseFinished )
 {
   mIsResponseFinished = responseFinished;
+}
+
+void QgsSocketMonitoringThread::setShared( std::shared_ptr<QgsSocketMonitoringThread> ptr )
+{
+  mySelf = ptr;
 }
 
 void QgsSocketMonitoringThread::run( )
@@ -134,6 +134,7 @@ void QgsSocketMonitoringThread::run( )
     QgsDebugMsgLevel( QStringLiteral( "FCGIServer: socket monitoring quits: no more socket." ), 2 );
   }
 #endif
+  mySelf = nullptr;
 }
 
 
@@ -149,16 +150,18 @@ QgsFcgiServerResponse::QgsFcgiServerResponse( QgsServerRequest::Method method )
   setDefaultHeaders();
 
   // This is not a unique_ptr because we want the response to not depend on the thread lifecycle.
-  mSocketMonitoringThread = new QgsSocketMonitoringThread( mFeedback );
-  mSocketMonitoringThread->start();
+  mSocketMonitoringThread = std::make_shared<QgsSocketMonitoringThread>( mFeedback );
+  mSocketMonitoringThread->setShared( mSocketMonitoringThread );
+  std::thread mThread = std::thread( &QgsSocketMonitoringThread::run, mSocketMonitoringThread );
+  mThread.detach();
 }
 
 QgsFcgiServerResponse::~QgsFcgiServerResponse()
 {
   mFinished = true;
-  if ( mSocketMonitoringThread )
-    // This will allow the thread to finish sleeping and exit its while loop in the background, without us needing to wait for it to finish.
-    mSocketMonitoringThread->setResponseFinished( mFinished );
+  // if ( mSocketMonitoringThread )
+  // This will allow the thread to finish sleeping and exit its while loop in the background, without us needing to wait for it to finish.
+  mSocketMonitoringThread->setResponseFinished( mFinished );
   QgsDebugMsgLevel( QStringLiteral( "FCGIServer: response quits." ), 2 );
 }
 

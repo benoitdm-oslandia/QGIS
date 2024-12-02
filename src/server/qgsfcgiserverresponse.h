@@ -35,10 +35,8 @@
  * \brief Thread used to monitor the fcgi socket
  * \since QGIS 3.36
  */
-class QgsSocketMonitoringThread: public QThread
+class QgsSocketMonitoringThread
 {
-    Q_OBJECT
-
   public:
 
     /**
@@ -50,11 +48,13 @@ class QgsSocketMonitoringThread: public QThread
     void run( );
 
     void setResponseFinished( bool responseFinished );
+    void setShared( std::shared_ptr<QgsSocketMonitoringThread> ptr );
 
   private:
     bool mIsResponseFinished = false;
     std::shared_ptr<QgsFeedback> mFeedback;
     int mIpcFd = -1;
+    std::shared_ptr<QgsSocketMonitoringThread> mySelf;
 };
 
 /**
@@ -123,7 +123,7 @@ class SERVER_EXPORT QgsFcgiServerResponse: public QgsServerResponse
     QgsServerRequest::Method mMethod;
     int mStatusCode = 0;
 
-    QPointer<QgsSocketMonitoringThread> mSocketMonitoringThread;
+    std::shared_ptr<QgsSocketMonitoringThread> mSocketMonitoringThread;
     std::shared_ptr<QgsFeedback> mFeedback;
 };
 
