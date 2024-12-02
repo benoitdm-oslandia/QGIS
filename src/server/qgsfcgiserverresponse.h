@@ -122,7 +122,7 @@ class SERVER_EXPORT QgsFcgiServerResponse: public QgsServerResponse
     QgsServerRequest::Method mMethod;
     int mStatusCode = 0;
 
-    QgsSocketMonitoringThread *mSocketMonitoringThread;
+    QPointer<QgsSocketMonitoringThread> mSocketMonitoringThread;
     std::shared_ptr<QgsFeedback> mFeedback;
 };
 
