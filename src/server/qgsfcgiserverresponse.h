@@ -27,6 +27,7 @@
 
 #include <QBuffer>
 #include <QThread>
+#include <QPointer>
 
 /**
  * \ingroup server
