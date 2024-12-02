@@ -24,7 +24,7 @@ services:
       - qgis
     privileged: true
     environment:
-      QGIS_DEBUG: 4
+      QGIS_DEBUG: 5
 
 
 networks:

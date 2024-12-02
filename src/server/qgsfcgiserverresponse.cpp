@@ -159,6 +159,7 @@ QgsFcgiServerResponse::~QgsFcgiServerResponse()
   if ( mSocketMonitoringThread )
     // This will allow the thread to finish sleeping and exit its while loop in the background, without us needing to wait for it to finish.
     mSocketMonitoringThread->setResponseFinished( mFinished );
+  QgsDebugMsgLevel( QStringLiteral( "FCGIServer: response quits." ), 2 );
 }
 
 void QgsFcgiServerResponse::removeHeader( const QString &key )
