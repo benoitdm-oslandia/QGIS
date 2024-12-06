@@ -26,7 +26,7 @@
 #include "qgsserverresponse.h"
 
 #include <QBuffer>
-#include <QThread>
+#include <thread>
 
 /**
  * \ingroup server
@@ -34,23 +34,30 @@
  * \brief Thread used to monitor the fcgi socket
  * \since QGIS 3.36
  */
-class QgsSocketMonitoringThread: public QThread
+class QgsSocketMonitoringThread
 {
-    Q_OBJECT
-
   public:
 
     /**
-     * \brief QgsSocketMonitoringThread
-     * \param  isResponseFinished
-     * \param  feedback
+     * Constructor for QgsSocketMonitoringThread
+     * \param  feedback used to cancel rendering jobs when socket timedout
      */
-    QgsSocketMonitoringThread( bool *isResponseFinished, QgsFeedback *feedback );
-    void run( );
+    QgsSocketMonitoringThread( std::shared_ptr<QgsFeedback> feedback );
+
+    /**
+     * main thread function
+     */
+    void run();
+
+    /**
+     * Controls thread life
+     * \param responseFinished stop the thread if true
+     */
+    void setResponseFinished( bool responseFinished );
 
   private:
-    bool *mIsResponseFinished = nullptr;
-    QgsFeedback *mFeedback = nullptr;
+    std::atomic_bool mIsResponseFinished;
+    std::shared_ptr<QgsFeedback> mFeedback;
     int mIpcFd = -1;
 };
 
@@ -68,7 +75,8 @@ class SERVER_EXPORT QgsFcgiServerResponse: public QgsServerResponse
      * \param method The HTTP method (Get by default)
      */
     QgsFcgiServerResponse( QgsServerRequest::Method method = QgsServerRequest::GetMethod );
-    virtual ~QgsFcgiServerResponse();
+
+    virtual ~QgsFcgiServerResponse() override;
 
     void setHeader( const QString &key, const QString &value ) override;
 
@@ -117,8 +125,12 @@ class SERVER_EXPORT QgsFcgiServerResponse: public QgsServerResponse
     QgsServerRequest::Method mMethod;
     int mStatusCode = 0;
 
+    // encapsulate thread data
     std::unique_ptr<QgsSocketMonitoringThread> mSocketMonitoringThread;
-    std::unique_ptr<QgsFeedback> mFeedback;
+    // real thread object. Used to join.
+    std::thread mThread;
+    // Used to cancel rendering jobs
+    std::shared_ptr<QgsFeedback> mFeedback;
 };
 
 #endif
