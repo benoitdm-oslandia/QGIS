@@ -72,6 +72,8 @@ QgsSocketMonitoringThread::QgsSocketMonitoringThread( std::shared_ptr<QgsFeedbac
 {
   Q_ASSERT( mFeedback );
 
+  mIsResponseFinished.store( false );
+
 #if defined(Q_OS_UNIX) && !defined(Q_OS_ANDROID)
   if ( FCGI_stdout && FCGI_stdout->fcgx_stream && FCGI_stdout->fcgx_stream->data )
   {
