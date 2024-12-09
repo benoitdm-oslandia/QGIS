@@ -104,8 +104,6 @@ void QgsSocketMonitoringThread::setResponseFinished( bool responseFinished )
 
 void QgsSocketMonitoringThread::run( )
 {
-  const pid_t threadId = gettid();
-
   if ( mIpcFd < 0 )
   {
     QgsMessageLog::logMessage( QStringLiteral( "Socket monitoring disabled: no socket fd!" ),
@@ -115,6 +113,8 @@ void QgsSocketMonitoringThread::run( )
   }
 
 #if defined(Q_OS_UNIX) && !defined(Q_OS_ANDROID)
+  const pid_t threadId = gettid();
+
   mIsResponseFinished.store( false );
   char c;
   while ( !mIsResponseFinished.load() )
