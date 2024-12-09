@@ -26,11 +26,11 @@
 
 #include "qgslogger.h"
 
-#include <unistd.h>
 #include <mutex>
 #include <chrono>
 
 #if defined(Q_OS_UNIX) && !defined(Q_OS_ANDROID)
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 
