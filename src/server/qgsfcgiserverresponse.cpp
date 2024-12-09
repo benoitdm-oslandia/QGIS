@@ -115,7 +115,9 @@ void QgsSocketMonitoringThread::run( )
   }
 
 #if defined(Q_OS_UNIX) && !defined(Q_OS_ANDROID)
+#ifdef QGISDEBUG
   const pid_t threadId = gettid();
+#endif
 
   mIsResponseFinished.store( false );
   char c;
