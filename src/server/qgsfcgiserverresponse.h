@@ -27,6 +27,7 @@
 
 #include <QBuffer>
 #include <thread>
+#include <mutex>
 
 /**
  * \ingroup server
@@ -50,15 +51,17 @@ class QgsSocketMonitoringThread
     void run();
 
     /**
-     * Controls thread life
-     * \param responseFinished stop the thread if true
+     * Stop the thread
      */
-    void setResponseFinished( bool responseFinished );
+    void stop();
 
   private:
-    std::atomic_bool mIsResponseFinished;
+    std::atomic_bool mShouldStop;
     std::shared_ptr<QgsFeedback> mFeedback;
     int mIpcFd = -1;
+
+    // used to synchronize socket monitoring thread and fcgi response
+    std::timed_mutex mMutex;
 };
 
 /**

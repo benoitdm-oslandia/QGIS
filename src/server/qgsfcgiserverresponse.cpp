@@ -26,13 +26,11 @@
 
 #include "qgslogger.h"
 
-#include <mutex>
-#include <chrono>
-
 #if defined(Q_OS_UNIX) && !defined(Q_OS_ANDROID)
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <chrono>
 
 //
 // QgsFCGXStreamData copied from libfcgi FCGX_Stream_Data
@@ -61,9 +59,6 @@ typedef struct QgsFCGXStreamData
 // to be able to use 333ms expression as a duration
 using namespace std::chrono_literals;
 
-// used to synchronize socket monitoring thread and fcgi response
-std::timed_mutex gSocketMonitoringMutex;
-
 
 // QgsSocketMonitoringThread constructor
 QgsSocketMonitoringThread::QgsSocketMonitoringThread( std::shared_ptr<QgsFeedback> feedback )
@@ -72,7 +67,7 @@ QgsSocketMonitoringThread::QgsSocketMonitoringThread( std::shared_ptr<QgsFeedbac
 {
   Q_ASSERT( mFeedback );
 
-  mIsResponseFinished.store( false );
+  mShouldStop.store( false );
 
 #if defined(Q_OS_UNIX) && !defined(Q_OS_ANDROID)
   if ( FCGI_stdout && FCGI_stdout->fcgx_stream && FCGI_stdout->fcgx_stream->data )
@@ -99,13 +94,19 @@ QgsSocketMonitoringThread::QgsSocketMonitoringThread( std::shared_ptr<QgsFeedbac
 }
 
 // Informs the thread to quit
-void QgsSocketMonitoringThread::setResponseFinished( bool responseFinished )
+void QgsSocketMonitoringThread::stop()
 {
-  mIsResponseFinished.store( responseFinished );
+  mShouldStop.store( true );
+  // Release the mutex so the try_lock in the thread will not wait anymore and
+  // the thread will end its loop as we have set 'mShouldStop' to true
+  mMutex.unlock();
 }
 
 void QgsSocketMonitoringThread::run( )
 {
+  // Lock the thread mutex: every try_lock will take 333ms
+  mMutex.lock();
+
   if ( mIpcFd < 0 )
   {
     QgsMessageLog::logMessage( QStringLiteral( "Socket monitoring disabled: no socket fd!" ),
@@ -119,9 +120,9 @@ void QgsSocketMonitoringThread::run( )
   const pid_t threadId = gettid();
 #endif
 
-  mIsResponseFinished.store( false );
+  mShouldStop.store( false );
   char c;
-  while ( !mIsResponseFinished.load() )
+  while ( !mShouldStop.load() )
   {
     const ssize_t x = recv( mIpcFd, &c, 1, MSG_PEEK | MSG_DONTWAIT ); // see https://stackoverflow.com/a/12402596
     if ( x != 0 )
@@ -134,7 +135,7 @@ void QgsSocketMonitoringThread::run( )
     {
       // double check...
       ssize_t x2 = 0;
-      for ( int i = 0; !mIsResponseFinished.load() && x2 == 0 && i < 10; i++ )
+      for ( int i = 0; !mShouldStop.load() && x2 == 0 && i < 10; i++ )
       {
         x2 = recv( mIpcFd, &c, 1, MSG_PEEK | MSG_DONTWAIT ); // see https://stackoverflow.com/a/12402596
         std::this_thread::sleep_for( 50ms );
@@ -157,17 +158,17 @@ void QgsSocketMonitoringThread::run( )
 
     // If lock is acquired this means the response has finished and we will exit the while loop
     // else we will wait max for 333ms.
-    if ( gSocketMonitoringMutex.try_lock_for( 333ms ) )
-      gSocketMonitoringMutex.unlock();
+    if ( mMutex.try_lock_for( 333ms ) )
+      mMutex.unlock();
   }
 
-  if ( mIsResponseFinished.load() )
+  if ( mShouldStop.load() )
   {
     QgsDebugMsgLevel( QStringLiteral( "FCGIServer::run %1: socket monitoring quits normally." ).arg( threadId ), 2 );
   }
   else
   {
-    QgsDebugMsgLevel( QStringLiteral( "FCGIServer::run %1: socket monitoring quits: no more socket." ).arg( threadId ), 2 );
+    QgsDebugMsgLevel( QStringLiteral( "FCGIServer::run %1: socket monitoring quits: no more socket." ).arg( threadId ), 1 );
   }
 #endif
 }
@@ -186,9 +187,6 @@ QgsFcgiServerResponse::QgsFcgiServerResponse( QgsServerRequest::Method method )
 
   mSocketMonitoringThread = std::make_unique<QgsSocketMonitoringThread>( mFeedback );
 
-  // Lock the thread mutex: every try_lock will take 333ms
-  gSocketMonitoringMutex.lock();
-
   // Start the monitoring thread
   mThread = std::thread( &QgsSocketMonitoringThread::run, mSocketMonitoringThread.get() );
 }
@@ -198,11 +196,7 @@ QgsFcgiServerResponse::~QgsFcgiServerResponse()
   mFinished = true;
 
   // Inform the thread to quit asap
-  mSocketMonitoringThread->setResponseFinished( mFinished );
-
-  // Release the mutex so the try_lock in the thread will not wait anymore and
-  // the thread will end its loop as we have set 'setResponseFinished' to true
-  gSocketMonitoringMutex.unlock();
+  mSocketMonitoringThread->stop();
 
   // Just to be sure
   mThread.join();
