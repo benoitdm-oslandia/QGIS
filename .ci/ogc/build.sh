@@ -17,6 +17,7 @@ ccache -z
 ccache --set-config sloppiness=pch_defines,time_macros,include_file_mtime,include_file_ctime
 
 cmake -GNinja \
+ -DCMAKE_BUILD_TYPE=Debug \
  -DUSE_CCACHE=ON \
  -DWITH_QUICK=OFF \
  -DWITH_3D=OFF \
