@@ -96,10 +96,12 @@ QgsSocketMonitoringThread::QgsSocketMonitoringThread( std::shared_ptr<QgsFeedbac
 // Informs the thread to quit
 void QgsSocketMonitoringThread::stop()
 {
+  QgsDebugMsgLevel( QStringLiteral( "FCGIServer::stop starts..." ), 1 );
   mShouldStop.store( true );
   // Release the mutex so the try_lock in the thread will not wait anymore and
   // the thread will end its loop as we have set 'mShouldStop' to true
   mMutex.unlock();
+  QgsDebugMsgLevel( QStringLiteral( "FCGIServer::stop ends!" ), 1 );
 }
 
 void QgsSocketMonitoringThread::run()
@@ -180,6 +182,7 @@ QgsFcgiServerResponse::QgsFcgiServerResponse( QgsServerRequest::Method method )
 
 QgsFcgiServerResponse::~QgsFcgiServerResponse()
 {
+  QgsDebugMsgLevel( QStringLiteral( "FCGIServer starts ~QgsFcgiServerResponse..." ), 1 );
   mFinished = true;
 
   // Inform the thread to quit asap
@@ -187,6 +190,8 @@ QgsFcgiServerResponse::~QgsFcgiServerResponse()
 
   // Just to be sure
   mThread.join();
+
+  QgsDebugMsgLevel( QStringLiteral( "FCGIServer ends ~QgsFcgiServerResponse!" ), 1 );
 }
 
 void QgsFcgiServerResponse::removeHeader( const QString &key )
