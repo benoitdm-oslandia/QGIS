@@ -486,7 +486,8 @@ void QgsServer::handleRequest( QgsServerRequest &request, QgsServerResponse &res
 
         if ( !response.feedback() || !response.feedback()->isCanceled() )
         {
-          if ( params.service().isEmpty() && ( api = sServiceRegistry->apiForRequest( request ) ) )
+          api = sServiceRegistry->apiForRequest( request );
+          if ( params.service().isEmpty() && api )
           {
             const QgsServerApiContext context { api->rootPath(), &request, &responseDecorator, project, sServerInterface };
             api->executeRequest( context );
