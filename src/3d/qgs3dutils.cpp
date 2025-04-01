@@ -99,7 +99,6 @@ QImage Qgs3DUtils::captureSceneImage( QgsAbstract3DEngine &engine, Qgs3DMapScene
   auto requestImageFcn = [&engine, scene] {
     if ( scene->sceneState() == Qgs3DMapScene::Ready )
     {
-      engine.renderSettings()->setRenderPolicy( Qt3DRender::QRenderSettings::RenderPolicy::OnDemand );
       engine.requestCaptureImage();
     }
   };
