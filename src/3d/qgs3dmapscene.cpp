@@ -71,6 +71,8 @@
 #include "qgspoint3dbillboardmaterial.h"
 #include "qgsmaplayertemporalproperties.h"
 #include "qgsmaplayerelevationproperties.h"
+#include "qgsdebugtextureentity.h"
+
 #include "qgslinematerial_p.h"
 #include "qgs3dsceneexporter.h"
 #include "qgs3dmapexportsettings.h"
@@ -83,6 +85,7 @@
 
 #include "qgswindow3dengine.h"
 #include "qgspointcloudlayer.h"
+#include "qgsforwardrenderview.h"
 
 std::function<QMap<QString, Qgs3DMapScene *>()> Qgs3DMapScene::sOpenScenesFunction = [] { return QMap<QString, Qgs3DMapScene *>(); };
 
@@ -833,7 +836,7 @@ void Qgs3DMapScene::finalizeNewEntity( Qt3DCore::QEntity *newEntity )
 
   // Finalize adding the 3D transparent objects by adding the layer components to the entities
   QgsFrameGraph *frameGraph = mEngine->frameGraph();
-  Qt3DRender::QLayer *transparentLayer = frameGraph->transparentObjectLayer();
+  Qt3DRender::QLayer *transparentLayer = frameGraph->forwardRenderView().transparentObjectLayer();
   const QList<Qt3DRender::QMaterial *> childMaterials = newEntity->findChildren<Qt3DRender::QMaterial *>();
   for ( Qt3DRender::QMaterial *material : childMaterials )
   {
@@ -982,50 +985,22 @@ void Qgs3DMapScene::onSkyboxSettingsChanged()
 
 void Qgs3DMapScene::onShadowSettingsChanged()
 {
-  QgsFrameGraph *frameGraph = mEngine->frameGraph();
-
-  const QList<QgsLightSource *> lightSources = mMap.lightSources();
-  QList<QgsDirectionalLightSettings *> directionalLightSources;
-  for ( QgsLightSource *source : lightSources )
-  {
-    if ( source->type() == Qgis::LightSourceType::Directional )
-    {
-      directionalLightSources << qgis::down_cast<QgsDirectionalLightSettings *>( source );
-    }
-  }
-
-  QgsShadowSettings shadowSettings = mMap.shadowSettings();
-  int selectedLight = shadowSettings.selectedDirectionalLight();
-  if ( shadowSettings.renderShadows() && selectedLight >= 0 && selectedLight < directionalLightSources.count() )
-  {
-    frameGraph->setShadowRenderingEnabled( true );
-    frameGraph->setShadowBias( shadowSettings.shadowBias() );
-    frameGraph->setShadowMapResolution( shadowSettings.shadowMapResolution() );
-    QgsDirectionalLightSettings light = *directionalLightSources.at( selectedLight );
-    frameGraph->setupDirectionalLight( light, shadowSettings.maximumShadowRenderingDistance() );
-  }
-  else
-    frameGraph->setShadowRenderingEnabled( false );
+  mEngine->frameGraph()->updateShadowSettings( mMap.shadowSettings(), mMap.lightSources() );
 }
 
 void Qgs3DMapScene::onAmbientOcclusionSettingsChanged()
 {
-  QgsFrameGraph *frameGraph = mEngine->frameGraph();
-  QgsAmbientOcclusionSettings ambientOcclusionSettings = mMap.ambientOcclusionSettings();
-  frameGraph->setAmbientOcclusionEnabled( ambientOcclusionSettings.isEnabled() );
-  frameGraph->setAmbientOcclusionRadius( ambientOcclusionSettings.radius() );
-  frameGraph->setAmbientOcclusionIntensity( ambientOcclusionSettings.intensity() );
-  frameGraph->setAmbientOcclusionThreshold( ambientOcclusionSettings.threshold() );
+  mEngine->frameGraph()->updateAmbientOcclusionSettings( mMap.ambientOcclusionSettings() );
 }
 
 void Qgs3DMapScene::onDebugShadowMapSettingsChanged()
 {
-  mEngine->frameGraph()->setupShadowMapDebugging( mMap.debugShadowMapEnabled(), mMap.debugShadowMapCorner(), mMap.debugShadowMapSize() );
+  mEngine->frameGraph()->updateDebugShadowMapSettings( mMap );
 }
 
 void Qgs3DMapScene::onDebugDepthMapSettingsChanged()
 {
-  mEngine->frameGraph()->setupDepthMapDebugging( mMap.debugDepthMapEnabled(), mMap.debugDepthMapCorner(), mMap.debugDepthMapSize() );
+  mEngine->frameGraph()->updateDebugDepthMapSettings( mMap );
 }
 
 void Qgs3DMapScene::onDebugOverlayEnabledChanged()
@@ -1036,10 +1011,7 @@ void Qgs3DMapScene::onDebugOverlayEnabledChanged()
 
 void Qgs3DMapScene::onEyeDomeShadingSettingsChanged()
 {
-  bool edlEnabled = mMap.eyeDomeLightingEnabled();
-  double edlStrength = mMap.eyeDomeLightingStrength();
-  double edlDistance = mMap.eyeDomeLightingDistance();
-  mEngine->frameGraph()->setupEyeDomeLighting( edlEnabled, edlStrength, edlDistance );
+  mEngine->frameGraph()->updateEyeDomeSettings( mMap );
 }
 
 void Qgs3DMapScene::onCameraMovementSpeedChanged()
@@ -1127,11 +1099,11 @@ QgsRectangle Qgs3DMapScene::sceneExtent() const
   return mMap.extent();
 }
 
-QgsDoubleRange Qgs3DMapScene::elevationRange() const
+QgsDoubleRange Qgs3DMapScene::elevationRange( const bool ignoreTerrain ) const
 {
   double zMin = std::numeric_limits<double>::max();
   double zMax = std::numeric_limits<double>::lowest();
-  if ( mMap.terrainRenderingEnabled() && mTerrain )
+  if ( mMap.terrainRenderingEnabled() && mTerrain && !ignoreTerrain )
   {
     const QgsBox3D box3D = mTerrain->rootNode()->box3D();
     zMin = std::min( zMin, box3D.zMinimum() );
@@ -1242,7 +1214,27 @@ void Qgs3DMapScene::onOriginChanged()
     transform->setOrigin( mMap.origin() );
   }
 
+  const QgsVector3D oldOrigin = mCameraController->origin();
   mCameraController->setOrigin( mMap.origin() );
+
+  if ( !mClipPlanesEquations.isEmpty() )
+  {
+    // how the math works - for a plane defined as (a,b,c,d), only "d" changes when
+    // moving the origin - the plane normal vector (a,b,c) stays the same.
+    // - line equation for old shift: a * (x - x0) + b * (y - y0) + c * (z - z0) + d0 = 0
+    // - line equation for new shift: a * (x - x1) + b * (y - y1) + c * (z - z1) + d1 = 0
+    // - we solve for d1:
+    //     d1 = a * (x1 - x0) + b * (y1 - y0) + c * (z1 - z0) + d0
+
+    QList<QVector4D> newPlanes;
+    QgsVector3D originShift = mMap.origin() - oldOrigin;
+    for ( QVector4D plane : std::as_const( mClipPlanesEquations ) )
+    {
+      plane.setW( originShift.x() * plane.x() + originShift.y() * plane.y() + originShift.z() * plane.z() + plane.w() );
+      newPlanes.append( plane );
+    }
+    enableClipping( newPlanes );
+  }
 }
 
 void Qgs3DMapScene::handleClippingOnEntity( QEntity *entity ) const
@@ -1297,8 +1289,7 @@ void Qgs3DMapScene::enableClipping( const QList<QVector4D> &clipPlaneEquations )
   mClipPlanesEquations = clipPlaneEquations.mid( 0, mMaxClipPlanes );
 
   // enable the clip planes on the framegraph
-  QgsFrameGraph *frameGraph = mEngine->frameGraph();
-  frameGraph->addClipPlanes( clipPlaneEquations.size() );
+  mEngine->frameGraph()->addClipPlanes( clipPlaneEquations.size() );
 
   // Enable the clip planes for the material of each entity.
   handleClippingOnAllEntities();
@@ -1309,8 +1300,7 @@ void Qgs3DMapScene::disableClipping()
   mClipPlanesEquations.clear();
 
   // disable the clip planes on the framegraph
-  QgsFrameGraph *frameGraph = mEngine->frameGraph();
-  frameGraph->removeClipPlanes();
+  mEngine->frameGraph()->removeClipPlanes();
 
   // Disable the clip planes for the material of each entity.
   handleClippingOnAllEntities();
