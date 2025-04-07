@@ -1937,12 +1937,11 @@ void TestQgs3DRendering::testEpsg4978LineRendering()
   map->setCrs( p.crs() );
   map->setExtent( fullExtent );
   map->setLayers( QList<QgsMapLayer *>() << layerLines );
+  map->setTerrainRenderingEnabled( false );
 
   QgsOffscreen3DEngine engine;
   Qgs3DMapScene *scene = new Qgs3DMapScene( *map, &engine );
   engine.setRootEntity( scene );
-
-  scene->setSceneOriginShiftEnabled( false );
 
   scene->cameraController()->setCameraNavigationMode( Qgis::NavigationMode::GlobeTerrainBased );
 
@@ -2158,6 +2157,7 @@ void TestQgs3DRendering::testAmbientOcclusion()
   // =========== set camera position
   scene->cameraController()->setLookingAtPoint( QVector3D( 0, 0, 0 ), 400, 50, 10 );
 
+  // =========== set AO to OFF
   QgsAmbientOcclusionSettings aoSettings = mapSettings.ambientOcclusionSettings();
   aoSettings.setEnabled( false );
   mapSettings.setAmbientOcclusionSettings( aoSettings );
@@ -2167,6 +2167,7 @@ void TestQgs3DRendering::testAmbientOcclusion()
   QGSCOMPARELONGSTR( "ambient_occlusion_1", "framegraph.txt", actualFG.toUtf8() );
   QGSVERIFYIMAGECHECK( "ambient_occlusion_1", "ambient_occlusion_1", img, QString(), 40, QSize( 0, 0 ), 15 );
 
+  // =========== set AO to ON
   aoSettings.setEnabled( true );
   mapSettings.setAmbientOcclusionSettings( aoSettings );
 

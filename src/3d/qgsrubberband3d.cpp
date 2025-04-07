@@ -47,15 +47,20 @@
 #include <Qt3DRender/QGeometryRenderer>
 #include <QColor>
 
+#include "qgsframegraph.h"
+#include "qgsrubberbandrenderview.h"
 
 /// @cond PRIVATE
 
 
-QgsRubberBand3D::QgsRubberBand3D( Qgs3DMapSettings &map, QgsAbstract3DEngine *engine, Qt3DCore::QEntity *parentEntity, const Qgis::GeometryType geometryType )
+QgsRubberBand3D::QgsRubberBand3D( Qgs3DMapSettings &map, QgsAbstract3DEngine *engine, const Qgis::GeometryType geometryType )
   : mMapSettings( &map )
   , mEngine( engine )
   , mGeometryType( geometryType )
 {
+  QgsRubberBandRenderView *rv = dynamic_cast<QgsRubberBandRenderView *>( engine->frameGraph()->renderView( QgsFrameGraph::RUBBER_RENDERVIEW ) );
+  Qt3DCore::QEntity *parentEntity = rv->rubberBandEntity();
+
   switch ( mGeometryType )
   {
     case Qgis::GeometryType::Point:
@@ -277,7 +282,7 @@ void QgsRubberBand3D::setMarkerType( const MarkerType marker )
     { QStringLiteral( "name" ), mMarkerType == Square ? QStringLiteral( "square" ) : QStringLiteral( "circle" ) }
   };
 
-  mMarkerSymbol.reset( QgsMarkerSymbol::createSimple( props ) );
+  mMarkerSymbol = QgsMarkerSymbol::createSimple( props );
   updateMarkerMaterial();
 }
 

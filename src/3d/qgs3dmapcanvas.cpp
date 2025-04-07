@@ -67,7 +67,6 @@ Qgs3DMapCanvas::Qgs3DMapCanvas()
 
   connect( mEngine, &QgsAbstract3DEngine::imageCaptured, this, [=]( const QImage &image ) {
     image.save( mCaptureFileName, mCaptureFileFormat.toLocal8Bit().data() );
-    mEngine->setRenderCaptureEnabled( false );
     emit savedAsImage( mCaptureFileName );
   } );
 
@@ -210,7 +209,6 @@ void Qgs3DMapCanvas::saveAsImage( const QString &fileName, const QString &fileFo
 
   mCaptureFileName = fileName;
   mCaptureFileFormat = fileFormat;
-  mEngine->setRenderCaptureEnabled( true );
   // Setup a frame action that is used to wait until next frame
   Qt3DLogic::QFrameAction *screenCaptureFrameAction = new Qt3DLogic::QFrameAction;
   mScene->addComponent( screenCaptureFrameAction );
@@ -359,7 +357,7 @@ void Qgs3DMapCanvas::highlightFeature( const QgsFeature &feature, QgsMapLayer *l
 
   if ( !mHighlights.contains( layer ) )
   {
-    QgsRubberBand3D *band = new QgsRubberBand3D( *mMapSettings, mEngine, mEngine->frameGraph()->rubberBandsRootEntity(), Qgis::GeometryType::Point );
+    QgsRubberBand3D *band = new QgsRubberBand3D( *mMapSettings, mEngine, Qgis::GeometryType::Point );
 
     const QgsSettings settings;
     const QColor color = QColor( settings.value( QStringLiteral( "Map/highlight/color" ), Qgis::DEFAULT_HIGHLIGHT_COLOR.name() ).toString() );
