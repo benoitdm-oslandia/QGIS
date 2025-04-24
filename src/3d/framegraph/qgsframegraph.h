@@ -84,7 +84,7 @@ class QgsFrameGraph : public Qt3DCore::QEntity
     Qt3DCore::QEntity *rubberBandsRootEntity() { return mRubberBandsRootEntity; }
 
     //! Returns the render capture object used to take an image of the scene
-    Qt3DRender::QRenderCapture *renderCapture() { return mRenderCapture; }
+    Qt3DRender::QRenderCapture *offScreenRenderCapture();
 
     //! Returns the render capture object used to take an image of the depth buffer of the scene
     Qt3DRender::QRenderCapture *depthRenderCapture();
@@ -104,13 +104,7 @@ class QgsFrameGraph : public Qt3DCore::QEntity
      * Sets whether it will be possible to render to an image
      * \since QGIS 3.18
      */
-    void setRenderCaptureEnabled( bool enabled );
-
-    /**
-     * Returns whether it will be possible to render to an image
-     * \since QGIS 3.18
-     */
-    bool renderCaptureEnabled() const { return mRenderCaptureEnabled; }
+    void setOffScreenRenderCaptureEnabled( bool enabled );
 
     /**
      * Sets whether debug overlay is enabled

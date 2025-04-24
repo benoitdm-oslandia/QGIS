@@ -30,7 +30,7 @@ QgsAbstract3DEngine::QgsAbstract3DEngine( QObject *parent )
 void QgsAbstract3DEngine::requestCaptureImage()
 {
   Qt3DRender::QRenderCaptureReply *captureReply;
-  captureReply = mFrameGraph->renderCapture()->requestCapture();
+  captureReply = mFrameGraph->offScreenRenderCapture()->requestCapture();
 
   connect( captureReply, &Qt3DRender::QRenderCaptureReply::completed, this, [=] {
     emit imageCaptured( captureReply->image() );
@@ -47,16 +47,6 @@ void QgsAbstract3DEngine::requestDepthBufferCapture()
     emit depthBufferCaptured( captureReply->image() );
     captureReply->deleteLater();
   } );
-}
-
-void QgsAbstract3DEngine::setRenderCaptureEnabled( bool enabled )
-{
-  mFrameGraph->setRenderCaptureEnabled( enabled );
-}
-
-bool QgsAbstract3DEngine::renderCaptureEnabled() const
-{
-  return mFrameGraph->renderCaptureEnabled();
 }
 
 void QgsAbstract3DEngine::dumpFrameGraphToConsole() const
