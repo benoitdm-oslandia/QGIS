@@ -36,8 +36,6 @@ QgsWindow3DEngine::QgsWindow3DEngine( Qgs3DMapCanvas *parent )
   mMapCanvas3D->setRootEntity( mRoot );
 
   mFrameGraph = new QgsFrameGraph( mMapCanvas3D, QSize( 1024, 768 ), mMapCanvas3D->camera(), mRoot );
-  // to deactivate unit test render capture
-  mFrameGraph->setOffScreenRenderCaptureEnabled( false );
   mMapCanvas3D->setActiveFrameGraph( mFrameGraph->frameGraphRoot() );
 
   // force switching to no shadow rendering

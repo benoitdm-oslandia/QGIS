@@ -23,7 +23,7 @@
 #include "qgsshadowrenderview.h"
 
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#if QT_VERSION < QT_VERSION_CHECK( 6, 0, 0 )
 #include <Qt3DRender/QAttribute>
 #include <Qt3DRender/QBuffer>
 #include <Qt3DRender/QGeometry>
@@ -470,12 +470,12 @@ void QgsFrameGraph::setSize( QSize s )
   mRenderSurfaceSelector->setExternalRenderTargetSize( mSize );
 }
 
-Qt3DRender::QRenderCapture *QgsFrameGraph::offScreenRenderCapture()
+Qt3DRender::QRenderCapture *QgsFrameGraph::renderCapture()
 {
   return mRenderCapture;
 }
 
-void QgsFrameGraph::setOffScreenRenderCaptureEnabled( bool enabled )
+void QgsFrameGraph::setRenderCaptureEnabled( bool enabled )
 {
   if ( enabled == mRenderCaptureEnabled )
     return;

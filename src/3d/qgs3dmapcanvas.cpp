@@ -67,8 +67,8 @@ Qgs3DMapCanvas::Qgs3DMapCanvas()
   mEngine = new QgsWindow3DEngine( this );
 
   connect( mEngine, &QgsAbstract3DEngine::imageCaptured, this, [=]( const QImage &image ) {
-    image.save( mCaptureFileName, mCaptureFileFormat.toLocal8Bit().data() );
-    emit savedAsImage( mCaptureFileName );
+    if ( image.save( mCaptureFileName, mCaptureFileFormat.toLocal8Bit().data() ) )
+      emit savedAsImage( mCaptureFileName );
   } );
 
   setCursor( Qt::OpenHandCursor );
