@@ -50,6 +50,7 @@ class QgsShadowRenderView;
 class QgsDepthRenderView;
 class QgsShadowSettings;
 class QgsDebugTextureEntity;
+class QgsAmbientOcclusionSettings;
 
 #define SIP_NO_FILE
 
@@ -203,6 +204,18 @@ class QgsFrameGraph : public Qt3DCore::QEntity
      * \since QGIS 3.44
      */
     void updateDebugDepthMapSettings( const Qgs3DMapSettings &settings );
+
+    /**
+     * Updates settings for ambient occlusion
+     * \since QGIS 3.44
+     */
+    void updateAmbientOcclusionSettings( const QgsAmbientOcclusionSettings &settings );
+
+    /**
+     * Updates settings for eye dome lighting
+     * \since QGIS 3.44
+     */
+    void updateEyeDomeSettings( const Qgs3DMapSettings &settings );
 
     static const QString FORWARD_RENDERVIEW;
     static const QString SHADOW_RENDERVIEW;
