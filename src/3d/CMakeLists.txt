@@ -81,6 +81,7 @@ set(QGIS_3D_SRCS
   framegraph/qgsabstractrenderview.cpp
   framegraph/qgs3daxisrenderview.cpp
   framegraph/qgsambientocclusionrenderentity.cpp
+  framegraph/qgsambientocclusionrenderview.cpp
   framegraph/qgsambientocclusionblurentity.cpp
   framegraph/qgsdebugtextureentity.cpp
   framegraph/qgsdebugtexturerenderview.cpp
@@ -89,6 +90,8 @@ set(QGIS_3D_SRCS
   framegraph/qgsforwardrenderview.cpp
   framegraph/qgspostprocessingentity.cpp
   framegraph/qgsrenderpassquad.cpp
+  framegraph/qgsrubberbandrenderview.cpp
+  framegraph/qgspostprocessingrenderview.cpp
   framegraph/qgsshadowrenderview.cpp
   framegraph/qgsframegraph.cpp
   framegraph/qgsframegraphutils.cpp
@@ -195,6 +198,7 @@ set(QGIS_3D_HDRS
   framegraph/qgsabstractrenderview.h
   framegraph/qgs3daxisrenderview.h
   framegraph/qgsambientocclusionrenderentity.h
+  framegraph/qgsambientocclusionrenderview.h
   framegraph/qgsambientocclusionblurentity.h
   framegraph/qgsdebugtextureentity.h
   framegraph/qgsdebugtexturerenderview.h
@@ -205,6 +209,8 @@ set(QGIS_3D_HDRS
   framegraph/qgsframegraphutils.h
   framegraph/qgspostprocessingentity.h
   framegraph/qgsrenderpassquad.h
+  framegraph/qgsrubberbandrenderview.h
+  framegraph/qgspostprocessingrenderview.cpp
   framegraph/qgsshadowrenderview.h
 
   symbols/qgsbillboardgeometry.h
