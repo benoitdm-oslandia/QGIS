@@ -22,8 +22,6 @@
 #include "qgsabstractrenderview.h"
 #include "qgsshadowrenderview.h"
 
-#include "qgsambientocclusionrenderentity.h"
-#include "qgsambientocclusionblurentity.h"
 
 #if QT_VERSION < QT_VERSION_CHECK( 6, 0, 0 )
 #include <Qt3DRender/QAttribute>
@@ -59,12 +57,18 @@ typedef Qt3DCore::QGeometry Qt3DQGeometry;
 #include "qgsdepthentity.h"
 #include "qgsdebugtexturerenderview.h"
 #include "qgsdebugtextureentity.h"
+#include "qgsambientocclusionrenderview.h"
+#include "qgspostprocessingrenderview.h"
+#include "qgsrubberbandrenderview.h"
 
 const QString QgsFrameGraph::FORWARD_RENDERVIEW = "forward";
 const QString QgsFrameGraph::SHADOW_RENDERVIEW = "shadow";
 const QString QgsFrameGraph::AXIS3D_RENDERVIEW = "3daxis";
 const QString QgsFrameGraph::DEPTH_RENDERVIEW = "depth";
 const QString QgsFrameGraph::DEBUG_RENDERVIEW = "debug_texture";
+const QString QgsFrameGraph::AMBIENT_OCCLUSION_RENDERVIEW = "ambient_occlusion";
+const QString QgsFrameGraph::POSTPROC_RENDERVIEW = "post_processing";
+const QString QgsFrameGraph::RUBBER_RENDERVIEW = "rubber_band";
 
 void QgsFrameGraph::constructForwardRenderPass()
 {
@@ -81,219 +85,40 @@ void QgsFrameGraph::constructDebugTexturePass( Qt3DRender::QFrameGraphNode *topN
   registerRenderView( std::make_unique<QgsDebugTextureRenderView>( DEBUG_RENDERVIEW ), DEBUG_RENDERVIEW, topNode );
 }
 
-Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructSubPostPassForProcessing()
+void QgsFrameGraph::constructPostprocessingPass()
 {
-  Qt3DRender::QCameraSelector *cameraSelector = new Qt3DRender::QCameraSelector;
-  cameraSelector->setObjectName( "Sub pass Postprocessing" );
-  cameraSelector->setCamera( shadowRenderView().lightCamera() );
+  // create post processing render view and register it
+  QgsPostprocessingRenderView *pprv = new QgsPostprocessingRenderView( POSTPROC_RENDERVIEW,          //
+                                                                       shadowRenderView(),           //
+                                                                       forwardRenderView(),          //
+                                                                       ambientOcclusionRenderView(), //
+                                                                       mSize,                        //
+                                                                       mRootEntity );
+  registerRenderView( std::unique_ptr<QgsPostprocessingRenderView>( pprv ), POSTPROC_RENDERVIEW );
 
-  Qt3DRender::QLayerFilter *layerFilter = new Qt3DRender::QLayerFilter( cameraSelector );
+  // create debug texture render view and register it (will be detach from main framegraph and attach to postprocessing renderview)
+  constructDebugTexturePass();
 
-  // could be the first of this branch
-  new Qt3DRender::QClearBuffers( layerFilter );
-
-  Qt3DRender::QLayer *postProcessingLayer = new Qt3DRender::QLayer();
-  mPostprocessingEntity = new QgsPostprocessingEntity( this, postProcessingLayer, mRootEntity );
-  layerFilter->addLayer( postProcessingLayer );
-  mPostprocessingEntity->setObjectName( "PostProcessingPassEntity" );
-
-  return cameraSelector;
+  // add debug texture render view to post processing subpasses (before the render capture one)
+  QVector<Qt3DRender::QFrameGraphNode *> subPasses = pprv->subPasses();
+  subPasses.insert( subPasses.length() - 1, renderView( DEBUG_RENDERVIEW )->topGraphNode() );
+  pprv->setSubPasses( subPasses );
 }
 
-Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructSubPostPassForRenderCapture()
+void QgsFrameGraph::constructAmbientOcclusionRenderPass()
 {
-  Qt3DRender::QFrameGraphNode *top = new Qt3DRender::QNoDraw;
-  top->setObjectName( "Sub pass RenderCapture" );
-
-  mRenderCapture = new Qt3DRender::QRenderCapture( top );
-
-  return top;
-}
-
-Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructPostprocessingPass()
-{
-  mRenderCaptureTargetSelector = new Qt3DRender::QRenderTargetSelector;
-  mRenderCaptureTargetSelector->setObjectName( "Postprocessing render pass" );
-  mRenderCaptureTargetSelector->setEnabled( mRenderCaptureEnabled );
-
-  Qt3DRender::QRenderTarget *renderTarget = new Qt3DRender::QRenderTarget( mRenderCaptureTargetSelector );
-
-  // The lifetime of the objects created here is managed
-  // automatically, as they become children of this object.
-
-  // Create a render target output for rendering color.
-  Qt3DRender::QRenderTargetOutput *colorOutput = new Qt3DRender::QRenderTargetOutput( renderTarget );
-  colorOutput->setAttachmentPoint( Qt3DRender::QRenderTargetOutput::Color0 );
-
-  // Create a texture to render into.
-  mRenderCaptureColorTexture = new Qt3DRender::QTexture2D( colorOutput );
-  mRenderCaptureColorTexture->setSize( mSize.width(), mSize.height() );
-  mRenderCaptureColorTexture->setFormat( Qt3DRender::QAbstractTexture::RGB8_UNorm );
-  mRenderCaptureColorTexture->setMinificationFilter( Qt3DRender::QAbstractTexture::Linear );
-  mRenderCaptureColorTexture->setMagnificationFilter( Qt3DRender::QAbstractTexture::Linear );
-  mRenderCaptureColorTexture->setObjectName( "PostProcessingPass::ColorTarget" );
-
-  // Hook the texture up to our output, and the output up to this object.
-  colorOutput->setTexture( mRenderCaptureColorTexture );
-  renderTarget->addOutput( colorOutput );
-
-  Qt3DRender::QRenderTargetOutput *depthOutput = new Qt3DRender::QRenderTargetOutput( renderTarget );
-
-  depthOutput->setAttachmentPoint( Qt3DRender::QRenderTargetOutput::Depth );
-  mRenderCaptureDepthTexture = new Qt3DRender::QTexture2D( depthOutput );
-  mRenderCaptureDepthTexture->setSize( mSize.width(), mSize.height() );
-  mRenderCaptureDepthTexture->setFormat( Qt3DRender::QAbstractTexture::DepthFormat );
-  mRenderCaptureDepthTexture->setMinificationFilter( Qt3DRender::QAbstractTexture::Linear );
-  mRenderCaptureDepthTexture->setMagnificationFilter( Qt3DRender::QAbstractTexture::Linear );
-  mRenderCaptureDepthTexture->setComparisonFunction( Qt3DRender::QAbstractTexture::CompareLessEqual );
-  mRenderCaptureDepthTexture->setComparisonMode( Qt3DRender::QAbstractTexture::CompareRefToTexture );
-  mRenderCaptureDepthTexture->setObjectName( "PostProcessingPass::DepthTarget" );
-
-  depthOutput->setTexture( mRenderCaptureDepthTexture );
-  renderTarget->addOutput( depthOutput );
-
-  mRenderCaptureTargetSelector->setTarget( renderTarget );
-
-  // sub passes:
-  constructSubPostPassForProcessing()->setParent( mRenderCaptureTargetSelector );
-  constructDebugTexturePass( mRenderCaptureTargetSelector );
-  constructSubPostPassForRenderCapture()->setParent( mRenderCaptureTargetSelector );
-
-  return mRenderCaptureTargetSelector;
-}
-
-Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructAmbientOcclusionRenderPass()
-{
-  mAmbientOcclusionRenderCameraSelector = new Qt3DRender::QCameraSelector;
-  mAmbientOcclusionRenderCameraSelector->setObjectName( "AmbientOcclusion render pass CameraSelector" );
-  mAmbientOcclusionRenderCameraSelector->setCamera( mMainCamera );
-
-  mAmbientOcclusionRenderStateSet = new Qt3DRender::QRenderStateSet( mAmbientOcclusionRenderCameraSelector );
-
-  Qt3DRender::QDepthTest *depthRenderDepthTest = new Qt3DRender::QDepthTest;
-  depthRenderDepthTest->setDepthFunction( Qt3DRender::QDepthTest::Always );
-  ;
-  Qt3DRender::QCullFace *depthRenderCullFace = new Qt3DRender::QCullFace;
-  depthRenderCullFace->setMode( Qt3DRender::QCullFace::NoCulling );
-
-  mAmbientOcclusionRenderStateSet->addRenderState( depthRenderDepthTest );
-  mAmbientOcclusionRenderStateSet->addRenderState( depthRenderCullFace );
-
-  mAmbientOcclusionRenderLayerFilter = new Qt3DRender::QLayerFilter( mAmbientOcclusionRenderStateSet );
-
-  mAmbientOcclusionRenderCaptureTargetSelector = new Qt3DRender::QRenderTargetSelector( mAmbientOcclusionRenderLayerFilter );
-  Qt3DRender::QRenderTarget *colorRenderTarget = new Qt3DRender::QRenderTarget( mAmbientOcclusionRenderCaptureTargetSelector );
-
-  // The lifetime of the objects created here is managed
-  // automatically, as they become children of this object.
-
-  // Create a render target output for rendering color.
-  Qt3DRender::QRenderTargetOutput *colorOutput = new Qt3DRender::QRenderTargetOutput( colorRenderTarget );
-  colorOutput->setAttachmentPoint( Qt3DRender::QRenderTargetOutput::Color0 );
-
-  // Create a texture to render into.
-  mAmbientOcclusionRenderTexture = new Qt3DRender::QTexture2D( colorOutput );
-  mAmbientOcclusionRenderTexture->setSize( mSize.width(), mSize.height() );
-  mAmbientOcclusionRenderTexture->setFormat( Qt3DRender::QAbstractTexture::R32F );
-  mAmbientOcclusionRenderTexture->setMinificationFilter( Qt3DRender::QAbstractTexture::Linear );
-  mAmbientOcclusionRenderTexture->setMagnificationFilter( Qt3DRender::QAbstractTexture::Linear );
-
-  // Hook the texture up to our output, and the output up to this object.
-  colorOutput->setTexture( mAmbientOcclusionRenderTexture );
-  colorRenderTarget->addOutput( colorOutput );
-
-  mAmbientOcclusionRenderCaptureTargetSelector->setTarget( colorRenderTarget );
-
-  Qt3DRender::QLayer *ambientOcclusionRenderLayer = new Qt3DRender::QLayer();
   Qt3DRender::QTexture2D *forwardDepthTexture = forwardRenderView().depthTexture();
-  mAmbientOcclusionRenderEntity = new QgsAmbientOcclusionRenderEntity( forwardDepthTexture, ambientOcclusionRenderLayer, mMainCamera, mRootEntity );
-  mAmbientOcclusionRenderLayerFilter->addLayer( ambientOcclusionRenderLayer );
 
-  return mAmbientOcclusionRenderCameraSelector;
+  QgsAmbientOcclusionRenderView *aorv = new QgsAmbientOcclusionRenderView( AMBIENT_OCCLUSION_RENDERVIEW, mMainCamera, mSize, forwardDepthTexture, mRootEntity );
+  registerRenderView( std::unique_ptr<QgsAmbientOcclusionRenderView>( aorv ), AMBIENT_OCCLUSION_RENDERVIEW );
 }
 
-Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructAmbientOcclusionBlurPass()
+void QgsFrameGraph::constructRubberBandsPass()
 {
-  mAmbientOcclusionBlurCameraSelector = new Qt3DRender::QCameraSelector;
-  mAmbientOcclusionBlurCameraSelector->setObjectName( "AmbientOcclusion blur pass CameraSelector" );
-  mAmbientOcclusionBlurCameraSelector->setCamera( mMainCamera );
-
-  mAmbientOcclusionBlurStateSet = new Qt3DRender::QRenderStateSet( mAmbientOcclusionBlurCameraSelector );
-
-  Qt3DRender::QDepthTest *depthRenderDepthTest = new Qt3DRender::QDepthTest;
-  depthRenderDepthTest->setDepthFunction( Qt3DRender::QDepthTest::Always );
-  ;
-  Qt3DRender::QCullFace *depthRenderCullFace = new Qt3DRender::QCullFace;
-  depthRenderCullFace->setMode( Qt3DRender::QCullFace::NoCulling );
-
-  mAmbientOcclusionBlurStateSet->addRenderState( depthRenderDepthTest );
-  mAmbientOcclusionBlurStateSet->addRenderState( depthRenderCullFace );
-
-  mAmbientOcclusionBlurLayerFilter = new Qt3DRender::QLayerFilter( mAmbientOcclusionBlurStateSet );
-
-  mAmbientOcclusionBlurRenderCaptureTargetSelector = new Qt3DRender::QRenderTargetSelector( mAmbientOcclusionBlurLayerFilter );
-  Qt3DRender::QRenderTarget *depthRenderTarget = new Qt3DRender::QRenderTarget( mAmbientOcclusionBlurRenderCaptureTargetSelector );
-
-  // The lifetime of the objects created here is managed
-  // automatically, as they become children of this object.
-
-  // Create a render target output for rendering color.
-  Qt3DRender::QRenderTargetOutput *colorOutput = new Qt3DRender::QRenderTargetOutput( depthRenderTarget );
-  colorOutput->setAttachmentPoint( Qt3DRender::QRenderTargetOutput::Color0 );
-
-  // Create a texture to render into.
-  mAmbientOcclusionBlurTexture = new Qt3DRender::QTexture2D( colorOutput );
-  mAmbientOcclusionBlurTexture->setSize( mSize.width(), mSize.height() );
-  mAmbientOcclusionBlurTexture->setFormat( Qt3DRender::QAbstractTexture::R32F );
-  mAmbientOcclusionBlurTexture->setMinificationFilter( Qt3DRender::QAbstractTexture::Linear );
-  mAmbientOcclusionBlurTexture->setMagnificationFilter( Qt3DRender::QAbstractTexture::Linear );
-
-  // Hook the texture up to our output, and the output up to this object.
-  colorOutput->setTexture( mAmbientOcclusionBlurTexture );
-  depthRenderTarget->addOutput( colorOutput );
-
-  mAmbientOcclusionBlurRenderCaptureTargetSelector->setTarget( depthRenderTarget );
-
-  Qt3DRender::QLayer *ambientOcclusionBlurLayer = new Qt3DRender::QLayer();
-  mAmbientOcclusionBlurEntity = new QgsAmbientOcclusionBlurEntity( mAmbientOcclusionRenderTexture, ambientOcclusionBlurLayer, mRootEntity );
-  mAmbientOcclusionBlurLayerFilter->addLayer( ambientOcclusionBlurLayer );
-
-  return mAmbientOcclusionBlurCameraSelector;
+  // rubber band render view writes to the same output textures than the forward render view:
+  QgsRubberBandRenderView *rv = new QgsRubberBandRenderView( RUBBER_RENDERVIEW, mMainCamera, mRootEntity, forwardRenderView().renderTargetSelector()->target() );
+  registerRenderView( std::unique_ptr<QgsRubberBandRenderView>( rv ), RUBBER_RENDERVIEW );
 }
-
-
-Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructRubberBandsPass()
-{
-  mRubberBandsCameraSelector = new Qt3DRender::QCameraSelector;
-  mRubberBandsCameraSelector->setObjectName( "RubberBands Pass CameraSelector" );
-  mRubberBandsCameraSelector->setCamera( mMainCamera );
-
-  mRubberBandsLayerFilter = new Qt3DRender::QLayerFilter( mRubberBandsCameraSelector );
-  mRubberBandsLayerFilter->addLayer( mRubberBandsLayer );
-
-  Qt3DRender::QBlendEquationArguments *blendState = new Qt3DRender::QBlendEquationArguments;
-  blendState->setSourceRgb( Qt3DRender::QBlendEquationArguments::SourceAlpha );
-  blendState->setDestinationRgb( Qt3DRender::QBlendEquationArguments::OneMinusSourceAlpha );
-
-  Qt3DRender::QBlendEquation *blendEquation = new Qt3DRender::QBlendEquation;
-  blendEquation->setBlendFunction( Qt3DRender::QBlendEquation::Add );
-
-  mRubberBandsStateSet = new Qt3DRender::QRenderStateSet( mRubberBandsLayerFilter );
-  Qt3DRender::QDepthTest *depthTest = new Qt3DRender::QDepthTest;
-  depthTest->setDepthFunction( Qt3DRender::QDepthTest::Always );
-  mRubberBandsStateSet->addRenderState( depthTest );
-  mRubberBandsStateSet->addRenderState( blendState );
-  mRubberBandsStateSet->addRenderState( blendEquation );
-
-  // Here we attach our drawings to the render target also used by forward pass.
-  // This is kind of okay, but as a result, post-processing effects get applied
-  // to rubber bands too. Ideally we would want them on top of everything.
-  mRubberBandsRenderTargetSelector = new Qt3DRender::QRenderTargetSelector( mRubberBandsStateSet );
-  mRubberBandsRenderTargetSelector->setTarget( forwardRenderView().renderTargetSelector()->target() );
-
-  return mRubberBandsCameraSelector;
-}
-
 
 void QgsFrameGraph::constructDepthRenderPass()
 {
@@ -343,10 +168,6 @@ QgsFrameGraph::QgsFrameGraph( QSurface *surface, QSize s, Qt3DRender::QCamera *m
   mRootEntity = root;
   mMainCamera = mainCamera;
 
-  mRubberBandsLayer = new Qt3DRender::QLayer;
-  mRubberBandsLayer->setObjectName( "mRubberBandsLayer" );
-  mRubberBandsLayer->setRecursive( true );
-
   mRenderSurfaceSelector = new Qt3DRender::QRenderSurfaceSelector;
 
   QObject *surfaceObj = dynamic_cast<QObject *>( surface );
@@ -362,9 +183,7 @@ QgsFrameGraph::QgsFrameGraph( QSurface *surface, QSize s, Qt3DRender::QCamera *m
   constructForwardRenderPass();
 
   // rubber bands (they should be always on top)
-  Qt3DRender::QFrameGraphNode *rubberBandsPass = constructRubberBandsPass();
-  rubberBandsPass->setObjectName( "rubberBandsPass" );
-  rubberBandsPass->setParent( mMainViewPort );
+  constructRubberBandsPass();
 
   // shadow rendering pass
   constructShadowRenderPass();
@@ -373,20 +192,10 @@ QgsFrameGraph::QgsFrameGraph( QSurface *surface, QSize s, Qt3DRender::QCamera *m
   constructDepthRenderPass();
 
   // Ambient occlusion factor render pass
-  Qt3DRender::QFrameGraphNode *ambientOcclusionFactorRender = constructAmbientOcclusionRenderPass();
-  ambientOcclusionFactorRender->setParent( mMainViewPort );
-
-  Qt3DRender::QFrameGraphNode *ambientOcclusionBlurPass = constructAmbientOcclusionBlurPass();
-  ambientOcclusionBlurPass->setParent( mMainViewPort );
+  constructAmbientOcclusionRenderPass();
 
   // post process
-  Qt3DRender::QFrameGraphNode *postprocessingPass = constructPostprocessingPass();
-  postprocessingPass->setParent( mMainViewPort );
-  postprocessingPass->setObjectName( "PostProcessingPass" );
-
-  mRubberBandsRootEntity = new Qt3DCore::QEntity( mRootEntity );
-  mRubberBandsRootEntity->setObjectName( "mRubberBandsRootEntity" );
-  mRubberBandsRootEntity->addComponent( mRubberBandsLayer );
+  constructPostprocessingPass();
 }
 
 void QgsFrameGraph::unregisterRenderView( const QString &name )
@@ -436,6 +245,24 @@ bool QgsFrameGraph::isRenderViewEnabled( const QString &name )
   return mRenderViewMap[name] != nullptr && mRenderViewMap[name]->isEnabled();
 }
 
+void QgsFrameGraph::updateAmbientOcclusionSettings( const QgsAmbientOcclusionSettings &settings )
+{
+  QgsAmbientOcclusionRenderView &aoRenderView = ambientOcclusionRenderView();
+
+  aoRenderView.setRadius( settings.radius() );
+  aoRenderView.setIntensity( settings.intensity() );
+  aoRenderView.setThreshold( settings.threshold() );
+  aoRenderView.setEnabled( settings.isEnabled() );
+
+  postprocessingRenderView().entity()->setAmbientOcclusionEnabled( settings.isEnabled() );
+}
+
+void QgsFrameGraph::updateEyeDomeSettings( const Qgs3DMapSettings &settings )
+{
+  postprocessingRenderView().entity()->setEyeDomeLightingEnabled( settings.eyeDomeLightingEnabled() );
+  postprocessingRenderView().entity()->updateEyeDomeSettings( settings );
+}
+
 void QgsFrameGraph::updateShadowSettings( const QgsShadowSettings &shadowSettings, const QList<QgsLightSource *> &lightSources )
 {
   if ( shadowSettings.renderShadows() )
@@ -456,15 +283,14 @@ void QgsFrameGraph::updateShadowSettings( const QgsShadowSettings &shadowSetting
     {
       shadowRenderView().setMapSize( shadowSettings.shadowMapResolution(), shadowSettings.shadowMapResolution() );
       shadowRenderView().setEnabled( true );
-      mPostprocessingEntity->setShadowRenderingEnabled( true );
-      mPostprocessingEntity->setShadowBias( static_cast<float>( shadowSettings.shadowBias() ) );
-      mPostprocessingEntity->updateShadowSettings( *light, static_cast<float>( shadowSettings.maximumShadowRenderingDistance() ) );
+      postprocessingRenderView().entity()->setShadowRenderingEnabled( true );
+      postprocessingRenderView().entity()->updateShadowSettings( shadowSettings, *light );
     }
   }
   else
   {
     shadowRenderView().setEnabled( false );
-    mPostprocessingEntity->setShadowRenderingEnabled( false );
+    postprocessingRenderView().entity()->setShadowRenderingEnabled( false );
   }
 }
 
@@ -540,44 +366,9 @@ void QgsFrameGraph::setClearColor( const QColor &clearColor )
   forwardRenderView().setClearColor( clearColor );
 }
 
-void QgsFrameGraph::setAmbientOcclusionEnabled( bool enabled )
-{
-  mAmbientOcclusionEnabled = enabled;
-  mAmbientOcclusionRenderEntity->setEnabled( enabled );
-  mPostprocessingEntity->setAmbientOcclusionEnabled( enabled );
-}
-
-void QgsFrameGraph::setAmbientOcclusionIntensity( float intensity )
-{
-  mAmbientOcclusionIntensity = intensity;
-  mAmbientOcclusionRenderEntity->setIntensity( intensity );
-}
-
-void QgsFrameGraph::setAmbientOcclusionRadius( float radius )
-{
-  mAmbientOcclusionRadius = radius;
-  mAmbientOcclusionRenderEntity->setRadius( radius );
-}
-
-void QgsFrameGraph::setAmbientOcclusionThreshold( float threshold )
-{
-  mAmbientOcclusionThreshold = threshold;
-  mAmbientOcclusionRenderEntity->setThreshold( threshold );
-}
-
 void QgsFrameGraph::setFrustumCullingEnabled( bool enabled )
 {
   forwardRenderView().setFrustumCullingEnabled( enabled );
-}
-
-void QgsFrameGraph::setupEyeDomeLighting( bool enabled, double strength, int distance )
-{
-  mEyeDomeLightingEnabled = enabled;
-  mEyeDomeLightingStrength = strength;
-  mEyeDomeLightingDistance = distance;
-  mPostprocessingEntity->setEyeDomeLightingEnabled( enabled );
-  mPostprocessingEntity->setEyeDomeLightingStrength( strength );
-  mPostprocessingEntity->setEyeDomeLightingDistance( distance );
 }
 
 void QgsFrameGraph::setSize( QSize s )
@@ -589,20 +380,17 @@ void QgsFrameGraph::setSize( QSize s )
     rv->updateWindowResize( mSize.width(), mSize.height() );
   }
 
-  mRenderCaptureColorTexture->setSize( mSize.width(), mSize.height() );
-  mRenderCaptureDepthTexture->setSize( mSize.width(), mSize.height() );
   mRenderSurfaceSelector->setExternalRenderTargetSize( mSize );
+}
 
-  mAmbientOcclusionRenderTexture->setSize( mSize.width(), mSize.height() );
-  mAmbientOcclusionBlurTexture->setSize( mSize.width(), mSize.height() );
+Qt3DRender::QRenderCapture *QgsFrameGraph::renderCapture()
+{
+  return postprocessingRenderView().renderCapture();
 }
 
 void QgsFrameGraph::setRenderCaptureEnabled( bool enabled )
 {
-  if ( enabled == mRenderCaptureEnabled )
-    return;
-  mRenderCaptureEnabled = enabled;
-  mRenderCaptureTargetSelector->setEnabled( mRenderCaptureEnabled );
+  postprocessingRenderView().setOffScreenRenderCaptureEnabled( enabled );
 }
 
 void QgsFrameGraph::setDebugOverlayEnabled( bool enabled )
@@ -636,4 +424,22 @@ QgsDepthRenderView &QgsFrameGraph::depthRenderView()
 {
   QgsAbstractRenderView *rv = mRenderViewMap[QgsFrameGraph::DEPTH_RENDERVIEW].get();
   return *( dynamic_cast<QgsDepthRenderView *>( rv ) );
+}
+
+QgsAmbientOcclusionRenderView &QgsFrameGraph::ambientOcclusionRenderView()
+{
+  QgsAbstractRenderView *rv = mRenderViewMap[QgsFrameGraph::AMBIENT_OCCLUSION_RENDERVIEW].get();
+  return *( dynamic_cast<QgsAmbientOcclusionRenderView *>( rv ) );
+}
+
+QgsPostprocessingRenderView &QgsFrameGraph::postprocessingRenderView()
+{
+  QgsAbstractRenderView *rv = mRenderViewMap[QgsFrameGraph::POSTPROC_RENDERVIEW].get();
+  return *( dynamic_cast<QgsPostprocessingRenderView *>( rv ) );
+}
+
+QgsRubberBandRenderView &QgsFrameGraph::rubberBandRenderView()
+{
+  QgsAbstractRenderView *rv = mRenderViewMap[QgsFrameGraph::RUBBER_RENDERVIEW].get();
+  return *( dynamic_cast<QgsRubberBandRenderView *>( rv ) );
 }

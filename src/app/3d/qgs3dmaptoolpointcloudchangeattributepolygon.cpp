@@ -145,7 +145,7 @@ void Qgs3DMapToolPointCloudChangeAttributePolygon::activate()
   // cannot move this to the constructor as there are no mapSettings available yet when the tool is created
   if ( !mPolygonRubberBand )
   {
-    mPolygonRubberBand = std::make_unique<QgsRubberBand3D>( *mCanvas->mapSettings(), mCanvas->engine(), mCanvas->engine()->frameGraph()->rubberBandsRootEntity(), Qgis::GeometryType::Polygon );
+    mPolygonRubberBand = std::make_unique<QgsRubberBand3D>( *mCanvas->mapSettings(), mCanvas->engine(), Qgis::GeometryType::Polygon );
     if ( mToolType == Polygon )
     {
       mPolygonRubberBand->setHideLastMarker( true );
@@ -158,7 +158,7 @@ void Qgs3DMapToolPointCloudChangeAttributePolygon::activate()
   }
   if ( !mLineRubberBand && mToolType != Polygon )
   {
-    mLineRubberBand = std::make_unique<QgsRubberBand3D>( *mCanvas->mapSettings(), mCanvas->engine(), mCanvas->engine()->frameGraph()->rubberBandsRootEntity(), Qgis::GeometryType::Line );
+    mLineRubberBand = std::make_unique<QgsRubberBand3D>( *mCanvas->mapSettings(), mCanvas->engine(), Qgis::GeometryType::Line );
     mLineRubberBand->setHideLastMarker( true );
   }
 }

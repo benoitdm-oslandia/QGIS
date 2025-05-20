@@ -48,15 +48,19 @@
 #include <Qt3DRender/QGeometryRenderer>
 #include <QColor>
 
+#include "qgsframegraph.h"
+#include "qgsrubberbandrenderview.h"
 
 /// @cond PRIVATE
 
 
-QgsRubberBand3D::QgsRubberBand3D( Qgs3DMapSettings &map, QgsAbstract3DEngine *engine, Qt3DCore::QEntity *parentEntity, const Qgis::GeometryType geometryType )
+QgsRubberBand3D::QgsRubberBand3D( Qgs3DMapSettings &map, QgsAbstract3DEngine *engine, const Qgis::GeometryType geometryType )
   : mMapSettings( &map )
   , mEngine( engine )
   , mGeometryType( geometryType )
 {
+  Qt3DCore::QEntity *parentEntity = mEngine->frameGraph()->rubberBandRenderView().rubberBandEntity();
+
   switch ( mGeometryType )
   {
     case Qgis::GeometryType::Point:
