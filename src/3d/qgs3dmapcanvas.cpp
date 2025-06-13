@@ -38,8 +38,9 @@
 #include "moc_qgs3dmapcanvas.cpp"
 
 
-Qgs3DMapCanvas::Qgs3DMapCanvas()
-  : m_aspectEngine( new Qt3DCore::QAspectEngine )
+Qgs3DMapCanvas::Qgs3DMapCanvas( QWidget *parent )
+  : m_parentWidget( parent )
+  , m_aspectEngine( new Qt3DCore::QAspectEngine )
   , m_renderAspect( new Qt3DRender::QRenderAspect )
   , m_inputAspect( new Qt3DInput::QInputAspect )
   , m_logicAspect( new Qt3DLogic::QLogicAspect )
@@ -271,10 +272,49 @@ bool Qgs3DMapCanvas::eventFilter( QObject *watched, QEvent *event )
   if ( watched != this )
     return false;
 
+  qDebug() << "Qgs3DMapCanvas::eventFilter:" << event;
+
   if ( mScene && mScene->get3DAxis() && mScene->get3DAxis()->handleEvent( event ) )
   {
+    qDebug() << "Qgs3DMapCanvas::eventFilter: handled by 3daxis";
     event->accept();
     return true;
+  }
+
+  if ( mMapTool )
+  {
+    qDebug() << "Qgs3DMapCanvas::eventFilter: checking maptool";
+    bool wasHandled = true;
+    switch ( event->type() )
+    {
+      case QEvent::MouseButtonPress:
+        mMapTool->mousePressEvent( static_cast<QMouseEvent *>( event ) );
+        break;
+      case QEvent::MouseButtonRelease:
+        mMapTool->mouseReleaseEvent( static_cast<QMouseEvent *>( event ) );
+        break;
+      case QEvent::MouseMove:
+        mMapTool->mouseMoveEvent( static_cast<QMouseEvent *>( event ) );
+        break;
+      case QEvent::KeyPress:
+        mMapTool->keyPressEvent( static_cast<QKeyEvent *>( event ) );
+        break;
+      case QEvent::KeyRelease:
+        mMapTool->keyReleaseEvent( static_cast<QKeyEvent *>( event ) );
+        break;
+      case QEvent::Wheel:
+        mMapTool->mouseWheelEvent( static_cast<QWheelEvent *>( event ) );
+        break;
+      default:
+        wasHandled = false;
+        break;
+    }
+    if ( wasHandled )
+    {
+      qDebug() << "Qgs3DMapCanvas::eventFilter: handled by maptool";
+      event->accept();
+      return true;
+    }
   }
 
   // ShortcutOverride is sent if the pressed key is "claimed" by a shortcut,
@@ -287,38 +327,12 @@ bool Qgs3DMapCanvas::eventFilter( QObject *watched, QEvent *event )
     // and accordingly never be received by the camera controller
     if ( cameraController() && cameraController()->keyboardEventFilter( static_cast<QKeyEvent *>( event ) ) )
     {
+      qDebug() << "Qgs3DMapCanvas::eventFilter: handled by cameracontroller";
       event->accept();
       return true;
     }
-    return false;
   }
 
-  if ( !mMapTool )
-    return false;
-
-  switch ( event->type() )
-  {
-    case QEvent::MouseButtonPress:
-      mMapTool->mousePressEvent( static_cast<QMouseEvent *>( event ) );
-      break;
-    case QEvent::MouseButtonRelease:
-      mMapTool->mouseReleaseEvent( static_cast<QMouseEvent *>( event ) );
-      break;
-    case QEvent::MouseMove:
-      mMapTool->mouseMoveEvent( static_cast<QMouseEvent *>( event ) );
-      break;
-    case QEvent::KeyPress:
-      mMapTool->keyPressEvent( static_cast<QKeyEvent *>( event ) );
-      break;
-    case QEvent::KeyRelease:
-      mMapTool->keyReleaseEvent( static_cast<QKeyEvent *>( event ) );
-      break;
-    case QEvent::Wheel:
-      mMapTool->mouseWheelEvent( static_cast<QWheelEvent *>( event ) );
-      break;
-    default:
-      break;
-  }
   return false;
 }
 
