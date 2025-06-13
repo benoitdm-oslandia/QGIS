@@ -272,7 +272,7 @@ bool Qgs3DMapCanvas::eventFilter( QObject *watched, QEvent *event )
   if ( watched != this )
     return false;
 
-  qDebug() << "Qgs3DMapCanvas::eventFilter:" << event;
+  //  qDebug() << "Qgs3DMapCanvas::eventFilter:" << event;
 
   if ( mScene && mScene->get3DAxis() && mScene->get3DAxis()->handleEvent( event ) )
   {
@@ -283,7 +283,7 @@ bool Qgs3DMapCanvas::eventFilter( QObject *watched, QEvent *event )
 
   if ( mMapTool )
   {
-    qDebug() << "Qgs3DMapCanvas::eventFilter: checking maptool";
+    //qDebug() << "Qgs3DMapCanvas::eventFilter: checking maptool";
     bool wasHandled = true;
     switch ( event->type() )
     {
@@ -311,7 +311,7 @@ bool Qgs3DMapCanvas::eventFilter( QObject *watched, QEvent *event )
     }
     if ( wasHandled )
     {
-      qDebug() << "Qgs3DMapCanvas::eventFilter: handled by maptool";
+      // qDebug() << "Qgs3DMapCanvas::eventFilter: handled by maptool";
       event->accept();
       return true;
     }

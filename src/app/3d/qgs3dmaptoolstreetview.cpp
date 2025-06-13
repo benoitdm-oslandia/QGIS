@@ -27,31 +27,52 @@
 #include "qgswindow3dengine.h"
 #include "qgsframegraph.h"
 #include "qgsabstractterrainsettings.h"
-
+#include <QTimer>
 
 Qgs3DMapToolStreetView::Qgs3DMapToolStreetView( Qgs3DMapCanvas *canvas )
-  : Qgs3DMapTool( canvas ), mIsNavigating( false ), mSelectedPos( QgsPoint() ), mLastTime( QTime::currentTime() )
+  : Qgs3DMapTool( canvas )
+  , mIsNavigating( false )
+  , mIsEnabled( false )
+  , mIgnoreNextMouseMove( false )
+  , mPreviousCameraPose()
+  , mMarkerPos( QgsPoint() )
+  , mLastMarkerTime( QTime::currentTime() )
+  , mJumpTime( QTime::currentTime() )
 {
+  mJumpTimer = new QTimer( this );
+  connect( mJumpTimer, &QTimer::timeout, this, QOverload<>::of( &Qgs3DMapToolStreetView::refreshCamera ) );
 }
 
 Qgs3DMapToolStreetView::~Qgs3DMapToolStreetView() = default;
 
 void Qgs3DMapToolStreetView::activate()
 {
-  mRubberBand.reset( new QgsRubberBand3D( *mCanvas->mapSettings(), mCanvas->engine(), mCanvas->engine()->frameGraph()->rubberBandsRootEntity() ) );
-
-  restart();
-  updateSettings();
+  if ( !mIsEnabled )
+  {
+    reset();
+    updateSettings();
+    mIsEnabled = true;
+  }
 }
 
 void Qgs3DMapToolStreetView::deactivate()
 {
-  mRubberBand.reset();
+  if ( mIsEnabled )
+  {
+    if ( mIsNavigating )
+    {
+      mCanvas->cameraController()->setInputHandlersEnabled( true );
+      mCanvas->cameraController()->setCameraPose( mPreviousCameraPose );
+    }
+    reset();
+    mIsEnabled = false;
+    emit finished();
+  }
 }
 
 QCursor Qgs3DMapToolStreetView::cursor() const
 {
-  return Qt::DragMoveCursor;
+  return Qt::WhatsThisCursor;
 }
 
 void Qgs3DMapToolStreetView::handleClick( const QPoint &screenPos )
@@ -75,7 +96,7 @@ void Qgs3DMapToolStreetView::handleClick( const QPoint &screenPos )
     }
   }
   const QgsVector3D mapCoords = Qgs3DUtils::worldToMapCoordinates( worldIntersection, mCanvas->mapSettings()->origin() );
-  setupPinPoint( QgsPoint( mapCoords.x(), mapCoords.y(), 0.0f ) );
+  setupMarker( QgsPoint( mapCoords.x(), mapCoords.y(), 0.0f ) );
 }
 
 void Qgs3DMapToolStreetView::updateSettings()
@@ -94,6 +115,8 @@ void Qgs3DMapToolStreetView::updateSettings()
 
 void Qgs3DMapToolStreetView::updateNavigationCamera( const QgsPoint &newCamPosInMap )
 {
+  Qgs3DUtils::waitForFrame( *mCanvas->engine(), mCanvas->scene() );
+
   qDebug() << "center:" << mCanvas->cameraController()->cameraPose().centerPoint().toString( 1 );
   qDebug() << "dist:" << mCanvas->cameraController()->cameraPose().distanceFromCenterPoint();
   qDebug() << "headingAngle:" << mCanvas->cameraController()->cameraPose().headingAngle();
@@ -103,18 +126,21 @@ void Qgs3DMapToolStreetView::updateNavigationCamera( const QgsPoint &newCamPosIn
 
   QgsVector3D viewVectorInMap( curCamCenterInMap - curCamPositionInMap );
 
+  double jump = jumpHeight( mJumpTime.msecsTo( QTime::currentTime() ) );
+  qDebug() << "updateNavigationCamera jump:" << jump;
+
   // TODO: fails when vertical scale is not 1.0
   QgsPoint camPosInMap( newCamPosInMap.x(), newCamPosInMap.y(), 0.0f );
   float zFromTerrain = canvas()->mapSettings()->terrainGenerator()->heightAt( camPosInMap.x(), camPosInMap.y(), Qgs3DRenderContext() );
   // apply vertical scale and offset
   zFromTerrain = ( zFromTerrain + canvas()->mapSettings()->terrainSettings()->elevationOffset() ) * canvas()->mapSettings()->terrainSettings()->verticalScale();
-  camPosInMap.setZ( 2.0 + zFromTerrain );
+  camPosInMap.setZ( 2.0 + jump + zFromTerrain );
 
   QgsPoint lookAtInMap( camPosInMap.x() + viewVectorInMap.x(), camPosInMap.y() + viewVectorInMap.y(), 0.0f );
   zFromTerrain = canvas()->mapSettings()->terrainGenerator()->heightAt( lookAtInMap.x(), lookAtInMap.y(), Qgs3DRenderContext() );
   // apply vertical scale and offset
   zFromTerrain = ( zFromTerrain + canvas()->mapSettings()->terrainSettings()->elevationOffset() ) * canvas()->mapSettings()->terrainSettings()->verticalScale();
-  lookAtInMap.setZ( 0.5 + zFromTerrain );
+  lookAtInMap.setZ( 0.5 + jump + zFromTerrain );
 
   QgsVector3D lookAtInWorld = Qgs3DUtils::mapToWorldCoordinates(
     QgsVector3D( lookAtInMap.x(), lookAtInMap.y(), lookAtInMap.z() ),
@@ -141,6 +167,23 @@ void Qgs3DMapToolStreetView::updateNavigationCamera( const QgsPoint &newCamPosIn
   camPose.setPitchAngle( pitch );
   camPose.setHeadingAngle( heading );
   mCanvas->cameraController()->setCameraPose( camPose );
+
+  mLastCamPosInMap = camPosInMap;
+}
+
+void Qgs3DMapToolStreetView::refreshCamera()
+{
+  double jump = jumpHeight( mJumpTime.msecsTo( QTime::currentTime() ) );
+  if ( jump )
+  {
+    updateNavigationCamera( mLastCamPosInMap );
+  }
+  else
+  {
+    if ( mJumpTimer->isActive() ) // last one refresh
+      updateNavigationCamera( mLastCamPosInMap );
+    mJumpTimer->stop();
+  }
 }
 
 void Qgs3DMapToolStreetView::setupNavigation()
@@ -148,33 +191,41 @@ void Qgs3DMapToolStreetView::setupNavigation()
   mIsNavigating = true;
   mPreviousCameraPose = mCanvas->cameraController()->cameraPose();
   mCanvas->cameraController()->setInputHandlersEnabled( false );
-  updateNavigationCamera( mSelectedPos );
+  updateNavigationCamera( mMarkerPos );
 
   mRubberBand->reset();
   mRubberBand->setHideLastMarker( true );
+
+  QPoint middle( mCanvas->width() / 2, mCanvas->height() / 2 );
+  QPoint middleG = mCanvas->mapToGlobal( middle );
+  mIgnoreNextMouseMove = true;
+  QCursor::setPos( middleG.x(), middleG.y() );
+
+  mCanvas->setCursor( Qt::CrossCursor );
 }
 
-void Qgs3DMapToolStreetView::setupPinPoint( const QgsPoint &point )
+void Qgs3DMapToolStreetView::setupMarker( const QgsPoint &point )
 {
   mRubberBand->reset();
 
-  mSelectedPos = point;
-  float zFromTerrain = canvas()->mapSettings()->terrainGenerator()->heightAt( mSelectedPos.x(), mSelectedPos.y(), Qgs3DRenderContext() );
-  mSelectedPos.setZ( zFromTerrain );
+  mMarkerPos = point;
+  float zFromTerrain = canvas()->mapSettings()->terrainGenerator()->heightAt( mMarkerPos.x(), mMarkerPos.y(), Qgs3DRenderContext() );
+  mMarkerPos.setZ( zFromTerrain );
 
-  QgsPoint newPoint( mSelectedPos );
+  QgsPoint newPoint( mMarkerPos );
   mRubberBand->addPoint( newPoint );
 
   newPoint.setZ( newPoint.z() + 30.0 );
   mRubberBand->addPoint( newPoint );
 }
 
-void Qgs3DMapToolStreetView::restart()
+void Qgs3DMapToolStreetView::reset()
 {
-  mRubberBand->reset();
+  mJumpTimer->stop();
+  mRubberBand.reset( new QgsRubberBand3D( *mCanvas->mapSettings(), mCanvas->engine(), mCanvas->engine()->frameGraph()->rubberBandsRootEntity() ) );
   mRubberBand->setHideLastMarker( true );
-  mLastTime = QTime::currentTime();
-  mSelectedPos = QgsPoint();
+  mLastMarkerTime = QTime::currentTime();
+  mMarkerPos = QgsPoint();
   mIsNavigating = false;
 }
 
@@ -182,55 +233,7 @@ void Qgs3DMapToolStreetView::restart()
 // {
 // }
 
-void Qgs3DMapToolStreetView::mouseMoveEvent( QMouseEvent *event )
-{
-  if ( mIsNavigating )
-  {
-    // QPoint middle( mCanvas->parentWidget()->width() / 2, mCanvas->parentWidget()->height() / 2 );
-    // if ( event->pos() != middle )
-    // {
-    mCanvas->cameraController()->rotateCamera( 0.1 * ( event->pos().y() - mMouseMovePos.y() ), //
-                                               0.1 * ( event->pos().x() - mMouseMovePos.x() ) );
-    //   QCursor::setPos( middle.x(), middle.y() );
-    // }
-  }
-  else
-  {
-    QTime ct = QTime::currentTime();
-    if ( mLastTime.msecsTo( ct ) < 100 )
-      return;
-
-    mLastTime = ct;
-
-    handleClick( event->pos() );
-  }
-  mMouseMovePos = event->pos();
-}
-
-void Qgs3DMapToolStreetView::quit()
-{
-  if ( mIsNavigating )
-  {
-    mCanvas->cameraController()->setInputHandlersEnabled( true );
-    mCanvas->cameraController()->setCameraPose( mPreviousCameraPose );
-  }
-  restart();
-  emit finished();
-}
-
-void Qgs3DMapToolStreetView::mouseReleaseEvent( QMouseEvent *event )
-{
-  if ( event->button() == Qt::RightButton )
-  {
-    quit();
-  }
-  else if ( event->button() == Qt::LeftButton && !mIsNavigating )
-  {
-    setupNavigation();
-  }
-}
-
-void Qgs3DMapToolStreetView::navigateOnX( float steps )
+void Qgs3DMapToolStreetView::navigateForward( float steps )
 {
   QgsVector3D curCamCenterInMap = Qgs3DUtils::worldToMapCoordinates( QgsVector3D( mCanvas->camera()->viewCenter() ), mCanvas->mapSettings()->origin() );
   QgsVector3D curCamPositionInMap = Qgs3DUtils::worldToMapCoordinates( QgsVector3D( mCanvas->camera()->position() ), mCanvas->mapSettings()->origin() );
@@ -238,16 +241,92 @@ void Qgs3DMapToolStreetView::navigateOnX( float steps )
   QgsVector3D viewVectorInMap( curCamCenterInMap - curCamPositionInMap );
   viewVectorInMap.normalize();
 
-  QgsVector3D newCamCenterInMap( curCamPositionInMap - ( viewVectorInMap * steps ) );
+  QgsVector3D newCamCenterInMap( curCamPositionInMap + ( viewVectorInMap * steps ) );
 
   updateNavigationCamera( QgsPoint( newCamCenterInMap.x(), newCamCenterInMap.y(), 0.0f ) );
+}
+
+void Qgs3DMapToolStreetView::navigateRightSide( float steps )
+{
+  QgsVector3D curCamCenterInMap = Qgs3DUtils::worldToMapCoordinates( QgsVector3D( mCanvas->camera()->viewCenter() ), mCanvas->mapSettings()->origin() );
+  QgsVector3D curCamPositionInMap = Qgs3DUtils::worldToMapCoordinates( QgsVector3D( mCanvas->camera()->position() ), mCanvas->mapSettings()->origin() );
+
+  QgsVector3D viewVectorInMap( curCamCenterInMap - curCamPositionInMap );
+  viewVectorInMap.normalize();
+  // perpendicular vector
+  double y = viewVectorInMap.y();
+  viewVectorInMap.setY( -viewVectorInMap.x() );
+  viewVectorInMap.setX( y );
+  viewVectorInMap.setZ( 0.0 );
+
+  QgsVector3D newCamCenterInMap( curCamPositionInMap + ( viewVectorInMap * steps ) );
+
+  updateNavigationCamera( QgsPoint( newCamCenterInMap.x(), newCamCenterInMap.y(), 0.0f ) );
+}
+
+
+void Qgs3DMapToolStreetView::mouseMoveEvent( QMouseEvent *event )
+{
+  if ( mIsNavigating )
+  {
+    QPoint middle( mCanvas->width() / 2, mCanvas->height() / 2 );
+    QPoint evPos = event->pos();
+    if ( mIgnoreNextMouseMove )
+    {
+      mIgnoreNextMouseMove = false;
+    }
+    else
+    {
+      if ( evPos != middle )
+      {
+        evPos -= middle;
+        evPos *= 0.1;
+        mCanvas->cameraController()->rotateCamera( evPos.y(), evPos.x() );
+
+        mIgnoreNextMouseMove = true;
+        QPoint middleG = mCanvas->mapToGlobal( middle );
+        QCursor::setPos( middleG.x(), middleG.y() );
+      }
+    }
+  }
+  else
+  {
+    QTime ct = QTime::currentTime();
+    if ( mLastMarkerTime.msecsTo( ct ) < 100 )
+      return;
+
+    mLastMarkerTime = ct;
+
+    handleClick( event->pos() );
+  }
+}
+
+void Qgs3DMapToolStreetView::mouseReleaseEvent( QMouseEvent *event )
+{
+  if ( event->button() == Qt::RightButton )
+  {
+    deactivate();
+  }
+  else if ( event->button() == Qt::LeftButton && !mIsNavigating )
+  {
+    setupNavigation();
+  }
 }
 
 void Qgs3DMapToolStreetView::mouseWheelEvent( QWheelEvent *event )
 {
   if ( mIsNavigating )
   {
-    navigateOnX( 0.1 * event->angleDelta().y() );
+    double speed = 1.0;
+    if ( event->modifiers() == Qt::ControlModifier )
+      speed = 0.1;
+    else if ( event->modifiers() == Qt::AltModifier )
+      speed = 10.0;
+
+    if ( event->angleDelta().y() != 0 )
+      navigateForward( -0.1 * speed * event->angleDelta().y() );
+    if ( event->angleDelta().x() != 0 )
+      navigateRightSide( 0.1 * speed * event->angleDelta().x() );
   }
 }
 
@@ -255,7 +334,7 @@ void Qgs3DMapToolStreetView::keyPressEvent( QKeyEvent *event )
 {
   if ( event->key() == Qt::Key_Escape )
   {
-    quit();
+    deactivate();
   }
   else if ( event->key() == Qt::Key_Enter && !mIsNavigating )
   {
@@ -263,13 +342,54 @@ void Qgs3DMapToolStreetView::keyPressEvent( QKeyEvent *event )
   }
   else if ( mIsNavigating )
   {
-    if ( event->key() == Qt::Key_Up )
+    double speed = 1.0;
+    if ( event->modifiers() == Qt::ControlModifier )
+      speed = 0.1;
+    else if ( event->modifiers() == Qt::AltModifier )
+      speed = 10.0;
+
+    if ( event->key() == Qt::Key_Space )
     {
-      navigateOnX( +10 );
+      double t = mJumpTime.msecsTo( QTime::currentTime() );
+      double h = jumpHeight( t );
+      qDebug() << "keyPressEvent cur jump:" << h;
+      if ( h == 0.0 ) // timeout, reset
+      {
+        mJumpAgainHeight = 0.0;
+        mJumpAgainTime = 0.0;
+        mJumpTime = QTime::currentTime();
+      }
+      else
+      {
+        mJumpAgainTime = t;
+        mJumpAgainHeight = h;
+      }
+      qDebug() << "keyPressEvent mJumpAgainHeight:" << mJumpAgainHeight;
+      qDebug() << "keyPressEvent mJumpAgainTime:" << mJumpAgainTime;
+      qDebug() << "keyPressEvent mJumpTime:" << mJumpTime;
+      mJumpTimer->start( 100 );
+    }
+    else if ( event->key() == Qt::Key_Up )
+    {
+      navigateForward( speed * 10 );
     }
     else if ( event->key() == Qt::Key_Down )
     {
-      navigateOnX( -10 );
+      navigateForward( speed * -10 );
+    }
+    else if ( event->key() == Qt::Key_Left )
+    {
+      navigateRightSide( speed * -10 );
+    }
+    else if ( event->key() == Qt::Key_Right )
+    {
+      navigateRightSide( speed * 10 );
     }
   }
+}
+
+double Qgs3DMapToolStreetView::jumpHeight( double t )
+{
+  double h = mJumpDefaultHeight - std::pow( ( t - mJumpAgainTime ) / mJumpDefaultTime - std::sqrt( mJumpDefaultHeight ), 2.0 ) + mJumpAgainHeight;
+  return std::max( 0.0, h );
 }

@@ -24,6 +24,8 @@
 
 class Qgs3DMeasureDialog;
 class QgsRubberBand3D;
+class QgsCameraPose;
+class QTimer;
 
 class Qgs3DMapToolStreetView : public Qgs3DMapTool
 {
@@ -39,26 +41,25 @@ class Qgs3DMapToolStreetView : public Qgs3DMapTool
     QCursor cursor() const override;
 
     //! Reset and start new
-    void restart();
+    void reset();
 
     //! Setup pin point.
-    void setupPinPoint( const QgsPoint &point );
+    void setupMarker( const QgsPoint &point );
 
     void setupNavigation();
 
     //! Update values from settings
     void updateSettings();
 
-    void navigateOnX( float steps );
-    void navigateOnY( float steps );
+    void navigateRightSide( float steps );
+    void navigateForward( float steps );
+
     /**
      * Update camero position at the \a newCamPosInMap. 
      * 
      * Elevation will be computed according to terrain elevation at X/Y, vertical scale and terrain offset.
      */
     void updateNavigationCamera( const QgsPoint &newCamPosInMap );
-
-    void quit();
 
   signals:
     void finished();
@@ -70,15 +71,28 @@ class Qgs3DMapToolStreetView : public Qgs3DMapTool
     void mouseMoveEvent( QMouseEvent *event ) override;
     void keyPressEvent( QKeyEvent *event ) override;
     void mouseWheelEvent( QWheelEvent *event ) override;
+    void refreshCamera();
 
   private:
     std::unique_ptr<QgsRubberBand3D> mRubberBand;
 
     bool mIsNavigating;
+    bool mIsEnabled;
+    bool mIgnoreNextMouseMove;
     QgsCameraPose mPreviousCameraPose;
-    QgsPoint mSelectedPos;
-    QPoint mMouseMovePos;
-    QTime mLastTime;
+    QgsPoint mMarkerPos;
+    //QPoint mMouseMovePos;
+    QTime mLastMarkerTime;
+    QgsPoint mLastCamPosInMap;
+
+    QTimer *mJumpTimer;
+    QTime mJumpTime;
+    double mJumpDefaultHeight = 5.0;
+    double mJumpDefaultTime = 100; // msec
+    double mJumpAgainTime = 0;
+    double mJumpAgainHeight = 0;
+
+    double jumpHeight( double t );
 };
 
 #endif // QGS3DMAPTOOLSTREETVIEW_H
