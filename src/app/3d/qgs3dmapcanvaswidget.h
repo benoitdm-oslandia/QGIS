@@ -40,6 +40,7 @@ class Qgs3DMapCanvas;
 class Qgs3DMapSettings;
 class Qgs3DMapToolIdentify;
 class Qgs3DMapToolMeasureLine;
+class Qgs3DMapToolStreetView;
 class Qgs3DMapToolPointCloudChangeAttribute;
 class Qgs3DNavigationWidget;
 class Qgs3DDebugWidget;
@@ -95,6 +96,7 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     Qgs3DAnimationWidget *animationWidget() { return mAnimationWidget; }
 
     Qgs3DMapToolMeasureLine *measurementLineTool() { return mMapToolMeasureLine; }
+    Qgs3DMapToolStreetView *streetViewTool() { return mMapToolStreetView; }
 
     QgsDockableWidgetHelper *dockableWidgetHelper() { return mDockableWidgetHelper; }
 
@@ -128,6 +130,7 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     void cameraControl();
     void identify();
     void measureLine();
+    void streetView();
     void changePointCloudAttributeByPaintbrush();
     void changePointCloudAttributeByPolygon();
     void changePointCloudAttributeByAboveLine();
@@ -182,6 +185,7 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     QTimer *mLabelNavSpeedHideTimeout = nullptr;
     Qgs3DMapToolIdentify *mMapToolIdentify = nullptr;
     Qgs3DMapToolMeasureLine *mMapToolMeasureLine = nullptr;
+    Qgs3DMapToolStreetView *mMapToolStreetView = nullptr;
     Qgs3DMapToolPointCloudChangeAttribute *mMapToolChangeAttribute = nullptr;
     QgsGeometry mCrossSectionLine;
     QObjectUniquePtr<QgsRubberBand> mCrossSectionRubberBand;

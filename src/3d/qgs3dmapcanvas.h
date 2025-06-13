@@ -89,7 +89,7 @@ class _3D_EXPORT Qgs3DMapCanvas : public QWindow
 {
     Q_OBJECT
   public:
-    Qgs3DMapCanvas();
+    Qgs3DMapCanvas( QWidget *parent = nullptr );
     ~Qgs3DMapCanvas() override;
 
     //! Returns access to the 3D scene configuration
@@ -205,6 +205,8 @@ class _3D_EXPORT Qgs3DMapCanvas : public QWindow
      */
     QVector<QgsPointXY> viewFrustum2DExtent();
 
+    QWidget *parentWidget() const { return m_parentWidget; }
+
   signals:
     //! Emitted when the 3D map canvas was successfully saved as image
     void savedAsImage( const QString &fileName );
@@ -268,6 +270,7 @@ class _3D_EXPORT Qgs3DMapCanvas : public QWindow
     bool eventFilter( QObject *watched, QEvent *event ) override;
 
   private:
+    QWidget *m_parentWidget;
     Qt3DCore::QAspectEngine *m_aspectEngine;
 
     // Aspects
