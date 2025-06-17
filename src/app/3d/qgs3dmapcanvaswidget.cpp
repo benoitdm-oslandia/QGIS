@@ -176,7 +176,7 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
   QAction *actionMeasurementTool = toolBar->addAction( QIcon( QgsApplication::iconPath( "mActionMeasure.svg" ) ), tr( "Measurement Line" ), this, &Qgs3DMapCanvasWidget::measureLine );
   actionMeasurementTool->setCheckable( true );
 
-  QAction *actionStreetViewTool = toolBar->addAction( QIcon( QgsApplication::iconPath( "pin.svg" ) ), tr( "Street view" ), this, &Qgs3DMapCanvasWidget::streetView );
+  QAction *actionStreetViewTool = toolBar->addAction( QIcon( QgsApplication::iconPath( "street-view.svg" ) ), tr( "Street view" ), this, &Qgs3DMapCanvasWidget::streetView );
   actionStreetViewTool->setCheckable( true );
 
   // Create action group to make the action exclusive

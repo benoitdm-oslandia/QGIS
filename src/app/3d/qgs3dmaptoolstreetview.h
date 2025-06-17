@@ -43,9 +43,6 @@ class Qgs3DMapToolStreetView : public Qgs3DMapTool
     //! Reset and start new
     void reset();
 
-    //! Setup pin point.
-    void setupMarker( const QgsPoint &point );
-
     void setupNavigation();
 
     //! Update values from settings
@@ -61,27 +58,34 @@ class Qgs3DMapToolStreetView : public Qgs3DMapTool
      */
     void updateNavigationCamera( const QgsPoint &newCamPosInMap );
 
+    /**
+     * If the event is relevant, handles the event and returns TRUE, otherwise FALSE.
+     * \since QGIS 3.44
+     */
+    bool keyboardEventFilter( QKeyEvent *event );
+
   signals:
     void finished();
 
   private slots:
-    void handleClick( const QPoint &screenPos );
-    // void mousePressEvent( QMouseEvent *event ) override;
+    void handleMarkerMove( const QPoint &screenPos );
     void mouseReleaseEvent( QMouseEvent *event ) override;
     void mouseMoveEvent( QMouseEvent *event ) override;
     void keyPressEvent( QKeyEvent *event ) override;
     void mouseWheelEvent( QWheelEvent *event ) override;
-    void refreshCamera();
+    void refreshCameraForJump();
 
   private:
     std::unique_ptr<QgsRubberBand3D> mRubberBand;
 
+    QString mPlatformName;
     bool mIsNavigating;
+    bool mIsNavigationPaused;
     bool mIsEnabled;
     bool mIgnoreNextMouseMove;
     QgsCameraPose mPreviousCameraPose;
     QgsPoint mMarkerPos;
-    //QPoint mMouseMovePos;
+    QPoint mLasMousePos;
     QTime mLastMarkerTime;
     QgsPoint mLastCamPosInMap;
 
