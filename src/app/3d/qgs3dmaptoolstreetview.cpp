@@ -44,7 +44,6 @@ Qgs3DMapToolStreetView::Qgs3DMapToolStreetView( Qgs3DMapCanvas *canvas )
   , mJumpTime( QTime::currentTime() )
 {
   qDebug() << "mPlatformName:" << QGuiApplication::platformName();
-  QgsDebugError( QString( "Qgs3DMapToolStreetView::Qgs3DMapToolStreetView mPlatformName=%1" ).arg( QGuiApplication::platformName() ) );
   mJumpTimer = new QTimer( this );
   connect( mJumpTimer, &QTimer::timeout, this, QOverload<>::of( &Qgs3DMapToolStreetView::refreshCameraForJump ) );
 }
@@ -53,12 +52,6 @@ Qgs3DMapToolStreetView::~Qgs3DMapToolStreetView() = default;
 
 void Qgs3DMapToolStreetView::activate()
 {
-  for ( int i = 0; i < 5; i++ )
-    QgsDebugMsgLevel( QString( "Qgs3DMapToolStreetView::activate test level %1" ).arg( i ), i );
-
-  QgsDebugError( QString( "Qgs3DMapToolStreetView::activate QGIS_LOG_FILE=%1" ).arg( getenv( "QGIS_LOG_FILE" ) ) );
-  QgsDebugError( QString( "Qgs3DMapToolStreetView::activate QGIS_DEBUG_FILE=%1" ).arg( getenv( "QGIS_DEBUG_FILE" ) ) );
-  QgsDebugError( QString( "Qgs3DMapToolStreetView::activate QGIS_DEBUG=%1" ).arg( getenv( "QGIS_DEBUG" ) ) );
   if ( !mIsEnabled )
   {
     reset();
@@ -291,7 +284,6 @@ void Qgs3DMapToolStreetView::navigateRightSide( float steps )
 
 void Qgs3DMapToolStreetView::mouseMoveEvent( QMouseEvent *event )
 {
-  qDebug() << "Qgs3DMapToolStreetView::mouseMoveEvent ";
   if ( mIsNavigating )
   {
     if ( !mIsNavigationPaused )
@@ -320,8 +312,6 @@ void Qgs3DMapToolStreetView::mouseMoveEvent( QMouseEvent *event )
             evPos *= 0.2;
           else
             evPos *= 0.5;
-
-          QgsDebugError( QString( "Qgs3DMapToolStreetView::mouseMoveEvent evPos: %1, %2" ).arg( evPos.x() ).arg( evPos.y() ) );
 
           mCanvas->cameraController()->rotateCamera( evPos.y(), evPos.x() );
 

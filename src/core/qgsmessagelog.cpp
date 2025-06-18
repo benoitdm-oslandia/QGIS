@@ -33,7 +33,6 @@ void QgsMessageLog::logMessage( const QString &message, const QString &tag, Qgis
   Q_UNUSED( function )
   Q_UNUSED( line )
 #endif
-  QgsDebugError( QString( "QgsMessageLog::logMessage level=%1, msg=%2" ).arg( level ).arg( message ) );
   switch ( level )
   {
     case Qgis::MessageLevel::Info:
