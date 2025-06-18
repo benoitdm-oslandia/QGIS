@@ -22,6 +22,8 @@
 #include "qgscamerapose.h"
 #include "qgspoint.h"
 
+#include <QTime>
+
 class QgsRubberBand3D;
 class QgsCameraPose;
 class QTimer;
