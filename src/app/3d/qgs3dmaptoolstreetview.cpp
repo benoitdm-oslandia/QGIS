@@ -58,7 +58,7 @@ Qgs3DMapToolStreetView::Qgs3DMapToolStreetView( Qgs3DMapCanvas *canvas )
 
   QgsDebugError( QString( "Qgs3DMapToolStreetView::Qgs3DMapToolStreetView mIsOptimal=%1" ).arg( mIsOptimal ) );
   mJumpTimer = new QTimer( this );
-  connect( mJumpTimer, &QTimer::timeout, this, QOverload<>::of( &Qgs3DMapToolStreetView::refreshCameraForJump ) );
+  connect( mJumpTimer, &QTimer::timeout, this, qOverload<>( &Qgs3DMapToolStreetView::refreshCameraForJump ) );
 }
 
 Qgs3DMapToolStreetView::~Qgs3DMapToolStreetView() = default;
