@@ -33,7 +33,7 @@
 
 Qgs3DMapToolStreetView::Qgs3DMapToolStreetView( Qgs3DMapCanvas *canvas )
   : Qgs3DMapTool( canvas )
-  , mPlatformName( QGuiApplication::platformName() )
+  , mIsOptimal( QGuiApplication::platformName() != "wayland" && QT_VERSION_MAJOR == 5 )
   , mIsNavigating( false )
   , mIsNavigationPaused( false )
   , mIsEnabled( false )
@@ -43,8 +43,8 @@ Qgs3DMapToolStreetView::Qgs3DMapToolStreetView( Qgs3DMapCanvas *canvas )
   , mLastMarkerTime( QTime::currentTime() )
   , mJumpTime( QTime::currentTime() )
 {
-  qDebug() << "mPlatformName:" << mPlatformName;
-  QgsDebugError( QString( "Qgs3DMapToolStreetView::Qgs3DMapToolStreetView mPlatformName=%1" ).arg( mPlatformName ) );
+  qDebug() << "mPlatformName:" << QGuiApplication::platformName();
+  QgsDebugError( QString( "Qgs3DMapToolStreetView::Qgs3DMapToolStreetView mPlatformName=%1" ).arg( QGuiApplication::platformName() ) );
   mJumpTimer = new QTimer( this );
   connect( mJumpTimer, &QTimer::timeout, this, QOverload<>::of( &Qgs3DMapToolStreetView::refreshCameraForJump ) );
 }
@@ -65,7 +65,7 @@ void Qgs3DMapToolStreetView::activate()
     updateSettings();
     mIsEnabled = true;
 
-    if ( mPlatformName != "wayland" )
+    if ( mIsOptimal )
     {
       QPoint middle( mCanvas->width() / 2, mCanvas->height() / 2 );
       QPoint middleG = mCanvas->mapToGlobal( middle );
@@ -234,7 +234,7 @@ void Qgs3DMapToolStreetView::setupNavigation()
   mRubberBand->reset();
   mRubberBand->setHideLastMarker( true );
 
-  if ( mPlatformName != "wayland" )
+  if ( mIsOptimal )
   {
     QPoint middle( mCanvas->width() / 2, mCanvas->height() / 2 );
     QPoint middleG = mCanvas->mapToGlobal( middle );
@@ -297,7 +297,7 @@ void Qgs3DMapToolStreetView::mouseMoveEvent( QMouseEvent *event )
     if ( !mIsNavigationPaused )
     {
       QPoint middle;
-      if ( mPlatformName != "wayland" )
+      if ( mIsOptimal )
       {
         middle = QPoint( mCanvas->width() / 2, mCanvas->height() / 2 );
       }
@@ -316,8 +316,8 @@ void Qgs3DMapToolStreetView::mouseMoveEvent( QMouseEvent *event )
         if ( evPos != middle )
         {
           evPos -= middle;
-          if ( mPlatformName != "wayland" )
-            evPos *= 0.1;
+          if ( mIsOptimal )
+            evPos *= 0.2;
           else
             evPos *= 0.5;
 
@@ -325,7 +325,7 @@ void Qgs3DMapToolStreetView::mouseMoveEvent( QMouseEvent *event )
 
           mCanvas->cameraController()->rotateCamera( evPos.y(), evPos.x() );
 
-          if ( mPlatformName != "wayland" )
+          if ( mIsOptimal )
           {
             mIgnoreNextMouseMove = true;
             QPoint middleG = mCanvas->mapToGlobal( middle );

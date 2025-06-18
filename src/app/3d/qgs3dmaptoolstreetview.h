@@ -81,6 +81,7 @@ class Qgs3DMapToolStreetView : public Qgs3DMapTool
     std::unique_ptr<QgsRubberBand3D> mRubberBand;
 
     QString mPlatformName;
+    bool mIsOptimal;
     bool mIsNavigating;
     bool mIsNavigationPaused;
     bool mIsEnabled;
