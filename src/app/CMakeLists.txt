@@ -353,6 +353,7 @@ if (WITH_3D)
     3d/qgs3dmaptoolpointcloudchangeattributepaintbrush.cpp
     3d/qgs3dmaptoolpointcloudchangeattribute.cpp
     3d/qgs3dmaptoolpointcloudchangeattributepolygon.cpp
+    3d/qgs3dmaptoolstreetview.cpp
     3d/qgs3dmeasuredialog.cpp
     3d/qgs3dmodelsourcelineedit.cpp
     3d/qgs3dnavigationwidget.cpp

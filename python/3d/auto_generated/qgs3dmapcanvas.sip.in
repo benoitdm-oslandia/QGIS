@@ -38,7 +38,7 @@ used with QGIS.
 #include "qgs3dmapcanvas.h"
 %End
   public:
-    Qgs3DMapCanvas();
+    Qgs3DMapCanvas( QWidget *parent = 0 );
     ~Qgs3DMapCanvas();
 
     Qgs3DMapSettings *mapSettings();
