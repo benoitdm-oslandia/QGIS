@@ -313,7 +313,7 @@ void Qgs3DMapToolStreetView::mouseMoveEvent( QMouseEvent *event )
           else
             evPos *= 0.5;
 
-          mCanvas->cameraController()->rotateCamera( evPos.y(), evPos.x() );
+          mCanvas->cameraController()->rotateCamera( evPos.y(), -evPos.x() );
 
           if ( mIsOptimal )
           {
