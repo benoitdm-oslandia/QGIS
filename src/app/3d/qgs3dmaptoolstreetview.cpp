@@ -233,6 +233,7 @@ void Qgs3DMapToolStreetView::refreshCameraForJump()
 void Qgs3DMapToolStreetView::setupNavigation()
 {
   mIsNavigating = true;
+  mIsNavigationPaused = false;
   mPreviousCameraPose = mCanvas->cameraController()->cameraPose();
   mCanvas->cameraController()->setInputHandlersEnabled( false );
   updateNavigationCamera( mMarkerPos );
