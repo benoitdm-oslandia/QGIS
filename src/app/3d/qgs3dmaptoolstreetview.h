@@ -18,8 +18,10 @@
 
 #include "qgs3dmaptool.h"
 #include "qgspoint.h"
+#include "qgscamerapose.h"
 
 #include <memory>
+#include <QTime>
 
 
 class Qgs3DMeasureDialog;

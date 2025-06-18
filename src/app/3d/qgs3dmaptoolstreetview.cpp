@@ -27,6 +27,7 @@
 #include "qgswindow3dengine.h"
 #include "qgsframegraph.h"
 #include "qgsabstractterrainsettings.h"
+#include "qgs3drendercontext.h"
 #include <QTimer>
 #include <QGuiApplication>
 
