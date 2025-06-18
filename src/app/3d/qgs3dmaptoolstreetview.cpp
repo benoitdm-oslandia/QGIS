@@ -89,7 +89,15 @@ void Qgs3DMapToolStreetView::deactivate()
       mCanvas->cameraController()->setInputHandlersEnabled( true );
       mCanvas->cameraController()->setCameraPose( mPreviousCameraPose );
     }
-    reset();
+
+    mJumpTimer->stop();
+    if ( mRubberBand.get() )
+      mRubberBand->reset(); // clean remaining entities
+
+    // to be done here to delete the children of rubberbond entity before the framegraph destructor
+    // which will delete the rubberbond entity parent and all its children
+    mRubberBand.reset();
+
     mIsEnabled = false;
     emit finished();
   }
