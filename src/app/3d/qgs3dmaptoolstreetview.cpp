@@ -30,10 +30,13 @@
 #include "qgs3drendercontext.h"
 #include <QTimer>
 #include <QGuiApplication>
+#ifdef Q_OS_MAC
+#include <ApplicationServices/ApplicationServices.h>
+#endif
 
 Qgs3DMapToolStreetView::Qgs3DMapToolStreetView( Qgs3DMapCanvas *canvas )
   : Qgs3DMapTool( canvas )
-  , mIsOptimal( QGuiApplication::platformName() != "wayland" && QT_VERSION_MAJOR == 5 )
+  , mIsOptimal( false )
   , mIsNavigating( false )
   , mIsNavigationPaused( false )
   , mIsEnabled( false )
@@ -43,7 +46,17 @@ Qgs3DMapToolStreetView::Qgs3DMapToolStreetView( Qgs3DMapCanvas *canvas )
   , mLastMarkerTime( QTime::currentTime() )
   , mJumpTime( QTime::currentTime() )
 {
-  qDebug() << "mPlatformName:" << QGuiApplication::platformName();
+#if defined( Q_OS_MAC )
+  mIsOptimal = AXIsProcessTrusted();
+#elif defined( Q_OS_LINUX )
+  mIsOptimal = QString( getenv( "XDG_SESSION_TYPE" ) ) == "x11" && QString( getenv( "XRDP_SESSION" ) ) == "";
+#elif defined( Q_OS_WINDOWS )
+  mIsOptimal = true;
+#else
+  mIsOptimal = false;
+#endif
+
+  QgsDebugError( QString( "Qgs3DMapToolStreetView::Qgs3DMapToolStreetView mIsOptimal=%1" ).arg( mIsOptimal ) );
   mJumpTimer = new QTimer( this );
   connect( mJumpTimer, &QTimer::timeout, this, QOverload<>::of( &Qgs3DMapToolStreetView::refreshCameraForJump ) );
 }
