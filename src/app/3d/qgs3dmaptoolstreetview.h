@@ -50,8 +50,8 @@ class Qgs3DMapToolStreetView : public Qgs3DMapTool
     //! Update values from settings
     void updateSettings();
 
-    void navigateRightSide( float steps );
-    void navigateForward( float steps );
+    void navigateRightSide( double steps );
+    void navigateForward( double steps );
 
     /**
      * Update camero position at the \a newCamPosInMap. 
