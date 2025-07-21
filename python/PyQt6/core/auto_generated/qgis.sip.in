@@ -1234,7 +1234,7 @@ The development version
     };
 
     enum class GeometryBackend /BaseType=IntEnum/
-      {
+    {
       QGIS,
       GEOS,
     };
