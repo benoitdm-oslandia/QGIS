@@ -3894,6 +3894,21 @@ Qgis.JoinStyle.__doc__ = """Join styles for buffers.
 # --
 Qgis.JoinStyle.baseClass = Qgis
 # monkey patching scoped based enum
+Qgis.JoinStyle3D.Round.__doc__ = "Smooth, rounded buffer around the input geometry"
+Qgis.JoinStyle3D.Flat.__doc__ = "Flat ends and constant width along the linestring"
+Qgis.JoinStyle3D.CylindersAndSpheres.__doc__ = "Cylinders along the linestring segments with spheres at the vertices"
+Qgis.JoinStyle3D.__doc__ = """Join styles for 3D buffers.
+
+.. versionadded:: 3.46
+
+* ``Round``: Smooth, rounded buffer around the input geometry
+* ``Flat``: Flat ends and constant width along the linestring
+* ``CylindersAndSpheres``: Cylinders along the linestring segments with spheres at the vertices
+
+"""
+# --
+Qgis.JoinStyle3D.baseClass = Qgis
+# monkey patching scoped based enum
 Qgis.GeosCreationFlag.RejectOnInvalidSubGeometry.__doc__ = "Don't allow geometries with invalid sub-geometries to be created"
 Qgis.GeosCreationFlag.SkipEmptyInteriorRings.__doc__ = "Skip any empty polygon interior ring"
 Qgis.GeosCreationFlag.__doc__ = """Flags which control geos geometry creation behavior.
@@ -5137,6 +5152,20 @@ Qgis.MapLayerRendererFlag.baseClass = Qgis
 Qgis.MapLayerRendererFlags = lambda flags=0: Qgis.MapLayerRendererFlag(flags)
 Qgis.MapLayerRendererFlags.baseClass = Qgis
 MapLayerRendererFlags = Qgis  # dirty hack since SIP seems to introduce the flags in module
+# monkey patching scoped based enum
+Qgis.PaintEffectFlag.RequiresRasterization.__doc__ = "The effect requires raster-based rendering."
+Qgis.PaintEffectFlag.__doc__ = """Flags which control how paint effects behave.
+
+.. versionadded:: 3.44
+
+* ``RequiresRasterization``: The effect requires raster-based rendering.
+
+"""
+# --
+Qgis.PaintEffectFlag.baseClass = Qgis
+Qgis.PaintEffectFlags = lambda flags=0: Qgis.PaintEffectFlag(flags)
+Qgis.PaintEffectFlags.baseClass = Qgis
+PaintEffectFlags = Qgis  # dirty hack since SIP seems to introduce the flags in module
 QgsRenderContext.TextRenderFormat = Qgis.TextRenderFormat
 # monkey patching scoped based enum
 QgsRenderContext.TextFormatAlwaysOutlines = Qgis.TextRenderFormat.AlwaysOutlines
@@ -10121,6 +10150,9 @@ QgsLayoutRenderContext.FlagAlwaysUseGlobalMasks = Qgis.LayoutRenderFlag.AlwaysUs
 QgsLayoutRenderContext.Flag.FlagAlwaysUseGlobalMasks = Qgis.LayoutRenderFlag.AlwaysUseGlobalMasks
 QgsLayoutRenderContext.FlagAlwaysUseGlobalMasks.is_monkey_patched = True
 QgsLayoutRenderContext.FlagAlwaysUseGlobalMasks.__doc__ = "When applying clipping paths for selective masking, always use global (\"entire map\") paths, instead of calculating local clipping paths per rendered feature. This results in considerably more complex layout exports in all current Qt versions. This flag only applies to vector layout exports. \n.. versionadded:: 3.38"
+QgsLayoutRenderContext.LimitCoverageLayerRenderToCurrentFeature = Qgis.LayoutRenderFlag.LimitCoverageLayerRenderToCurrentFeature
+QgsLayoutRenderContext.LimitCoverageLayerRenderToCurrentFeature.is_monkey_patched = True
+QgsLayoutRenderContext.LimitCoverageLayerRenderToCurrentFeature.__doc__ = "Limit coverage layer rendering to the current atlas feature. \n.. versionadded:: 4.0"
 Qgis.LayoutRenderFlag.__doc__ = """Flags for controlling how a layout is rendered.
 
 .. note::
@@ -10185,6 +10217,10 @@ Qgis.LayoutRenderFlag.__doc__ = """Flags for controlling how a layout is rendere
 
 
   Available as ``QgsLayoutRenderContext.FlagAlwaysUseGlobalMasks`` in older QGIS releases.
+
+* ``LimitCoverageLayerRenderToCurrentFeature``: Limit coverage layer rendering to the current atlas feature.
+
+  .. versionadded:: 4.0
 
 
 """
@@ -11484,6 +11520,10 @@ Qgis.MouseHandlesAction.ResizeLeftUp.__doc__ = "Resize left up (Top left handle)
 Qgis.MouseHandlesAction.ResizeRightUp.__doc__ = "Resize right up (Top right handle)"
 Qgis.MouseHandlesAction.ResizeLeftDown.__doc__ = "Resize left down (Bottom left handle)"
 Qgis.MouseHandlesAction.ResizeRightDown.__doc__ = "Resize right down (Bottom right handle)"
+Qgis.MouseHandlesAction.RotateTopLeft.__doc__ = "Rotate from top left handle. \n.. versionadded:: 4.0"
+Qgis.MouseHandlesAction.RotateTopRight.__doc__ = "Rotate from top right handle. \n.. versionadded:: 4.0"
+Qgis.MouseHandlesAction.RotateBottomLeft.__doc__ = "Rotate from bottom left handle. \n.. versionadded:: 4.0"
+Qgis.MouseHandlesAction.RotateBottomRight.__doc__ = "Rotate right bottom right handle. \n.. versionadded:: 4.0"
 Qgis.MouseHandlesAction.SelectItem.__doc__ = "Select item"
 Qgis.MouseHandlesAction.NoAction.__doc__ = "No action"
 Qgis.MouseHandlesAction.__doc__ = """Action to be performed by the mouse handles
@@ -11499,6 +11539,22 @@ Qgis.MouseHandlesAction.__doc__ = """Action to be performed by the mouse handles
 * ``ResizeRightUp``: Resize right up (Top right handle)
 * ``ResizeLeftDown``: Resize left down (Bottom left handle)
 * ``ResizeRightDown``: Resize right down (Bottom right handle)
+* ``RotateTopLeft``: Rotate from top left handle.
+
+  .. versionadded:: 4.0
+
+* ``RotateTopRight``: Rotate from top right handle.
+
+  .. versionadded:: 4.0
+
+* ``RotateBottomLeft``: Rotate from bottom left handle.
+
+  .. versionadded:: 4.0
+
+* ``RotateBottomRight``: Rotate right bottom right handle.
+
+  .. versionadded:: 4.0
+
 * ``SelectItem``: Select item
 * ``NoAction``: No action
 

@@ -249,13 +249,13 @@ void QgsFilteredTableWidget::onTableWidgetCustomContextMenuRequested( const QPoi
 
   tableWidgetMenu->exec( QCursor::pos() );
 
-  // destory actions
+  // destroy actions
   disconnect( actionTableWidgetSelectAll, &QAction::triggered, nullptr, nullptr );
   disconnect( actionTableWidgetDeselectAll, &QAction::triggered, nullptr, nullptr );
   actionTableWidgetSelectAll->deleteLater();
   actionTableWidgetDeselectAll->deleteLater();
 
-  // destory menu
+  // destroy menu
   tableWidgetMenu->deleteLater();
 }
 
@@ -415,7 +415,7 @@ void QgsValueRelationWidgetWrapper::initWidget( QWidget *editor )
   {
     if ( QgsFilterLineEdit *filterLineEdit = qobject_cast<QgsFilterLineEdit *>( editor ) )
     {
-      connect( filterLineEdit, &QgsFilterLineEdit::valueChanged, this, [=]( const QString & ) {
+      connect( filterLineEdit, &QgsFilterLineEdit::valueChanged, this, [this]( const QString & ) {
         if ( mSubWidgetSignalBlocking == 0 )
           emitValueChanged();
       } );
