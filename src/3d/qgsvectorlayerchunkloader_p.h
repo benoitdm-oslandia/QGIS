@@ -129,6 +129,10 @@ class QgsVectorLayerChunkedEntity : public QgsChunkedEntity
     QList<QgsRayCastHit> rayIntersection( const QgsRay3D &ray, const QgsRayCastContext &context ) const override;
 
     ~QgsVectorLayerChunkedEntity() override;
+
+    //! update already loaded nodes (add to the queue)
+    void updateNodes( const QList<QgsChunkNode *> &nodes );
+
   private slots:
     void onTerrainElevationOffsetChanged();
 
@@ -142,6 +146,8 @@ class QgsVectorLayerChunkedEntity : public QgsChunkedEntity
     Qt3DCore::QTransform *mTransform = nullptr;
 
     bool applyTerrainOffset() const;
+
+    std::unique_ptr<QgsChunkQueueJobFactory> mUpdateJobFactory;
 
     friend class TestQgsChunkedEntity;
 };
