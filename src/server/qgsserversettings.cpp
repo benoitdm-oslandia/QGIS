@@ -189,6 +189,10 @@ void QgsServerSettings::initSettings()
 
   const Setting sCapabilitiesCacheSize = { QgsServerSettingsEnv::QGIS_SERVER_CAPABILITIES_CACHE_SIZE, QgsServerSettingsEnv::DEFAULT_VALUE, QStringLiteral( "The QGIS Server capabilities cache size" ), QStringLiteral( "/qgis/capabilities_cache_size" ), QMetaType::Type::Int, QVariant( 40 ), QVariant() };
   mSettings[sCapabilitiesCacheSize.envVar] = sCapabilitiesCacheSize;
+
+  // bad layers handling
+  const Setting sMonitorFCGI = { QgsServerSettingsEnv::QGIS_SERVER_FCGI_MONITORING, QgsServerSettingsEnv::DEFAULT_VALUE, QStringLiteral( "Enable/disable the FCGI monitoring thread" ), QString(), QMetaType::Type::Bool, QVariant( true ), QVariant() };
+  mSettings[sMonitorFCGI.envVar] = sMonitorFCGI;
 }
 
 void QgsServerSettings::load()
@@ -550,4 +554,9 @@ int QgsServerSettings::capabilitiesCacheSize() const
 
   QgsMessageLog::logMessage( QStringLiteral( "Invalid capabilities cache size, expecting integer - defaulting to 40" ), "Server", Qgis::MessageLevel::Warning );
   return 40;
+}
+
+bool QgsServerSettings::monitorFCGI() const
+{
+  return value( QgsServerSettingsEnv::QGIS_SERVER_FCGI_MONITORING ).toBool();
 }

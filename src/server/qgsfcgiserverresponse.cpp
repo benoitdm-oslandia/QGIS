@@ -23,6 +23,7 @@
 #include <fcgi_stdio.h>
 #include <QDebug>
 #include <QThread>
+#include "qgsserver.h"
 
 #include "qgslogger.h"
 
@@ -191,28 +192,41 @@ void QgsSocketMonitoringThread::run()
 //
 // QgsFcgiServerResponse
 //
-QgsFcgiServerResponse::QgsFcgiServerResponse( QgsServerRequest::Method method )
+QgsFcgiServerResponse::QgsFcgiServerResponse( QgsServerSettings *settings, QgsServerRequest::Method method )
   : mMethod( method )
   , mFeedback( new QgsFeedback )
+  , mSettings( settings )
 {
   mBuffer.open( QIODevice::ReadWrite );
   setDefaultHeaders();
 
-  mSocketMonitoringThread = std::make_unique<QgsSocketMonitoringThread>( mFeedback );
+  if ( mSettings->monitorFCGI() )
+  {
+    mSocketMonitoringThread = std::make_unique<QgsSocketMonitoringThread>( mFeedback );
 
-  // Start the monitoring thread
-  mThread = std::thread( &QgsSocketMonitoringThread::run, mSocketMonitoringThread.get() );
+    // Start the monitoring thread
+    mThread = std::thread( &QgsSocketMonitoringThread::run, mSocketMonitoringThread.get() );
+  }
+  else
+  {
+    QgsMessageLog::logMessage( QStringLiteral( "Socket monitoring disabled has been disabled by env var." ), //
+                               QStringLiteral( "FCGIServer" ),                                               //
+                               Qgis::MessageLevel::Info );
+  }
 }
 
 QgsFcgiServerResponse::~QgsFcgiServerResponse()
 {
   mFinished = true;
 
-  // Inform the thread to quit asap
-  mSocketMonitoringThread->stop();
+  if ( mSettings->monitorFCGI() )
+  {
+    // Inform the thread to quit asap
+    mSocketMonitoringThread->stop();
 
-  // Just to be sure
-  mThread.join();
+    // Just to be sure
+    mThread.join();
+  }
 }
 
 void QgsFcgiServerResponse::removeHeader( const QString &key )

@@ -40,6 +40,7 @@ QgsServerSettingsEnv.QGIS_SERVER_PROJECT_CACHE_SIZE = QgsServerSettingsEnv.EnvVa
 QgsServerSettingsEnv.QGIS_SERVER_ALLOWED_EXTRA_SQL_TOKENS = QgsServerSettingsEnv.EnvVar.QGIS_SERVER_ALLOWED_EXTRA_SQL_TOKENS
 QgsServerSettingsEnv.QGIS_SERVER_APPLICATION_NAME = QgsServerSettingsEnv.EnvVar.QGIS_SERVER_APPLICATION_NAME
 QgsServerSettingsEnv.QGIS_SERVER_CAPABILITIES_CACHE_SIZE = QgsServerSettingsEnv.EnvVar.QGIS_SERVER_CAPABILITIES_CACHE_SIZE
+QgsServerSettingsEnv.QGIS_SERVER_FCGI_MONITORING = QgsServerSettingsEnv.EnvVar.QGIS_SERVER_FCGI_MONITORING
 QgsServerSettingsEnv.EnvVar.baseClass = QgsServerSettingsEnv
 try:
     QgsServerSettings.name = staticmethod(QgsServerSettings.name)

@@ -73,9 +73,10 @@ class SERVER_EXPORT QgsFcgiServerResponse : public QgsServerResponse
   public:
     /**
      * Constructor for QgsFcgiServerResponse.
+     * \param settings the server settings
      * \param method The HTTP method (Get by default)
      */
-    QgsFcgiServerResponse( QgsServerRequest::Method method = QgsServerRequest::GetMethod );
+    QgsFcgiServerResponse( QgsServerSettings *settings, QgsServerRequest::Method method = QgsServerRequest::GetMethod );
 
     virtual ~QgsFcgiServerResponse() override;
 
@@ -132,6 +133,8 @@ class SERVER_EXPORT QgsFcgiServerResponse : public QgsServerResponse
     std::thread mThread;
     // Used to cancel rendering jobs
     std::shared_ptr<QgsFeedback> mFeedback;
+
+    QgsServerSettings *mSettings;
 };
 
 #endif

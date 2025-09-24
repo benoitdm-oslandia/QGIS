@@ -87,7 +87,7 @@ int main( int argc, char *argv[] )
   while ( fcgi_accept() >= 0 )
   {
     QgsFcgiServerRequest request;
-    QgsFcgiServerResponse response( request.method() );
+    QgsFcgiServerResponse response( server.serverInterface()->serverSettings(), request.method() );
     if ( !request.hasError() )
     {
       server.handleRequest( request, response );

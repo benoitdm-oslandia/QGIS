@@ -86,6 +86,7 @@ class SERVER_EXPORT QgsServerSettingsEnv : public QObject
       QGIS_SERVER_ALLOWED_EXTRA_SQL_TOKENS,             //!< Adds these tokens to the list of allowed tokens that the services accept when filtering features \since QGIS 3.28
       QGIS_SERVER_APPLICATION_NAME,                     //!< Define the QGIS Server application name \since QGIS 3.30
       QGIS_SERVER_CAPABILITIES_CACHE_SIZE,              //!< Define the QGIS Server capabilities cache size \since QGIS 3.31
+      QGIS_SERVER_FCGI_MONITORING,                      //!< Enable/disable the FCGI monitoring thread \since QGIS 3.44
     };
     Q_ENUM( EnvVar )
 };
@@ -398,6 +399,16 @@ class SERVER_EXPORT QgsServerSettings
      * \since QGIS 3.31
      */
     int capabilitiesCacheSize() const;
+
+    /**
+     * Returns true when the FCGI monitoring thread is enabled.
+     * The default value is TRUE and the value can be changed
+     * by setting the environment variable QGIS_SERVER_FCGI_MONITORING.
+     *
+     * \since QGIS 3.44
+     */
+    bool monitorFCGI() const;
+
 
   private:
     void initSettings();

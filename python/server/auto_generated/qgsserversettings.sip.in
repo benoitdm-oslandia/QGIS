@@ -68,6 +68,7 @@ configuration.
       QGIS_SERVER_ALLOWED_EXTRA_SQL_TOKENS,
       QGIS_SERVER_APPLICATION_NAME,
       QGIS_SERVER_CAPABILITIES_CACHE_SIZE,
+      QGIS_SERVER_FCGI_MONITORING,
     };
 };
 
@@ -425,6 +426,16 @@ variable QGIS_SERVER_CAPABILITIES_CACHE_SIZE.
 
 .. versionadded:: 3.31
 %End
+
+    bool monitorFCGI() const;
+%Docstring
+Returns true when the FCGI monitoring thread is enabled. The default
+value is ``True`` and the value can be changed by setting the
+environment variable QGIS_SERVER_FCGI_MONITORING.
+
+.. versionadded:: 3.44
+%End
+
 
 };
 
