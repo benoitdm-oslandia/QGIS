@@ -64,6 +64,205 @@ namespace QgsWms
     void addKeywordListElement( const QgsProject *project, QDomDocument &doc, QDomElement &parent );
   } // namespace
 
+
+  struct QgsDuration
+  {
+      static short getMaxDay( short month, int year )
+      {
+        if ( month == 1 )
+        {
+          if ( year % 4 == 0 )
+          {
+            if ( year % 100 == 0 )
+            {
+              if ( year % 400 == 0 )
+                return 29;
+              return 28;
+            }
+            return 29;
+          }
+          return 28;
+        }
+        else if ( month == 3 || month == 5 || month == 8 || month == 10 )
+          return 30;
+        else
+          return 31;
+      }
+
+      static QDateTime roundDTMin( const QDateTime &dt )
+      {
+        QDateTime out( dt );
+        out.setTime( QTime( out.time().hour(), out.time().minute(), 0 ) );
+        if ( dt.time().second() > 30 )
+        {
+          out = out.addSecs( 60 );
+        }
+        return out;
+      }
+
+      QgsDuration()
+        : years( 0L ), days( 0L ), hours( 0L ), mins( 0L ), secs( 0L ), msecs( 0L ) {}
+
+      QgsDuration( const QgsDuration &other )
+        : years( other.years ), days( other.days ), hours( other.hours ), mins( other.mins ), secs( other.secs ), msecs( other.msecs )
+      {
+      }
+
+      QgsDuration &operator=( const QgsDuration &other )
+      {
+        years = other.years;
+        days = other.days;
+        hours = other.hours;
+        mins = other.mins;
+        secs = other.secs;
+        msecs = other.msecs;
+        return *this;
+      }
+
+      bool operator==( const QgsDuration &other ) const
+      {
+        return years == other.years && days == other.days && hours == other.hours && mins == other.mins;
+      }
+
+      QgsDuration( const QDateTime &start, const QDateTime &end )
+      {
+        long milliSec = start.msecsTo( end );
+        if ( start.date().year() == end.date().year() )
+        {
+          years = 0;
+          days = int( milliSec / ( 24 * 3600 * 1000 ) );
+        }
+        else
+        {
+          QDateTime startInEndYear( QDate( end.date().year(), start.date().month(), start.date().day() ), start.time() );
+
+          if ( startInEndYear > end ) // overlaps 12/31->01/01
+          {
+            QDateTime endOfYear( QDate( start.date().year() + 1, 1, 1 ), QTime( 0, 0, 0 ) );
+            days = start.daysTo( endOfYear );
+            if ( QgsDuration::getMaxDay( 1, start.date().year() ) == 29 )
+            {
+              QDateTime endOfFeburary( QDate( start.date().year(), 3, 1 ), QTime( 0, 0, 0 ) );
+              if ( start < endOfFeburary )
+              {
+                days--;
+              }
+            }
+            QDateTime startOfYear( QDate( end.date().year(), 1, 1 ), QTime( 0, 0, 0 ) );
+            days += startOfYear.daysTo( end );
+            if ( QgsDuration::getMaxDay( 1, end.date().year() ) == 29 )
+            {
+              QDateTime endOfFeburary( QDate( end.date().year(), 2, 29 ), QTime( 23, 59, 59 ) );
+              if ( end > endOfFeburary )
+              {
+                days--;
+              }
+            }
+            years = end.date().year() - start.date().year() - 1;
+          }
+          else
+          {
+            days = startInEndYear.daysTo( end );
+            years = end.date().year() - start.date().year();
+          }
+        }
+
+        long remain = milliSec % ( 24 * 3600 * 1000 );
+        hours = int( remain / ( 3600 * 1000 ) );
+        remain = remain % ( 3600 * 1000 );
+        mins = int( remain / ( 60 * 1000 ) );
+        remain = remain % ( 60 * 1000 );
+        secs = int( remain / 1000 );
+        msecs = remain % ( 1000 );
+      }
+
+      QString toString() const
+      {
+        return QString( "%1 years, %2 days, %3:%4:%5,%6" ).arg( years ).arg( days ).arg( hours ).arg( mins ).arg( secs ).arg( msecs );
+      }
+
+      QString asOgcString() const
+      {
+        if ( secs > 0 )
+          return QString( "P%1Y0M%2DT%3H%4M%5S" ).arg( years ).arg( days ).arg( hours ).arg( mins ).arg( secs );
+        if ( mins > 0 )
+          return QString( "P%1Y0M%2DT%3H%4M" ).arg( years ).arg( days ).arg( hours ).arg( mins );
+        if ( hours > 0 )
+          return QString( "P%1Y0M%2DT%3H0M" ).arg( years ).arg( days ).arg( hours );
+        if ( days > 0 )
+          return QString( "P%1Y0M%2D" ).arg( years ).arg( days );
+        return QString( "P%1Y" ).arg( years );
+      }
+
+      QgsDuration roundSec() const
+      {
+        QgsDuration out( *this );
+        out.msecs = 0L;
+        out.secs = 0L;
+        if ( secs > 30 )
+        {
+          out.mins++;
+          if ( out.mins == 60 )
+          {
+            return out.roundMin();
+          }
+        }
+        return out;
+      }
+
+      QgsDuration roundMin() const
+      {
+        QgsDuration out( *this );
+        out.msecs = 0L;
+        out.secs = 0L;
+        out.mins = 0L;
+        if ( mins > 30 )
+        {
+          out.hours++;
+          if ( out.hours == 24 )
+          {
+            return out.roundHour();
+          }
+        }
+        return out;
+      }
+
+      QgsDuration roundHour() const
+      {
+        QgsDuration out( *this );
+        out.msecs = 0L;
+        out.secs = 0L;
+        out.mins = 0L;
+        out.hours = 0L;
+        if ( hours > 12 )
+        {
+          out.days++;
+          if ( out.days == 365 )
+          {
+            return out.roundDay();
+          }
+        }
+        return out;
+      }
+
+      QgsDuration roundDay() const
+      {
+        QgsDuration out( *this );
+        out.msecs = 0L;
+        out.secs = 0L;
+        out.mins = 0L;
+        out.hours = 0L;
+        out.days = 0L;
+        if ( days > 365 / 2 )
+        {
+          out.years++;
+        }
+        return out;
+      }
+
+      long years, days, hours, mins, secs, msecs;
+  };
+
   void writeGetCapabilities( QgsServerInterface *serverIface, const QgsProject *project, const QgsWmsRequest &request, QgsServerResponse &response, bool projectSettings )
   {
 #ifdef HAVE_SERVER_PYTHON_PLUGINS
@@ -894,6 +1093,130 @@ namespace QgsWms
     return layerParentElem;
   }
 
+  QStringList computeTimeDimensions( const QList<QgsDateTimeRange> &dateRanges, const QString &dateFormat )
+  {
+    QStringList strValues;
+    QgsDateTimeRange mergedRange;
+    QgsDuration rangeDuration;
+    int rangeCount = 0;
+
+    QDateTime firstInstant;
+    QDateTime lastInstant;
+    QgsDuration instantDuration;
+    int instantCount = 0;
+
+    auto flushRange = [dateFormat]( const QgsDateTimeRange &range, const QgsDuration &duration, int rangeCount ) -> QStringList { //
+      QStringList out;
+      if ( rangeCount == 1 )
+      {
+        out << ( range.isInstant() ? range.begin().toString( dateFormat ) : QStringLiteral( "%1/%2" ).arg( range.begin().toString( dateFormat ) ).arg( range.end().toString( dateFormat ) ) );
+      }
+      else
+        out << QStringLiteral( "%1/%2/%3" ).arg( range.begin().toString( dateFormat ) ).arg( range.end().toString( dateFormat ) ).arg( duration.asOgcString() );
+      return out;
+    };
+
+    auto flushInstants = [dateFormat]( const QDateTime &first, const QDateTime &last, const QgsDuration &duration, int instantCount ) -> QStringList { //
+      QStringList out;
+      if ( instantCount == 1 )
+      {
+        out << first.toString( dateFormat );
+      }
+      else if ( instantCount == 2 )
+      {
+        out << first.toString( dateFormat ) << last.toString( dateFormat );
+      }
+      else
+        out << QStringLiteral( "%1/%2/%3" ).arg( first.toString( dateFormat ) ).arg( last.toString( dateFormat ) ).arg( duration.asOgcString() );
+      return out;
+    };
+
+    for ( const QgsDateTimeRange &range : dateRanges )
+    {
+      // Standard ISO8601 doesn't support range with no defined begin or end
+      if ( range.begin().isValid() )
+      {
+        if ( range.end().isValid() ) // valid range
+        {
+          if ( instantCount ) // flush instants
+          {
+            strValues << flushInstants( firstInstant, lastInstant, instantDuration, instantCount );
+            instantCount = 0;
+          }
+
+          QgsDuration tmpDur( range.begin(), range.end() );
+          tmpDur = tmpDur.roundMin();
+          if ( rangeCount == 0 ) // init merged range
+          {
+            rangeDuration = tmpDur;
+            mergedRange = QgsDateTimeRange( QgsDuration::roundDTMin( range.begin() ), QgsDuration::roundDTMin( range.end() ) );
+            rangeCount = 1;
+          }
+          else if ( rangeDuration == tmpDur && mergedRange.end().secsTo( range.begin() ) < 60 ) // extent merged range
+          {
+            mergedRange = QgsDateTimeRange( mergedRange.begin(), QgsDuration::roundDTMin( range.end() ) );
+            rangeCount++;
+          }
+          else // flush merged range and start new one
+          {
+            strValues << flushRange( mergedRange, rangeDuration, rangeCount );
+
+            rangeDuration = tmpDur;
+            mergedRange = QgsDateTimeRange( QgsDuration::roundDTMin( range.begin() ), QgsDuration::roundDTMin( range.end() ) );
+            rangeCount = 1;
+          }
+          // TODO: to remove
+          QgsDebugMsgLevel( QStringLiteral( "Duration %1" ).arg( rangeDuration.toString() ), 0 );
+        }
+
+        else // instant
+        {
+          if ( rangeCount ) // flush merged range
+          {
+            strValues << flushRange( mergedRange, rangeDuration, rangeCount );
+            rangeCount = 0;
+          }
+
+          if ( instantCount == 0 ) // init instants
+          {
+            firstInstant = QgsDuration::roundDTMin( range.begin() );
+            instantCount++;
+          }
+          else if ( instantCount == 1 ) // 2 instant ie. first duration
+          {
+            lastInstant = QgsDuration::roundDTMin( range.begin() );
+            instantCount++;
+            instantDuration = QgsDuration( firstInstant, lastInstant );
+            instantDuration = instantDuration.roundMin();
+          }
+          else
+          {
+            QgsDuration tmpDur( lastInstant, QgsDuration::roundDTMin( range.begin() ) );
+            tmpDur = tmpDur.roundMin();
+            if ( instantDuration == tmpDur ) // extent instants
+            {
+              lastInstant = range.begin();
+              instantCount++;
+            }
+            else // flush instants and start new one
+            {
+              strValues << flushInstants( firstInstant, lastInstant, instantDuration, instantCount );
+              firstInstant = range.begin();
+              instantCount = 1;
+            }
+          }
+        }
+      }
+    }
+
+    if ( rangeCount ) // flush merged range
+      strValues << flushRange( mergedRange, rangeDuration, rangeCount );
+    if ( instantCount ) // flush instants
+      strValues << flushInstants( firstInstant, lastInstant, instantDuration, instantCount );
+
+    return strValues;
+  }
+
   namespace
   {
     //! helper method to write all server properties except
@@ -1094,20 +1417,14 @@ namespace QgsWms
       // we write a TIME dimension even if dateRanges is empty. Not sure this is appropriate but
       // it was like that from the beginning so better keep it that way to avoid regression on client side
 
-      const bool hasDateTime = std::any_of( dateRanges.constBegin(), dateRanges.constEnd(), []( const QgsDateTimeRange &r ) { return r.begin().time() != QTime( 0, 0 )
-                                                                                                                                     || ( !r.isInstant() && r.end().time() != QTime( 0, 0 ) ); } );
+      const bool hasDateTime = std::any_of( dateRanges.constBegin(), dateRanges.constEnd(), []( const QgsDateTimeRange &r ) { //
+        return r.begin().time() != QTime( 0, 0 )
+               || ( !r.isInstant() && r.end().time() != QTime( 0, 0 ) );
+      } );
 
       const QString dateFormat = hasDateTime ? QStringLiteral( "yyyy-MM-ddTHH:mm:ss" ) : QStringLiteral( "yyyy-MM-dd" );
 
-      QStringList strValues;
-      for ( const QgsDateTimeRange &range : dateRanges )
-      {
-        // Standard ISO8601 doesn't support range with no defined begin or end
-        if ( range.begin().isValid() && range.end().isValid() )
-        {
-          strValues << ( range.isInstant() ? range.begin().toString( dateFormat ) : QStringLiteral( "%1/%2" ).arg( range.begin().toString( dateFormat ) ).arg( range.end().toString( dateFormat ) ) );
-        }
-      }
+      QStringList strValues = computeTimeDimensions( dateRanges, dateFormat );
 
       QDomElement dimElem = doc.createElement( QStringLiteral( "Dimension" ) );
       dimElem.setAttribute( QStringLiteral( "name" ), QStringLiteral( "TIME" ) );
@@ -1309,11 +1626,6 @@ namespace QgsWms
               QDomElement dimElem = doc.createElement( QStringLiteral( "Dimension" ) );
               dimElem.setAttribute( QStringLiteral( "name" ), dim.name );
 
-              if ( dim.name.toUpper() == QLatin1String( "TIME" ) )
-              {
-                timeDimensionAdded = true;
-              }
-
               if ( !dim.units.isEmpty() )
               {
                 dimElem.setAttribute( QStringLiteral( "units" ), dim.units );
@@ -1341,11 +1653,35 @@ namespace QgsWms
                 dimElem.setAttribute( QStringLiteral( "fieldName" ), dim.fieldName );
                 dimElem.setAttribute( QStringLiteral( "endFieldName" ), dim.endFieldName );
               }
+
               // values list
               QStringList strValues;
-              for ( const QVariant &v : values )
+              if ( dim.name.toUpper() == QLatin1String( "TIME" ) )
               {
-                strValues << v.toString();
+                qWarning()
+                  << __FUNCTION__ << __LINE__
+                  << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
+                     "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
+                     "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%";
+                bool hasDateTime = false;
+                QList<QgsDateTimeRange> allRanges;
+                for ( const QVariant &v : values )
+                {
+                  QDateTime start = v.toDateTime();
+                  QgsDateTimeRange range( start );
+                  allRanges.append( range );
+                  hasDateTime |= start.time() != QTime( 0, 0 );
+                }
+                const QString dateFormat = hasDateTime ? QStringLiteral( "yyyy-MM-ddTHH:mm:ss" ) : QStringLiteral( "yyyy-MM-dd" );
+                strValues = computeTimeDimensions( allRanges, QStringLiteral( dateFormat ) );
+                timeDimensionAdded = true;
+              }
+              else
+              {
+                for ( const QVariant &v : values )
+                {
+                  strValues << v.toString();
+                }
               }
               QDomText dimValuesText = doc.createTextNode( strValues.join( QLatin1String( ", " ) ) );
               dimElem.appendChild( dimValuesText );
@@ -1359,6 +1695,10 @@ namespace QgsWms
                && l->temporalProperties()->isActive() )
           {
             // TODO: set "default" (reference value)
+            qWarning() << __FUNCTION__ << __LINE__
+                       << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
+                          "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
+                          "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%";
 
             // Add all values
             const QList<QgsDateTimeRange> allRanges { l->temporalProperties()->allTemporalRanges( l ) };

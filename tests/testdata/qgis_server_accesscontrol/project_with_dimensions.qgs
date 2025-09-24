@@ -47,12 +47,18 @@
         <Option/>
       </customproperties>
     </layer-tree-layer>
+      <layer-tree-layer expanded="0" legend_exp="" id="landcover_2010_15_20_e245226d_6246_438d_a440_a94a1c9e2a32" name="Landcover 2010-2020" checked="Qt::Checked" patch_size="-1,-1" legend_split_behavior="0" providerKey="gdal" source="./landcover_2010_15_20.vrt">
+        <customproperties>
+          <Option/>
+        </customproperties>
+      </layer-tree-layer>
     <custom-order enabled="0">
       <item>dem20150730091219559</item>
       <item>dimensions_e67f85f9_5ced_4a1f_92e9_7ab81da166e6</item>
       <item>dimensions_3fdfa880_24e9_417d_b2e7_912ac57061ab</item>
       <item>dimensions_291f5427_756e_4bf5_b279_311fa3922787</item>
       <item>datetime_str_d1bc12e0_4078_44cd_80c6_b3625c4af76d</item>
+      <item>landcover_2010_15_20_e245226d_6246_438d_a440_a94a1c9e2a32</item>
     </custom-order>
   </layer-tree-group>
   <snapping-settings enabled="1" tolerance="40" scaleDependencyMode="0" type="1" maxScale="0" intersection-snapping="0" minScale="0" self-snapping="0" unit="1" mode="3">
@@ -1987,6 +1993,255 @@ def my_form_open(dialog, layer, feature):
       <widgets/>
       <previewExpression>"elev"</previewExpression>
       <mapTip></mapTip>
+    </maplayer>
+    <maplayer styleCategories="AllStyleCategories" autoRefreshTime="0" legendPlaceholderImage="" minScale="1e+08" type="raster" refreshOnNotifyMessage="" refreshOnNotifyEnabled="0" maxScale="0" autoRefreshMode="Disabled" hasScaleBasedVisibilityFlag="0">
+      <extent>
+        <xmin>-2600010</xmin>
+        <ymin>-885090</ymin>
+        <xmax>3100020</xmax>
+        <ymax>3914940</ymax>
+      </extent>
+      <wgs84extent>
+        <xmin>-177.29275972275843287</xmin>
+        <ymin>34.30138413257304819</ymin>
+        <xmax>-9.97722977823945278</xmax>
+        <ymax>84.45606671126326148</ymax>
+      </wgs84extent>
+      <id>landcover_2010_15_20_e245226d_6246_438d_a440_a94a1c9e2a32</id>
+      <datasource>./landcover_2010_15_20.vrt</datasource>
+      <layername>Landcover 2010-2020</layername>
+      <srs>
+        <spatialrefsys nativeFormat="Wkt">
+          <wkt>PROJCRS["NAD83(CSRS) / Canada Atlas Lambert",BASEGEOGCRS["NAD83(CSRS)",DATUM["NAD83 Canadian Spatial Reference System",ELLIPSOID["GRS 1980",6378137,298.257222101,LENGTHUNIT["metre",1]]],PRIMEM["Greenwich",0,ANGLEUNIT["degree",0.0174532925199433]],ID["EPSG",4617]],CONVERSION["Canada Atlas Lambert",METHOD["Lambert Conic Conformal (2SP)",ID["EPSG",9802]],PARAMETER["Latitude of false origin",49,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8821]],PARAMETER["Longitude of false origin",-95,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8822]],PARAMETER["Latitude of 1st standard parallel",49,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8823]],PARAMETER["Latitude of 2nd standard parallel",77,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8824]],PARAMETER["Easting at false origin",0,LENGTHUNIT["metre",1],ID["EPSG",8826]],PARAMETER["Northing at false origin",0,LENGTHUNIT["metre",1],ID["EPSG",8827]]],CS[Cartesian,2],AXIS["(E)",east,ORDER[1],LENGTHUNIT["metre",1]],AXIS["(N)",north,ORDER[2],LENGTHUNIT["metre",1]],USAGE[SCOPE["Transformation of coordinates at 5m level of accuracy."],AREA["Canada - onshore and offshore - Alberta; British Columbia; Manitoba; New Brunswick; Newfoundland and Labrador; Northwest Territories; Nova Scotia; Nunavut; Ontario; Prince Edward Island; Quebec; Saskatchewan; Yukon."],BBOX[38.21,-141.01,86.46,-40.73]],ID["EPSG",3979]]</wkt>
+          <proj4>+proj=lcc +lat_0=49 +lon_0=-95 +lat_1=49 +lat_2=77 +x_0=0 +y_0=0 +ellps=GRS80 +units=m +no_defs</proj4>
+          <srsid>27402</srsid>
+          <srid>3979</srid>
+          <authid>EPSG:3979</authid>
+          <description>NAD83(CSRS) / Canada Atlas Lambert</description>
+          <projectionacronym>lcc</projectionacronym>
+          <ellipsoidacronym>EPSG:7019</ellipsoidacronym>
+          <geographicflag>false</geographicflag>
+        </spatialrefsys>
+      </srs>
+      <resourceMetadata>
+        <identifier></identifier>
+        <parentidentifier></parentidentifier>
+        <language></language>
+        <type>dataset</type>
+        <title></title>
+        <abstract></abstract>
+        <contact>
+          <name></name>
+          <organization></organization>
+          <position></position>
+          <voice></voice>
+          <fax></fax>
+          <email></email>
+          <role></role>
+        </contact>
+        <links/>
+        <dates/>
+        <fees></fees>
+        <encoding></encoding>
+        <crs>
+          <spatialrefsys nativeFormat="Wkt">
+            <wkt>PROJCRS["NAD83(CSRS) / Canada Atlas Lambert",BASEGEOGCRS["NAD83(CSRS)",DATUM["NAD83 Canadian Spatial Reference System",ELLIPSOID["GRS 1980",6378137,298.257222101,LENGTHUNIT["metre",1]]],PRIMEM["Greenwich",0,ANGLEUNIT["degree",0.0174532925199433]],ID["EPSG",4617]],CONVERSION["Canada Atlas Lambert",METHOD["Lambert Conic Conformal (2SP)",ID["EPSG",9802]],PARAMETER["Latitude of false origin",49,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8821]],PARAMETER["Longitude of false origin",-95,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8822]],PARAMETER["Latitude of 1st standard parallel",49,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8823]],PARAMETER["Latitude of 2nd standard parallel",77,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8824]],PARAMETER["Easting at false origin",0,LENGTHUNIT["metre",1],ID["EPSG",8826]],PARAMETER["Northing at false origin",0,LENGTHUNIT["metre",1],ID["EPSG",8827]]],CS[Cartesian,2],AXIS["(E)",east,ORDER[1],LENGTHUNIT["metre",1]],AXIS["(N)",north,ORDER[2],LENGTHUNIT["metre",1]],USAGE[SCOPE["Transformation of coordinates at 5m level of accuracy."],AREA["Canada - onshore and offshore - Alberta; British Columbia; Manitoba; New Brunswick; Newfoundland and Labrador; Northwest Territories; Nova Scotia; Nunavut; Ontario; Prince Edward Island; Quebec; Saskatchewan; Yukon."],BBOX[38.21,-141.01,86.46,-40.73]],ID["EPSG",3979]]</wkt>
+            <proj4>+proj=lcc +lat_0=49 +lon_0=-95 +lat_1=49 +lat_2=77 +x_0=0 +y_0=0 +ellps=GRS80 +units=m +no_defs</proj4>
+            <srsid>27402</srsid>
+            <srid>3979</srid>
+            <authid>EPSG:3979</authid>
+            <description>NAD83(CSRS) / Canada Atlas Lambert</description>
+            <projectionacronym>lcc</projectionacronym>
+            <ellipsoidacronym>EPSG:7019</ellipsoidacronym>
+            <geographicflag>false</geographicflag>
+          </spatialrefsys>
+        </crs>
+        <extent>
+          <spatial miny="179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368" maxz="0" minx="179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368" dimensions="2" maxx="-179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368" maxy="-179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368" minz="0" crs="EPSG:3979"/>
+          <temporal>
+            <period>
+              <start></start>
+              <end></end>
+            </period>
+          </temporal>
+        </extent>
+      </resourceMetadata>
+      <shortname>landcover_2010-2020</shortname>
+      <provider>gdal</provider>
+      <noData>
+        <noDataList bandNo="1" useSrcNoData="1"/>
+        <noDataList bandNo="2" useSrcNoData="1"/>
+        <noDataList bandNo="3" useSrcNoData="1"/>
+      </noData>
+      <map-layer-style-manager current="default">
+        <map-layer-style name="default"/>
+      </map-layer-style-manager>
+      <flags>
+        <Identifiable>1</Identifiable>
+        <Removable>1</Removable>
+        <Searchable>0</Searchable>
+        <Private>0</Private>
+      </flags>
+      <temporal enabled="1" mode="3" bandNumber="1" fetchMode="0">
+        <ranges>
+          <range includeBeginning="1" band="1" includeEnd="1" begin="2010-07-01T00:00:00" end="2015-06-30T23:59:59"/>
+          <range includeBeginning="1" band="2" includeEnd="1" begin="2015-07-01T00:00:55" end="2020-06-30T23:59:59"/>
+          <range includeBeginning="1" band="3" includeEnd="1" begin="2020-07-01T00:00:59" end="2025-06-30T23:59:59"/>
+        </ranges>
+      </temporal>
+      <elevation enabled="0" mode="RepresentsElevationSurface" zoffset="0" band="1" symbology="Line" zscale="1">
+        <data-defined-properties>
+          <Option type="Map">
+            <Option name="name" type="QString" value=""/>
+            <Option name="properties"/>
+            <Option name="type" type="QString" value="collection"/>
+          </Option>
+        </data-defined-properties>
+        <profileLineSymbol>
+          <symbol clip_to_extent="1" is_animated="0" name="" type="line" alpha="1" frame_rate="10" force_rhr="0">
+            <data_defined_properties>
+              <Option type="Map">
+                <Option name="name" type="QString" value=""/>
+                <Option name="properties"/>
+                <Option name="type" type="QString" value="collection"/>
+              </Option>
+            </data_defined_properties>
+            <layer locked="0" enabled="1" class="SimpleLine" id="{7acf7c69-0ebb-48d3-9e16-5d04110deb56}" pass="0">
+              <Option type="Map">
+                <Option name="align_dash_pattern" type="QString" value="0"/>
+                <Option name="capstyle" type="QString" value="square"/>
+                <Option name="customdash" type="QString" value="5;2"/>
+                <Option name="customdash_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/>
+                <Option name="customdash_unit" type="QString" value="MM"/>
+                <Option name="dash_pattern_offset" type="QString" value="0"/>
+                <Option name="dash_pattern_offset_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/>
+                <Option name="dash_pattern_offset_unit" type="QString" value="MM"/>
+                <Option name="draw_inside_polygon" type="QString" value="0"/>
+                <Option name="joinstyle" type="QString" value="bevel"/>
+                <Option name="line_color" type="QString" value="232,113,141,255,rgb:0.9098039,0.4431373,0.5529412,1"/>
+                <Option name="line_style" type="QString" value="solid"/>
+                <Option name="line_width" type="QString" value="0.6"/>
+                <Option name="line_width_unit" type="QString" value="MM"/>
+                <Option name="offset" type="QString" value="0"/>
+                <Option name="offset_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/>
+                <Option name="offset_unit" type="QString" value="MM"/>
+                <Option name="ring_filter" type="QString" value="0"/>
+                <Option name="trim_distance_end" type="QString" value="0"/>
+                <Option name="trim_distance_end_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/>
+                <Option name="trim_distance_end_unit" type="QString" value="MM"/>
+                <Option name="trim_distance_start" type="QString" value="0"/>
+                <Option name="trim_distance_start_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/>
+                <Option name="trim_distance_start_unit" type="QString" value="MM"/>
+                <Option name="tweak_dash_pattern_on_corners" type="QString" value="0"/>
+                <Option name="use_custom_dash" type="QString" value="0"/>
+                <Option name="width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/>
+              </Option>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option name="name" type="QString" value=""/>
+                  <Option name="properties"/>
+                  <Option name="type" type="QString" value="collection"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </profileLineSymbol>
+        <profileFillSymbol>
+          <symbol clip_to_extent="1" is_animated="0" name="" type="fill" alpha="1" frame_rate="10" force_rhr="0">
+            <data_defined_properties>
+              <Option type="Map">
+                <Option name="name" type="QString" value=""/>
+                <Option name="properties"/>
+                <Option name="type" type="QString" value="collection"/>
+              </Option>
+            </data_defined_properties>
+            <layer locked="0" enabled="1" class="SimpleFill" id="{9f344551-c79d-4e67-bd2b-ec19256d60bc}" pass="0">
+              <Option type="Map">
+                <Option name="border_width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/>
+                <Option name="color" type="QString" value="232,113,141,255,rgb:0.9098039,0.4431373,0.5529412,1"/>
+                <Option name="joinstyle" type="QString" value="bevel"/>
+                <Option name="offset" type="QString" value="0,0"/>
+                <Option name="offset_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/>
+                <Option name="offset_unit" type="QString" value="MM"/>
+                <Option name="outline_color" type="QString" value="35,35,35,255,rgb:0.1372549,0.1372549,0.1372549,1"/>
+                <Option name="outline_style" type="QString" value="no"/>
+                <Option name="outline_width" type="QString" value="0.26"/>
+                <Option name="outline_width_unit" type="QString" value="MM"/>
+                <Option name="style" type="QString" value="solid"/>
+              </Option>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option name="name" type="QString" value=""/>
+                  <Option name="properties"/>
+                  <Option name="type" type="QString" value="collection"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </profileFillSymbol>
+      </elevation>
+      <customproperties>
+        <Option type="Map">
+          <Option name="WMSBackgroundLayer" type="bool" value="false"/>
+          <Option name="WMSPublishDataSourceUrl" type="bool" value="false"/>
+          <Option name="embeddedWidgets/count" type="int" value="0"/>
+          <Option name="identify/format" type="QString" value="Value"/>
+          <Option name="wms_time_default" type="QString" value="2020-07-01T12:00:00Z"/>
+          <Option name="wms_time_extent" type="QString" value="2010-07-01T12:00:00Z/2020-07-01T12:00:00Z/P5Y"/>
+          <Option name="wms_time_item" type="QString" value="TIFFTAG_DATETIME"/>
+        </Option>
+      </customproperties>
+      <mapTip enabled="1"></mapTip>
+      <pipe-data-defined-properties>
+        <Option type="Map">
+          <Option name="name" type="QString" value=""/>
+          <Option name="properties"/>
+          <Option name="type" type="QString" value="collection"/>
+        </Option>
+      </pipe-data-defined-properties>
+      <pipe>
+        <provider>
+          <resampling enabled="false" zoomedInResamplingMethod="nearestNeighbour" zoomedOutResamplingMethod="nearestNeighbour" maxOversampling="2"/>
+        </provider>
+        <rasterrenderer alphaBand="-1" opacity="1" type="paletted" nodataColor="" band="1">
+          <rasterTransparency/>
+          <minMaxOrigin>
+            <limits>None</limits>
+            <extent>WholeRaster</extent>
+            <statAccuracy>Estimated</statAccuracy>
+            <cumulativeCutLower>0.02</cumulativeCutLower>
+            <cumulativeCutUpper>0.98</cumulativeCutUpper>
+            <stdDevFactor>2</stdDevFactor>
+          </minMaxOrigin>
+          <colorPalette>
+            <paletteEntry label="No data" alpha="0" color="#000000" value="0"/>
+            <paletteEntry label="Temperate or sub-polar needleleaf forest " alpha="255" color="#003c00" value="1"/>
+            <paletteEntry label="Sub-polar taiga needleleaf forest" alpha="255" color="#939b6f" value="2"/>
+            <paletteEntry label="Tropical or sub-tropical broadleaf  evergreen forest" alpha="255" color="#006200" value="3"/>
+            <paletteEntry label="Tropical or sub-tropical broadleaf deciduous forest" alpha="255" color="#1daa04" value="4"/>
+            <paletteEntry label="Temperate or sub-polar broadleaf deciduous forest" alpha="255" color="#138b04" value="5"/>
+            <paletteEntry label="Mixed forest" alpha="255" color="#5b742a" value="6"/>
+            <paletteEntry label="Tropical or sub-tropical shrubland" alpha="255" color="#6aa289" value="7"/>
+            <paletteEntry label="Temperate or sub-polar shrubland" alpha="255" color="#b29d32" value="8"/>
+            <paletteEntry label="Tropical or sub-tropical grassland " alpha="255" color="#e7db5d" value="9"/>
+            <paletteEntry label="Temperate or sub-polar grassland" alpha="255" color="#e0ce89" value="10"/>
+            <paletteEntry label="Sub-polar or polar shrubland-lichen-moss" alpha="255" color="#9b7453" value="11"/>
+            <paletteEntry label="Sub-polar or polar grassland-lichen-moss" alpha="255" color="#b9d38e" value="12"/>
+            <paletteEntry label="Sub-polar or polar barren-lichen-moss" alpha="255" color="#3f896f" value="13"/>
+            <paletteEntry label="Wetland " alpha="255" color="#6aa289" value="14"/>
+            <paletteEntry label="Cropland" alpha="255" color="#f0b86c" value="15"/>
+            <paletteEntry label="Barren lands" alpha="255" color="#a7aaad" value="16"/>
+            <paletteEntry label="Urban" alpha="255" color="#db2025" value="17"/>
+            <paletteEntry label="Water " alpha="255" color="#4b6fa2" value="18"/>
+            <paletteEntry label="Snow and Ice" alpha="255" color="#fef9fe" value="19"/>
+          </colorPalette>
+        </rasterrenderer>
+        <brightnesscontrast brightness="0" contrast="0" gamma="1"/>
+        <huesaturation saturation="0" colorizeStrength="100" invertColors="0" grayscaleMode="0" colorizeBlue="128" colorizeOn="0" colorizeRed="255" colorizeGreen="128"/>
+        <rasterresampler maxOversampling="2"/>
+        <resamplingStage>resamplingFilter</resamplingStage>
+      </pipe>
+      <blendMode>0</blendMode>
     </maplayer>
   </projectlayers>
   <layerorder>

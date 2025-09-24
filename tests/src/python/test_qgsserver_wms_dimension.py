@@ -21,6 +21,7 @@ from qgis.PyQt.QtCore import QSize
 from qgis.testing import unittest
 
 from test_qgsserver_wms import TestQgsServerWMSTestBase
+import time
 
 
 class TestQgsServerWMSDimension(TestQgsServerWMSTestBase):
@@ -80,6 +81,9 @@ class TestQgsServerWMSDimension(TestQgsServerWMSTestBase):
 
     def test_wms_getcapabilities(self):
         self.wms_request_compare("GetCapabilities")
+
+    # def test_wms_getcapabilities_with_time(self):
+    #     self.wms_request_compare("GetCapabilities", reference_file="GetCapabilities_wms_time_dimension", project="landcover_vrt_en.qgz")
 
     def test_wms_getmap_default(self):
         # default rendering
@@ -556,4 +560,5 @@ class TestQgsServerWMSDimension(TestQgsServerWMSTestBase):
 
 
 if __name__ == "__main__":
+    input("Enter your input:")
     unittest.main()

@@ -38,6 +38,7 @@ class TestQgsChunkedEntity : public QgsTest
   private slots:
     void initTestCase();    // will be called before the first testfunction is executed.
     void cleanupTestCase(); // will be called after the last testfunction was executed.
+    void vectorLayerChunkedEntityElevationDtm();
     void vectorLayerChunkedEntityElevationOffset();
     void ruleBasedChunkedEntityElevationOffset();
 
@@ -91,6 +92,53 @@ void TestQgsChunkedEntity::cleanupTestCase()
 {
   mProject.reset();
   QgsApplication::exitQgis();
+}
+
+void TestQgsChunkedEntity::vectorLayerChunkedEntityElevationDtm()
+{
+  Qgs3DMapSettings *map = new Qgs3DMapSettings;
+  map->setLayers( QList<QgsMapLayer *>() << mLayerBuildings << mLayerDtm );
+
+  QgsDemTerrainSettings *demTerrainSettings = new QgsDemTerrainSettings;
+  demTerrainSettings->setLayer( mLayerDtm );
+  demTerrainSettings->setVerticalScale( 3 );
+  map->setTerrainSettings( demTerrainSettings );
+
+  QgsPolygon3DSymbol *symbolAbsolute = new QgsPolygon3DSymbol;
+  symbolAbsolute->setAltitudeClamping( Qgis::AltitudeClamping::Absolute );
+  QgsVectorLayer3DRenderer *renderer3d = new QgsVectorLayer3DRenderer( symbolAbsolute );
+  renderer3d->setLayer( mLayerBuildings );
+  mLayerBuildings->setRenderer3D( renderer3d );
+
+  std::unique_ptr<Qt3DCore::QEntity> entity( renderer3d->createEntity( map ) );
+  QVERIFY( entity );
+  QVector<Qt3DCore::QTransform *> trs = entity->componentsOfType<Qt3DCore::QTransform>();
+  QVERIFY( trs.size() == 1 );
+  QVERIFY( trs.constFirst()->translation() == QVector3D( 0.0f, 0.0f, 0.0f ) );
+
+  // set an elevation offset, no change is clamping is absolute
+  const float offset = 42.f;
+  QgsAbstractTerrainSettings *terrainSettings = map->terrainSettings()->clone();
+  terrainSettings->setElevationOffset( offset );
+  map->setTerrainSettings( terrainSettings );
+
+  entity.reset( renderer3d->createEntity( map ) );
+  QVERIFY( entity );
+  trs = entity->componentsOfType<Qt3DCore::QTransform>();
+  QVERIFY( trs.size() == 1 );
+  QVERIFY( trs.constFirst()->translation() == QVector3D( 0.0f, 0.0f, 0.0f ) );
+
+  // if clamping is terrain, offset is applied
+  QgsPolygon3DSymbol *symbolTerrain = static_cast<QgsPolygon3DSymbol *>( symbolAbsolute->clone() );
+  symbolTerrain->setAltitudeClamping( Qgis::AltitudeClamping::Terrain );
+  ;
+  renderer3d->setSymbol( symbolTerrain );
+
+  entity.reset( renderer3d->createEntity( map ) );
+  QVERIFY( entity );
+  trs = entity->componentsOfType<Qt3DCore::QTransform>();
+  QVERIFY( trs.size() == 1 );
+  QVERIFY( trs.constFirst()->translation() == QVector3D( 0.0f, 0.0f, offset ) );
 }
 
 void TestQgsChunkedEntity::vectorLayerChunkedEntityElevationOffset()
