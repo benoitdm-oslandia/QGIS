@@ -51,6 +51,9 @@ class QgsMessageBar;
 class QgsRubberBand;
 class QgsDoubleSpinBox;
 
+class Qgs3DPointCloudEditionToolBar;
+class Qgs3DPrimitiveEditionToolBar;
+
 //! Helper validator for classification classes
 class ClassValidator : public QValidator
 {
@@ -104,11 +107,11 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     void cameraControl();
     void identify();
     void measureLine();
-    void changePointCloudAttributeByPaintbrush();
-    void changePointCloudAttributeByPolygon();
-    void changePointCloudAttributeByAboveLine();
-    void changePointCloudAttributeByBelowLine();
-    void changePointCloudAttributePointFilter();
+    // void changePointCloudAttributeByPaintbrush();
+    // void changePointCloudAttributeByPolygon();
+    // void changePointCloudAttributeByAboveLine();
+    // void changePointCloudAttributeByBelowLine();
+    // void changePointCloudAttributePointFilter();
     void exportScene();
     void toggleNavigationWidget( bool visibility );
     void toggleEditingToolbar( bool visibility );
@@ -135,12 +138,17 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     void onExtentChanged();
     void onGpuMemoryLimitReached();
 
-    void onPointCloudChangeAttributeSettingsChanged();
+    void onLayerForEditionChanged();
 
     void onCrossSectionToolFinished();
 
   private:
     void updateCheckedActionsFromMapSettings( const Qgs3DMapSettings *mapSettings ) const;
+
+    void updateEditionToolBar();
+
+    // TODO fixed version:
+    QList<QgsMapLayer *> editableLayers() const;
 
     QString mCanvasName;
     Qgs3DMapCanvas *mCanvas = nullptr;
@@ -153,7 +161,7 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     QTimer *mLabelNavSpeedHideTimeout = nullptr;
     Qgs3DMapToolIdentify *mMapToolIdentify = nullptr;
     Qgs3DMapToolMeasureLine *mMapToolMeasureLine = nullptr;
-    Qgs3DMapToolPointCloudChangeAttribute *mMapToolChangeAttribute = nullptr;
+    // Qgs3DMapToolPointCloudChangeAttribute *mMapToolChangeAttribute = nullptr;
     std::unique_ptr<QgsMapToolExtent> mMapToolExtent;
     std::unique_ptr<QgsMapToolClippingPlanes> mMapToolClippingPlanes;
     QgsMapTool *mMapToolPrevious = nullptr;
@@ -161,7 +169,7 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     QMenu *mMapThemeMenu = nullptr;
     QMenu *mCameraMenu = nullptr;
     QMenu *mEffectsMenu = nullptr;
-    QMenu *mEditingToolsMenu = nullptr;
+    // QMenu *mEditingToolsMenu = nullptr;
     QList<QAction *> mMapThemeMenuPresetActions;
     QAction *mActionEnableShadows = nullptr;
     QAction *mActionEnableEyeDome = nullptr;
@@ -177,11 +185,14 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     QAction *mActionSetSceneExtent = nullptr;
     QAction *mActionSetClippingPlanes = nullptr;
     QAction *mActionDisableClippingPlanes = nullptr;
-    QAction *mActionToggleEditing = nullptr;
+    QComboBox *mCboSelectLayerForEdition = nullptr;
+    QAction *mActionSelectLayerForEdition = nullptr;
     QAction *mActionUndo = nullptr;
+    QMetaObject::Connection mUndoConnection;
     QAction *mActionRedo = nullptr;
-    QAction *mEditingToolsAction = nullptr;
-    QToolBar *mPointCloudEditingToolbar = nullptr;
+    QMetaObject::Connection mRedoConnection;
+    //QAction *mEditingToolsAction = nullptr;
+    Qgs3DPointCloudEditionToolBar *mPointCloudEditingToolbar = nullptr;
     QgsDockableWidgetHelper *mDockableWidgetHelper = nullptr;
     QObjectUniquePtr<QgsRubberBand> mViewFrustumHighlight;
     QObjectUniquePtr<QgsRubberBand> mViewExtentHighlight;
@@ -189,6 +200,7 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     QgsMessageBar *mMessageBar = nullptr;
     bool mGpuMemoryLimitReachedReported = false;
 
+    QgsMapLayer *mLayer = nullptr;
     //! Container QWidget that encapsulates 3D QWindow
     QWidget *mContainer = nullptr;
     //! On-Screen Navigation widget.
@@ -197,13 +209,6 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     Qgs3DDebugWidget *mDebugWidget = nullptr;
 
     QToolBar *mEditingToolBar = nullptr;
-    QComboBox *mCboChangeAttribute = nullptr;
-    QComboBox *mCboChangeAttributeValue = nullptr;
-    ClassValidator *mClassValidator = nullptr;
-    QgsDoubleSpinBox *mSpinChangeAttributeValue = nullptr;
-    QAction *mCboChangeAttributeValueAction = nullptr;
-    QAction *mSpinChangeAttributeValueAction = nullptr;
-    QString mChangeAttributePointFilter;
 
     QMenu *mToolbarMenu = nullptr;
 };
