@@ -71,8 +71,6 @@ Qgs3DPointCloudEditionToolBar::Qgs3DPointCloudEditionToolBar( Qgs3DMapCanvasWidg
   mClassValidator = new ClassValidator( this );
   mCboChangeAttributeValueAction = addWidget( mCboChangeAttributeValue );
 
-  mMapToolChangeAttribute = new Qgs3DMapToolPointCloudChangeAttribute( mParentWidget->mapCanvas3D() );
-
   connect( mCboChangeAttribute, qOverload<int>( &QComboBox::currentIndexChanged ), this, [this]( int ) { onPointCloudChangeAttributeSettingsChanged(); } );
   connect( mCboChangeAttributeValue, qOverload<const QString &>( &QComboBox::currentTextChanged ), this, [this]( const QString &text ) {
     double newValue = 0;
@@ -91,46 +89,8 @@ Qgs3DPointCloudEditionToolBar::Qgs3DPointCloudEditionToolBar( Qgs3DMapCanvasWidg
     mMapToolChangeAttribute->setNewValue( newValue );
   } );
   connect( mSpinChangeAttributeValue, qOverload<double>( &QgsDoubleSpinBox::valueChanged ), this, [this]( double ) { mMapToolChangeAttribute->setNewValue( mSpinChangeAttributeValue->value() ); } );
-}
 
-void Qgs3DPointCloudEditionToolBar::deactivate()
-{
-  for ( auto action : findChildren<QAction *>() )
-    action->setVisible( false );
-
-  mEditingToolsAction->setEnabled( false );
-  qDebug() << __FUNCTION__ << __LINE__ << "visible:" << isVisible();
-  setEnabled( false );
-}
-
-void Qgs3DPointCloudEditionToolBar::activate( QgsMapLayer *layer )
-{
-  QgsPointCloudLayer *pcLayer = qobject_cast<QgsPointCloudLayer *>( layer );
-  const QVector<QgsPointCloudAttribute> attributes = pcLayer->attributes().attributes();
-  const QString previousAttribute = mCboChangeAttribute->currentText();
-  whileBlocking( mCboChangeAttribute )->clear();
-  for ( const QgsPointCloudAttribute &attribute : attributes )
-  {
-    if ( attribute.name() == QLatin1String( "X" ) || attribute.name() == QLatin1String( "Y" ) || attribute.name() == QLatin1String( "Z" ) )
-      continue;
-
-    whileBlocking( mCboChangeAttribute )->addItem( attribute.name() );
-  }
-
-  int index = mCboChangeAttribute->findText( previousAttribute );
-  if ( index < 0 )
-    index = mCboChangeAttribute->findText( QStringLiteral( "Classification" ) );
-  mCboChangeAttribute->setCurrentIndex( std::max( index, 0 ) );
-
-  // setEnabled( pcLayer->isEditable() );
-  mEditingToolsAction->setEnabled( pcLayer->isEditable() );
-  // Reparse the class values when the renderer changes - renderer3DChanged() is not fired when only the renderer symbol is changed
-  connect( pcLayer, &QgsMapLayer::request3DUpdate, this, &Qgs3DPointCloudEditionToolBar::onPointCloudChangeAttributeSettingsChanged );
-
-  setEnabled( true );
-  for ( auto action : findChildren<QAction *>() )
-    action->setVisible( true );
-  qDebug() << __FUNCTION__ << __LINE__ << "visible:" << isVisible();
+  mMapToolChangeAttribute = new Qgs3DMapToolPointCloudChangeAttribute( mParentWidget->mapCanvas3D() );
 }
 
 void Qgs3DPointCloudEditionToolBar::changePointCloudAttributeByPaintbrush()
@@ -208,6 +168,47 @@ void Qgs3DPointCloudEditionToolBar::changePointCloudAttributePointFilter()
   if ( !mChangeAttributePointFilter.isEmpty() )
     tooltip.append( QStringLiteral( "\n%1\n%2" ).arg( tr( "Current filter expression: " ), mChangeAttributePointFilter ) );
   action->setToolTip( tooltip );
+}
+
+void Qgs3DPointCloudEditionToolBar::deactivate()
+{
+  for ( auto action : findChildren<QAction *>() )
+    action->setVisible( false );
+
+  mEditingToolsAction->setEnabled( false );
+  qDebug() << __FUNCTION__ << __LINE__ << "visible:" << isVisible();
+  setEnabled( false );
+}
+
+void Qgs3DPointCloudEditionToolBar::activate( QgsMapLayer *layer )
+{
+  QgsPointCloudLayer *pcLayer = qobject_cast<QgsPointCloudLayer *>( layer );
+  const QVector<QgsPointCloudAttribute> attributes = pcLayer->attributes().attributes();
+  const QString previousAttribute = mCboChangeAttribute->currentText();
+  whileBlocking( mCboChangeAttribute )->clear();
+  for ( const QgsPointCloudAttribute &attribute : attributes )
+  {
+    if ( attribute.name() == QLatin1String( "X" ) || attribute.name() == QLatin1String( "Y" ) || attribute.name() == QLatin1String( "Z" ) )
+      continue;
+
+    whileBlocking( mCboChangeAttribute )->addItem( attribute.name() );
+  }
+
+  int index = mCboChangeAttribute->findText( previousAttribute );
+  if ( index < 0 )
+    index = mCboChangeAttribute->findText( QStringLiteral( "Classification" ) );
+  mCboChangeAttribute->setCurrentIndex( std::max( index, 0 ) );
+
+  // setEnabled( pcLayer->isEditable() );
+  mEditingToolsAction->setEnabled( pcLayer->isEditable() );
+  // Reparse the class values when the renderer changes - renderer3DChanged() is not fired when only the renderer symbol is changed
+  connect( pcLayer, &QgsMapLayer::request3DUpdate, this, &Qgs3DPointCloudEditionToolBar::onPointCloudChangeAttributeSettingsChanged );
+
+  setEnabled( true );
+  for ( auto action : findChildren<QAction *>() )
+    action->setVisible( true );
+  onPointCloudChangeAttributeSettingsChanged(); // be sure to have the good input fields displayed
+  qDebug() << __FUNCTION__ << __LINE__ << "visible:" << isVisible();
 }
 
 void Qgs3DPointCloudEditionToolBar::onPointCloudChangeAttributeSettingsChanged()

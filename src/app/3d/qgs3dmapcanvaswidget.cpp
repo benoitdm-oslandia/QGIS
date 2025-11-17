@@ -13,6 +13,7 @@
  *                                                                         *
  ***************************************************************************/
 
+
 #include "qgs3dmapcanvaswidget.h"
 
 #include "qgisapp.h"
@@ -517,6 +518,10 @@ void Qgs3DMapCanvasWidget::updateLayerRelatedActions( QgsMapLayer *layer )
     return;
 
   qDebug() << __FUNCTION__ << __LINE__ << "for layer:" << layer;
+  // toggle previous layer
+  QgisApp::instance()->toggleEditing( mLayer );
+
+  // set new working layer
   mLayer = layer;
 
   if ( mEditingToolBar )
@@ -598,8 +603,12 @@ void Qgs3DMapCanvasWidget::updateEditionToolBar()
 
   if ( mLayer && mLayer->supportsEditing() )
   {
-    mActionSelectLayerForEdition->setEnabled( mLayer->supportsEditing() );
-    mActionSelectLayerForEdition->setChecked( mLayer->isEditable() );
+    // toggle editing
+    if ( !mLayer->isEditable() )
+      QgisApp::instance()->toggleEditing( mLayer );
+
+    // mActionSelectLayerForEdition->setEnabled( true );
+    // mActionSelectLayerForEdition->setChecked( mLayer->isEditable() );
     mDockableWidgetHelper->setWindowTitle( QStringLiteral( "%1 - %2" ).arg( mCanvasName ).arg( mLayer->name() ) );
 
     connect( mActionUndo, &QAction::triggered, mLayer->undoStack(), &QUndoStack::undo );
