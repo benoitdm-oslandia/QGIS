@@ -14,15 +14,30 @@
  ***************************************************************************/
 
 #include "qgs3dprimitiveeditiontoolbar.h"
-//#include "moc_qgs3dprimitiveeditiontoolbar.cpp"
 
 #include <QAction>
 #include <QLabel>
+#include <QMenu>
+#include <QToolButton>
+
+#include "qgsapplication.h"
+#include "qgs3dmapcanvas.h"
+#include "qgs3dmaptoolpointcloudchangeattributepolygon.h"
 
 Qgs3DPrimitiveEditionToolBar::Qgs3DPrimitiveEditionToolBar( Qgs3DMapCanvasWidget *parent )
   : Qgs3DEditionToolBar( QStringLiteral( "Primitive edition" ), parent )
 {
   addWidget( new QLabel( tr( "PRIMITIVE" ) ) );
+
+  mEditingToolsMenu = new QMenu( this );
+
+  mEditingToolsAction = new QAction( QgsApplication::getThemeIcon( QStringLiteral( "mActionAddBasicShape.svg" ) ), tr( "Create new primitive" ), this );
+  mEditingToolsAction->setMenu( mEditingToolsMenu );
+  addAction( mEditingToolsAction );
+
+  QToolButton *editingToolsButton = qobject_cast<QToolButton *>( widgetForAction( mEditingToolsAction ) );
+  editingToolsButton->setPopupMode( QToolButton::ToolButtonPopupMode::InstantPopup );
+  /* QAction *actionPointCloudChangeAttributeTool =*/mEditingToolsMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIconEsriI3s.svg" ) ) ), tr( "Create a cube" ), this, &Qgs3DPrimitiveEditionToolBar::changePointCloudAttributeByPolygon );
 }
 
 void Qgs3DPrimitiveEditionToolBar::activate( QgsMapLayer * /*layer*/ )
@@ -44,4 +59,17 @@ void Qgs3DPrimitiveEditionToolBar::deactivate()
 QList<QAction *> Qgs3DPrimitiveEditionToolBar::groupActions() const
 {
   return {};
+}
+
+void Qgs3DPrimitiveEditionToolBar::changePointCloudAttributeByPolygon()
+{
+  const QAction *action = qobject_cast<QAction *>( sender() );
+  if ( !action )
+    return;
+
+  mMapToolChangeAttribute->deleteLater();
+  mMapToolChangeAttribute = new Qgs3DMapToolPointCloudChangeAttributePolygon( mParentWidget->mapCanvas3D(), Qgs3DMapToolPointCloudChangeAttributePolygon::Polygon );
+  //onPointCloudChangeAttributeSettingsChanged();
+  mParentWidget->mapCanvas3D()->setMapTool( mMapToolChangeAttribute );
+  mEditingToolsAction->setIcon( action->icon() );
 }

@@ -518,8 +518,9 @@ void Qgs3DMapCanvasWidget::updateLayerRelatedActions( QgsMapLayer *layer )
     return;
 
   qDebug() << __FUNCTION__ << __LINE__ << "for layer:" << layer;
-  // toggle previous layer
-  QgisApp::instance()->toggleEditing( mLayer );
+  if ( mLayer && !mLayer->isModified() )
+    // toggle previous layer
+    QgisApp::instance()->toggleEditing( mLayer );
 
   // set new working layer
   mLayer = layer;

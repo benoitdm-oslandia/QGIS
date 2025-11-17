@@ -18,6 +18,7 @@
 
 #include "qgs3deditiontoolbar.h"
 
+class Qgs3DMapToolPointCloudChangeAttribute;
 
 class Qgs3DPrimitiveEditionToolBar : public Qgs3DEditionToolBar
 {
@@ -29,6 +30,15 @@ class Qgs3DPrimitiveEditionToolBar : public Qgs3DEditionToolBar
     void activate( QgsMapLayer *layer ) override;
     void deactivate() override;
     QList<QAction *> groupActions() const override;
+
+  private slots:
+    void changePointCloudAttributeByPolygon();
+
+  private:
+    QMenu *mEditingToolsMenu = nullptr;
+    QAction *mEditingToolsAction = nullptr;
+
+    Qgs3DMapToolPointCloudChangeAttribute *mMapToolChangeAttribute = nullptr;
 };
 
 #endif // QGS3DPRIMITIVEEDITIONTOOLBAR_H
