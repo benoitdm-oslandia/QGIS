@@ -66,10 +66,12 @@ class Qgs3DMapToolCreateCube : public Qgs3DMapTool
     QPoint mMouseClickPos;
     QgsPoint mFirstPointOnMap;
 
-    Qt3DCore::QEntity *mCubeLineEntity = nullptr;
+    std::unique_ptr<Qt3DCore::QEntity> mPrimitiveLineEntity = nullptr;
+    std::unique_ptr<Qt3DCore::QEntity> mHighlightedPointEntity = nullptr;
 
     QgsPoint screenToMap( const QPoint &screenPos ) const;
-    void updateCube( double length, double zRotation );
+    void updatePrimitive( const QgsPoint &mapPos, double length, double zRotation );
+    void updateHLPoint( const QgsPoint &mapPos, const QPoint &screenPos );
 };
 
 ///@cond PRIVATE

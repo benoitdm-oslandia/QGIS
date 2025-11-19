@@ -25,9 +25,8 @@ void Qgs3DCreateCubeDialog::setRotation( double rx, double ry, double rz )
 
 void Qgs3DCreateCubeDialog::resetData()
 {
-  // whileBlocking( spinTX )->setValue( point.x() );
-  // whileBlocking( spinTY )->setValue( point.y() );
-  // whileBlocking( spinTZ )->setValue( point.z() );
+  whileBlocking( spinSize )->setValue( 0.0 );
+  setRotation( 0.0, 0.0, 0.0 );
 }
 
 void Qgs3DCreateCubeDialog::setSize( double size )

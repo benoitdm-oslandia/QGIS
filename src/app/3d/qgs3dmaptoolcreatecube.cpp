@@ -30,6 +30,7 @@
 
 #include <QMouseEvent>
 #include <Qt3DExtras/QPhongMaterial>
+#include <Qt3DExtras/QSphereMesh>
 
 
 Qgs3DMapToolCreateCube::Qgs3DMapToolCreateCube( Qgs3DMapCanvas *canvas )
@@ -55,25 +56,20 @@ void Qgs3DMapToolCreateCube::activate()
 
 void Qgs3DMapToolCreateCube::deactivate()
 {
-  qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString();
-  mRubberBand.reset();
+  finish();
 
   // Hide dialog
   mDialog->hide();
-  mDone = true;
-  if ( mCubeLineEntity != nullptr )
-  {
-    mCubeLineEntity->deleteLater();
-    mCubeLineEntity = nullptr;
-  }
 }
 
 void Qgs3DMapToolCreateCube::finish()
 {
   qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString();
-  deactivate();
-  //mDialog->hide();
-  //mCanvas->setMapTool( nullptr );
+  mRubberBand.reset();
+  mPrimitiveLineEntity.reset();
+  mHighlightedPointEntity.reset();
+
+  mDone = true;
 }
 
 QCursor Qgs3DMapToolCreateCube::cursor() const
@@ -87,11 +83,6 @@ void Qgs3DMapToolCreateCube::restart()
 
   mDone = false;
   mDialog->resetData();
-  if ( mCubeLineEntity != nullptr )
-  {
-    mCubeLineEntity->deleteLater();
-    mCubeLineEntity = nullptr;
-  }
   mMouseClickPos = QPoint();
 
   mRubberBand.reset( new QgsRubberBand3D( *mCanvas->mapSettings(), mCanvas->engine(), mCanvas->engine()->frameGraph()->rubberBandsRootEntity() ) );
@@ -99,11 +90,23 @@ void Qgs3DMapToolCreateCube::restart()
   const int myRed = settings.value( QStringLiteral( "qgis/default_measure_color_red" ), 222 ).toInt();
   const int myGreen = settings.value( QStringLiteral( "qgis/default_measure_color_green" ), 155 ).toInt();
   const int myBlue = settings.value( QStringLiteral( "qgis/default_measure_color_blue" ), 67 ).toInt();
-
   mRubberBand->setWidth( 3 );
   mRubberBand->setColor( QColor( myRed, myGreen, myBlue ) );
 
-  mDialog->show();
+  // mDefaultPickingMethod = mMapScene->engine()->renderSettings()->pickingSettings()->pickMethod();
+
+  // // Create screencaster to be used by EventFilter:
+  // //   1- Perform ray casting tests by specifying "touch" coordinates in screen space
+  // //   2- connect screencaster results to onTouchedByRay
+  // //   3- screencaster will be triggered by EventFilter
+  // mScreenRayCaster = new Qt3DRender::QScreenRayCaster( mAxisSceneEntity );
+  // mScreenRayCaster->addLayer( mRenderView->objectLayer() ); // to only filter on axis objects
+  // mScreenRayCaster->setFilterMode( Qt3DRender::QScreenRayCaster::AcceptAllMatchingLayers );
+  // mScreenRayCaster->setRunMode( Qt3DRender::QAbstractRayCaster::SingleShot );
+
+  // mAxisSceneEntity->addComponent( mScreenRayCaster );
+
+  // QObject::connect( mScreenRayCaster, &Qt3DRender::QScreenRayCaster::hitsChanged, this, &Qgs3DAxis::onTouchedByRay );
 }
 
 
@@ -136,30 +139,30 @@ QgsPoint Qgs3DMapToolCreateCube::screenToMap( const QPoint &screenPos ) const
   return QgsPoint( mapCoords.x(), mapCoords.y(), mapCoords.z() );
 }
 
-void Qgs3DMapToolCreateCube::updateCube( double length, double zRotation )
+void Qgs3DMapToolCreateCube::updatePrimitive( const QgsPoint &mapPos, double length, double zRotation )
 {
   QgsGeoTransform *transform;
-  if ( mCubeLineEntity == nullptr )
+  if ( mPrimitiveLineEntity.get() == nullptr )
   {
-    mCubeLineEntity = new Qt3DCore::QEntity( mCanvas->engine()->frameGraph()->rubberBandsRootEntity() );
-    mCubeLineEntity->setObjectName( "primitive_new_cube" );
+    mPrimitiveLineEntity.reset( new Qt3DCore::QEntity( mCanvas->engine()->frameGraph()->rubberBandsRootEntity() ) );
+    mPrimitiveLineEntity->setObjectName( "new_primitive" );
 
-    QgsPrivate::Qgs3DWiredMesh *cubeLine = new QgsPrivate::Qgs3DWiredMesh;
+    QgsPrivate::Qgs3DWiredMesh *mesh = new QgsPrivate::Qgs3DWiredMesh;
     QgsAABB box = QgsAABB( -0.5f, -0.5f, 0, //
                            0.5f, 0.5f, 1.0 );
-    cubeLine->setVertices( box.verticesForLines() );
-    mCubeLineEntity->addComponent( cubeLine );
+    mesh->setVertices( box.verticesForLines() );
+    mPrimitiveLineEntity->addComponent( mesh );
 
-    Qt3DExtras::QPhongMaterial *cubeLineMaterial = new Qt3DExtras::QPhongMaterial;
-    cubeLineMaterial->setAmbient( Qt::blue );
-    mCubeLineEntity->addComponent( cubeLineMaterial );
+    Qt3DExtras::QPhongMaterial *material = new Qt3DExtras::QPhongMaterial;
+    material->setAmbient( Qt::blue );
+    mPrimitiveLineEntity->addComponent( material );
 
-    transform = new QgsGeoTransform( mCubeLineEntity );
-    mCubeLineEntity->addComponent( transform );
+    transform = new QgsGeoTransform( mPrimitiveLineEntity.get() );
+    mPrimitiveLineEntity->addComponent( transform );
   }
   else
   {
-    for ( auto trans : mCubeLineEntity->findChildren<QgsGeoTransform *>() )
+    for ( auto trans : mPrimitiveLineEntity->findChildren<QgsGeoTransform *>() )
     {
       transform = trans;
       break;
@@ -168,7 +171,53 @@ void Qgs3DMapToolCreateCube::updateCube( double length, double zRotation )
 
   transform->setOrigin( mCanvas->mapSettings()->origin() );
   transform->setRotationZ( static_cast<float>( zRotation ) );
-  transform->setGeoTranslation( QgsVector3D( mFirstPointOnMap.x(), mFirstPointOnMap.y(), mFirstPointOnMap.z() ) );
+  transform->setGeoTranslation( QgsVector3D( mapPos.x(), mapPos.y(), mapPos.z() ) );
+  transform->setScale3D( { static_cast<float>( length ), static_cast<float>( length ), static_cast<float>( length ) } );
+}
+
+void Qgs3DMapToolCreateCube::updateHLPoint( const QgsPoint &mapPos, const QPoint &screenPos )
+{
+  QgsGeoTransform *transform;
+  if ( mHighlightedPointEntity.get() == nullptr )
+  {
+    mHighlightedPointEntity.reset( new Qt3DCore::QEntity( mCanvas->engine()->frameGraph()->rubberBandsRootEntity() ) );
+    mHighlightedPointEntity->setObjectName( "HL_point" );
+
+    Qt3DExtras::QSphereMesh *mesh = new Qt3DExtras::QSphereMesh( mCanvas->engine()->frameGraph()->rubberBandsRootEntity() );
+    mesh->setRadius( 1.0f );
+    mesh->setRings( 4 );
+    mesh->setSlices( 4 );
+    mHighlightedPointEntity->addComponent( mesh );
+
+    Qt3DExtras::QPhongMaterial *material = new Qt3DExtras::QPhongMaterial;
+    material->setAmbient( Qt::red );
+    mHighlightedPointEntity->addComponent( material );
+
+    transform = new QgsGeoTransform( mHighlightedPointEntity.get() );
+    mHighlightedPointEntity->addComponent( transform );
+  }
+  else
+  {
+    for ( auto trans : mHighlightedPointEntity->findChildren<QgsGeoTransform *>() )
+    {
+      transform = trans;
+      break;
+    }
+  }
+
+  transform->setOrigin( mCanvas->mapSettings()->origin() );
+  transform->setGeoTranslation( QgsVector3D( mapPos.x(), mapPos.y(), mapPos.z() ) );
+
+  // QgsPoint mapPos2 = screenToMap( QPoint( screenPos.x() + 10, screenPos.y() + 10 ) );
+
+  // QgsVector3D worldPos = Qgs3DUtils::mapToWorldCoordinates( QgsVector3D( mapPos.x(), mapPos.y(), mapPos.z() ), mCanvas->mapSettings()->origin() );
+  // QgsVector3D worldPos2 = Qgs3DUtils::mapToWorldCoordinates( QgsVector3D( mapPos2.x(), mapPos2.y(), mapPos2.z() ), mCanvas->mapSettings()->origin() );
+
+  double length = 10; //mapPos.distance3D( mapPos2 );
+
+  // qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "screen / map:" << screenPos << "/" << mapPos.toQPointF() << worldPos.toVector3D();
+  // qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "screen2 / map2:" << QPoint( screenPos.x() + 10, screenPos.y() + 10 ) << "/" << mapPos2.toQPointF() << worldPos2.toVector3D();
+  qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "HL size:" << length;
   transform->setScale3D( { static_cast<float>( length ), static_cast<float>( length ), static_cast<float>( length ) } );
 }
 
@@ -186,10 +235,12 @@ void Qgs3DMapToolCreateCube::handleClick( const QPoint &screenPos )
     mMouseClickPos = screenPos;
 
     mFirstPointOnMap = screenToMap( screenPos );
-    updateCube( 10.0, 0.0 );
+    updatePrimitive( mFirstPointOnMap, 10.0, 0.0 );
 
-    mRubberBand->addPoint( mFirstPointOnMap );
-    mRubberBand->addPoint( mFirstPointOnMap );
+    QgsPoint rbPoint( mFirstPointOnMap );
+    rbPoint.setZ( rbPoint.z() / mCanvas->mapSettings()->terrainSettings()->verticalScale() );
+    mRubberBand->addPoint( rbPoint );
+    mRubberBand->addPoint( rbPoint );
   }
   else
   {
@@ -211,19 +262,24 @@ void Qgs3DMapToolCreateCube::mouseMoveEvent( QMouseEvent *event )
 
   QgsPoint pointMap = screenToMap( event->pos() );
 
-  if ( mCubeLineEntity == nullptr )
+  QgsPoint rbPoint( pointMap );
+  rbPoint.setZ( rbPoint.z() / mCanvas->mapSettings()->terrainSettings()->verticalScale() );
+
+  updateHLPoint( pointMap, event->pos() );
+
+  if ( mPrimitiveLineEntity.get() == nullptr )
   {
     mDialog->setTranslation( pointMap );
   }
   else
   {
-    mRubberBand->moveLastPoint( pointMap );
+    mRubberBand->moveLastPoint( rbPoint );
 
     double length = pointMap.distance3D( mFirstPointOnMap );
     double angle = -1.0 * QgsGeometryUtilsBase::lineAngle( pointMap.x(), pointMap.y(), mFirstPointOnMap.x(), mFirstPointOnMap.y() );
     angle *= 180.0 / M_PI;
-    qDebug() << "cube size:" << length << "/ rotation: " << angle;
-    updateCube( length, angle );
+    qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "cube size:" << length << "/ rotation: " << angle;
+    updatePrimitive( mFirstPointOnMap, length, angle );
     mDialog->setRotation( 0.0, 0.0, ( angle < 0.0 ? 360.0 + angle : angle ) );
     mDialog->setSize( length );
   }
@@ -244,8 +300,6 @@ void Qgs3DMapToolCreateCube::mouseReleaseEvent( QMouseEvent *event )
     }
 
     // Finish measurement
-    // mRubberBand->setHideLastMarker( false );
-    // mRubberBand->removeLastPoint();
     finish();
   }
 }
