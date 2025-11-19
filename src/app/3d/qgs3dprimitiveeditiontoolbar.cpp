@@ -14,6 +14,7 @@
  ***************************************************************************/
 
 #include "qgs3dprimitiveeditiontoolbar.h"
+#include "qgs3dmaptoolcreatecube.h"
 
 #include <QAction>
 #include <QLabel>
@@ -22,22 +23,22 @@
 
 #include "qgsapplication.h"
 #include "qgs3dmapcanvas.h"
-#include "qgs3dmaptoolpointcloudchangeattributepolygon.h"
 
 Qgs3DPrimitiveEditionToolBar::Qgs3DPrimitiveEditionToolBar( Qgs3DMapCanvasWidget *parent )
   : Qgs3DEditionToolBar( QStringLiteral( "Primitive edition" ), parent )
 {
   addWidget( new QLabel( tr( "PRIMITIVE" ) ) );
 
-  mEditingToolsMenu = new QMenu( this );
+  mCreatePrimitiveAction = new QAction( QgsApplication::getThemeIcon( QStringLiteral( "mActionAddBasicShape.svg" ) ), tr( "Create new primitive" ), this );
 
-  mEditingToolsAction = new QAction( QgsApplication::getThemeIcon( QStringLiteral( "mActionAddBasicShape.svg" ) ), tr( "Create new primitive" ), this );
-  mEditingToolsAction->setMenu( mEditingToolsMenu );
-  addAction( mEditingToolsAction );
+  mCreatePrimitiveMenu = new QMenu( this );
+  mCreatePrimitiveAction->setMenu( mCreatePrimitiveMenu );
 
-  QToolButton *editingToolsButton = qobject_cast<QToolButton *>( widgetForAction( mEditingToolsAction ) );
-  editingToolsButton->setPopupMode( QToolButton::ToolButtonPopupMode::InstantPopup );
-  /* QAction *actionPointCloudChangeAttributeTool =*/mEditingToolsMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIconEsriI3s.svg" ) ) ), tr( "Create a cube" ), this, &Qgs3DPrimitiveEditionToolBar::changePointCloudAttributeByPolygon );
+  addAction( mCreatePrimitiveAction );
+  QToolButton *createPrimitiveButton = qobject_cast<QToolButton *>( widgetForAction( mCreatePrimitiveAction ) );
+  createPrimitiveButton->setPopupMode( QToolButton::ToolButtonPopupMode::InstantPopup );
+
+  /* QAction *actionPointCloudChangeAttributeTool =*/mCreatePrimitiveMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIconEsriI3s.svg" ) ) ), tr( "Create a cube" ), this, &Qgs3DPrimitiveEditionToolBar::createCube );
 }
 
 void Qgs3DPrimitiveEditionToolBar::activate( QgsMapLayer * /*layer*/ )
@@ -61,15 +62,16 @@ QList<QAction *> Qgs3DPrimitiveEditionToolBar::groupActions() const
   return {};
 }
 
-void Qgs3DPrimitiveEditionToolBar::changePointCloudAttributeByPolygon()
+void Qgs3DPrimitiveEditionToolBar::createCube()
 {
   const QAction *action = qobject_cast<QAction *>( sender() );
   if ( !action )
     return;
 
-  mMapToolChangeAttribute->deleteLater();
-  mMapToolChangeAttribute = new Qgs3DMapToolPointCloudChangeAttributePolygon( mParentWidget->mapCanvas3D(), Qgs3DMapToolPointCloudChangeAttributePolygon::Polygon );
+  if ( mCreateCubeMapTool != nullptr )
+    mCreateCubeMapTool->deleteLater();
+  mCreateCubeMapTool = new Qgs3DMapToolCreateCube( mParentWidget->mapCanvas3D() );
   //onPointCloudChangeAttributeSettingsChanged();
-  mParentWidget->mapCanvas3D()->setMapTool( mMapToolChangeAttribute );
-  mEditingToolsAction->setIcon( action->icon() );
+  mParentWidget->mapCanvas3D()->setMapTool( mCreateCubeMapTool );
+  mCreatePrimitiveAction->setIcon( action->icon() );
 }
