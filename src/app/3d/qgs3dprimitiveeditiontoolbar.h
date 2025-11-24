@@ -19,7 +19,7 @@
 #include "qgs3deditiontoolbar.h"
 #include "qgs3dmaptoolcreateprimitive.h"
 
-class Qgs3DMapToolCreateCube;
+class Qgs3DMapToolCreatePrimitive;
 
 /**
  * Allow creation of 3D primitive on polyhedral layers
@@ -44,12 +44,17 @@ class Qgs3DPrimitiveEditionToolBar : public Qgs3DEditionToolBar
 
   private slots:
     void createCube();
+    void createSphere();
+    void createTorus();
+    void createCylinder();
+    void createCone();
+    void createPrimitive( const QAction *action, const QString &primitiveName );
 
   private:
-    QMenu *mCreatePrimitiveMenu = nullptr;
     QAction *mCreatePrimitiveAction = nullptr;
+    QList<QAction *> mActions;
 
-    Qgs3DMapToolCreateCube *mCreateCubeMapTool = nullptr;
+    Qgs3DMapToolCreatePrimitive *mCreatePrimitiveMapTool = nullptr;
 };
 
 #endif // QGS3DPRIMITIVEEDITIONTOOLBAR_H

@@ -32,14 +32,18 @@ Qgs3DPrimitiveEditionToolBar::Qgs3DPrimitiveEditionToolBar( Qgs3DMapCanvasWidget
 
   mCreatePrimitiveAction = new QAction( QgsApplication::getThemeIcon( QStringLiteral( "mActionAddBasicShape.svg" ) ), tr( "Create new primitive" ), this );
 
-  mCreatePrimitiveMenu = new QMenu( this );
-  mCreatePrimitiveAction->setMenu( mCreatePrimitiveMenu );
+  QMenu *createPrimitiveMenu = new QMenu( this );
+  mCreatePrimitiveAction->setMenu( createPrimitiveMenu );
 
   addAction( mCreatePrimitiveAction );
   QToolButton *createPrimitiveButton = qobject_cast<QToolButton *>( widgetForAction( mCreatePrimitiveAction ) );
   createPrimitiveButton->setPopupMode( QToolButton::ToolButtonPopupMode::InstantPopup );
 
-  mCreatePrimitiveMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIconEsriI3s.svg" ) ) ), tr( "Create a cube" ), this, &Qgs3DPrimitiveEditionToolBar::createCube );
+  mActions << createPrimitiveMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DAddCube.svg" ) ) ), tr( "Create a cube" ), this, &Qgs3DPrimitiveEditionToolBar::createCube );
+  mActions << createPrimitiveMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DAddSphere.svg" ) ) ), tr( "Create a sphere" ), this, &Qgs3DPrimitiveEditionToolBar::createSphere );
+  mActions << createPrimitiveMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DAddTorus.svg" ) ) ), tr( "Create a torus" ), this, &Qgs3DPrimitiveEditionToolBar::createTorus );
+  mActions << createPrimitiveMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DAddCylinder.svg" ) ) ), tr( "Create a cylinder" ), this, &Qgs3DPrimitiveEditionToolBar::createCylinder );
+  mActions << createPrimitiveMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DAddCone.svg" ) ) ), tr( "Create a cone" ), this, &Qgs3DPrimitiveEditionToolBar::createCone );
 }
 
 bool Qgs3DPrimitiveEditionToolBar::accept( QgsMapLayer *layer ) const
@@ -69,18 +73,43 @@ void Qgs3DPrimitiveEditionToolBar::deactivate()
 
 QList<QAction *> Qgs3DPrimitiveEditionToolBar::groupActions() const
 {
-  return {};
+  return mActions;
 }
 
 void Qgs3DPrimitiveEditionToolBar::createCube()
 {
-  const QAction *action = qobject_cast<QAction *>( sender() );
+  createPrimitive( qobject_cast<QAction *>( sender() ), "cube" );
+}
+
+void Qgs3DPrimitiveEditionToolBar::createSphere()
+{
+  createPrimitive( qobject_cast<QAction *>( sender() ), "sphere" );
+}
+
+void Qgs3DPrimitiveEditionToolBar::createTorus()
+{
+  createPrimitive( qobject_cast<QAction *>( sender() ), "torus" );
+}
+
+void Qgs3DPrimitiveEditionToolBar::createCylinder()
+{
+  createPrimitive( qobject_cast<QAction *>( sender() ), "cylinder" );
+}
+
+void Qgs3DPrimitiveEditionToolBar::createCone()
+{
+  createPrimitive( qobject_cast<QAction *>( sender() ), "cone" );
+}
+
+void Qgs3DPrimitiveEditionToolBar::createPrimitive( const QAction *action, const QString &primitiveName )
+{
   if ( !action )
     return;
 
-  if ( mCreateCubeMapTool != nullptr )
-    mCreateCubeMapTool->deleteLater();
-  mCreateCubeMapTool = new Qgs3DMapToolCreateCube( mParentWidget->mapCanvas3D() );
-  mParentWidget->mapCanvas3D()->setMapTool( mCreateCubeMapTool );
+  if ( mCreatePrimitiveMapTool != nullptr )
+    mCreatePrimitiveMapTool->deleteLater();
+
+  mCreatePrimitiveMapTool = new Qgs3DMapToolCreatePrimitive( mParentWidget->mapCanvas3D(), primitiveName );
+  mParentWidget->mapCanvas3D()->setMapTool( mCreatePrimitiveMapTool );
   mCreatePrimitiveAction->setIcon( action->icon() );
 }

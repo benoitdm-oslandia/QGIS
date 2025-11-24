@@ -1,5 +1,5 @@
 /***************************************************************************
-    qgs3dmaptoolcreatecube.h
+    qgs3dmaptoolcreateprimitive.h
     -------------------
     begin                : November 2025
     copyright            : (C) 2025 Oslandia
@@ -13,15 +13,15 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifndef QGS3DMAPTOOLCREATECUBE_H
-#define QGS3DMAPTOOLCREATECUBE_H
+#ifndef QGS3DMAPTOOLCREATEPRIMITIVE_H
+#define QGS3DMAPTOOLCREATEPRIMITIVE_H
 
 #include "qgs3dmaptool.h"
 #include "qgspoint.h"
 
 #include <QObject>
 
-class Qgs3DCreateCubeDialog;
+class Qgs3DCreatePrimitiveDialog;
 class QPoint;
 class QgsRubberBand3D;
 
@@ -29,14 +29,23 @@ namespace Qt3DCore
 {
   class QEntity;
 }
+namespace Qt3DExtras
+{
+  class QPhongMaterial;
+}
+namespace Qt3DRender
+{
+  class QMaterial;
+  class QGeometryRenderer;
+} //namespace Qt3DRender
 
-class Qgs3DMapToolCreateCube : public Qgs3DMapTool
+class Qgs3DMapToolCreatePrimitive : public Qgs3DMapTool
 {
     Q_OBJECT
 
   public:
-    Qgs3DMapToolCreateCube( Qgs3DMapCanvas *canvas );
-    ~Qgs3DMapToolCreateCube() override;
+    Qgs3DMapToolCreatePrimitive( Qgs3DMapCanvas *canvas, const QString &type );
+    ~Qgs3DMapToolCreatePrimitive() override;
 
     void activate() override;
     void deactivate() override;
@@ -55,9 +64,12 @@ class Qgs3DMapToolCreateCube : public Qgs3DMapTool
     void mouseMoveEvent( QMouseEvent *event ) override;
 
   private:
+    QString mType;
     //! Dialog
-    std::unique_ptr<Qgs3DCreateCubeDialog> mDialog;
+    std::unique_ptr<Qgs3DCreatePrimitiveDialog> mDialog;
     std::unique_ptr<QgsRubberBand3D> mRubberBand;
+
+    Qt3DRender::QGeometryRenderer *mCurrentMesh = nullptr;
 
     //! Indicates whether we've just done a right mouse click
     bool mDone = true;
@@ -65,14 +77,14 @@ class Qgs3DMapToolCreateCube : public Qgs3DMapTool
     //! Check if mouse was moved between mousePress and mouseRelease
     bool mMouseHasMoved = false;
     QPoint mMouseClickPos;
-    QgsPoint mFirstPointOnMap;
+    QPoint mMouseHoverPos;
+    QVector<QgsPoint> mPointOnMap;
+    int mNbMouseClick = 0;
 
     std::unique_ptr<Qt3DCore::QEntity> mPrimitiveLineEntity = nullptr;
-    std::unique_ptr<Qt3DCore::QEntity> mHighlightedPointEntity = nullptr;
 
     QgsPoint screenToMap( const QPoint &screenPos ) const;
-    void updatePrimitive( const QgsPoint &mapPos, double length, double zRotation );
-    void updateHLPoint( const QgsPoint &mapPos, const QPoint &screenPos );
+    void updatePrimitive( /*double length, double zRotation*/ );
 };
 
 ///@cond PRIVATE
@@ -156,4 +168,4 @@ namespace QgsPrivate
 
 } //namespace QgsPrivate
 
-#endif // QGS3DMAPTOOLCREATECUBE_H
+#endif // QGS3DMAPTOOLCREATEPRIMITIVE_H
