@@ -52,6 +52,7 @@ typedef Qt3DCore::QGeometry Qt3DQGeometry;
 #include <Qt3DRender/QBlendEquationArguments>
 #include <Qt3DRender/QAbstractTexture>
 #include <Qt3DRender/QNoDraw>
+#include <Qt3DRender/QNoPicking>
 #include "qgsshadowrenderview.h"
 #include "qgsforwardrenderview.h"
 #include "qgsdepthrenderview.h"
@@ -309,7 +310,14 @@ bool QgsFrameGraph::registerRenderView( std::unique_ptr<QgsAbstractRenderView> r
   if ( mRenderViewMap.find( name ) == mRenderViewMap.end() )
   {
     mRenderViewMap[name] = std::move( renderView );
-    mRenderViewMap[name]->topGraphNode()->setParent( topNode ? topNode : mMainViewPort );
+    Qt3DRender::QNoPicking *noPick = new Qt3DRender::QNoPicking( topNode ? topNode : mMainViewPort );
+
+    if ( name == FORWARD_RENDERVIEW )
+      noPick->setEnabled( false );
+    else
+      noPick->setEnabled( true );
+
+    mRenderViewMap[name]->topGraphNode()->setParent( noPick );
     mRenderViewMap[name]->updateWindowResize( mSize.width(), mSize.height() );
     out = true;
   }
