@@ -596,7 +596,7 @@ void Qgs3DMapCanvasWidget::updateEditionToolBar()
 
   for ( auto toolbar : mEditingToolBar->findChildren<Qgs3DEditionToolBar *>() )
   {
-    if ( mLayer && toolbar->layerType() == mLayer->type() && mLayer->supportsEditing() )
+    if ( mLayer && toolbar->accept( mLayer ) && mLayer->supportsEditing() )
       toolbar->activate( mLayer );
     else
       toolbar->deactivate();

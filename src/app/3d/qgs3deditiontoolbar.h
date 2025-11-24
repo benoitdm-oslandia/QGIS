@@ -27,7 +27,7 @@ class Qgs3DEditionToolBar : public QToolBar
   public:
     Qgs3DEditionToolBar( const QString &title, Qgs3DMapCanvasWidget *parent );
 
-    virtual Qgis::LayerType layerType() const = 0;
+    virtual bool accept( QgsMapLayer *layer ) const = 0;
     virtual void activate( QgsMapLayer *layer ) = 0;
     virtual void deactivate() = 0;
     virtual QList<QAction *> groupActions() const = 0;

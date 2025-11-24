@@ -93,6 +93,12 @@ Qgs3DPointCloudEditionToolBar::Qgs3DPointCloudEditionToolBar( Qgs3DMapCanvasWidg
   mMapToolChangeAttribute = new Qgs3DMapToolPointCloudChangeAttribute( mParentWidget->mapCanvas3D() );
 }
 
+bool Qgs3DPointCloudEditionToolBar::accept( QgsMapLayer *layer ) const
+{
+  return layer != nullptr && layer->type() == Qgis::LayerType::PointCloud;
+}
+
+
 void Qgs3DPointCloudEditionToolBar::changePointCloudAttributeByPaintbrush()
 {
   const QAction *action = qobject_cast<QAction *>( sender() );

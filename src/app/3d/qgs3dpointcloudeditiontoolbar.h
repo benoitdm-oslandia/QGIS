@@ -26,7 +26,8 @@ class Qgs3DPointCloudEditionToolBar : public Qgs3DEditionToolBar
 
   public:
     Qgs3DPointCloudEditionToolBar( Qgs3DMapCanvasWidget *parent );
-    Qgis::LayerType layerType() const override { return Qgis::LayerType::PointCloud; }
+
+    bool accept( QgsMapLayer *layer ) const override;
     void activate( QgsMapLayer *layer ) override;
     void deactivate() override;
     QList<QAction *> groupActions() const override;

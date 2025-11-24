@@ -15,6 +15,7 @@
 
 #include "qgs3dprimitiveeditiontoolbar.h"
 #include "qgs3dmaptoolcreateprimitive.h"
+#include "qgsvectorlayer.h"
 
 #include <QAction>
 #include <QLabel>
@@ -42,6 +43,15 @@ Qgs3DPrimitiveEditionToolBar::Qgs3DPrimitiveEditionToolBar( Qgs3DMapCanvasWidget
   mCreatePrimitiveMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIconEsriI3s.svg" ) ) ), tr( "Create a cube" ), this, &Qgs3DPrimitiveEditionToolBar::createCube );
   mCreatePrimitiveMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIconEsriI3s.svg" ) ) ), tr( "Create a sphere" ), this, &Qgs3DPrimitiveEditionToolBar::createSphere );
 }
+
+bool Qgs3DPrimitiveEditionToolBar::accept( QgsMapLayer *layer ) const
+{
+  if ( layer == nullptr || layer->type() != Qgis::LayerType::Vector )
+    return false;
+  const QgsVectorLayer *vl = dynamic_cast<QgsVectorLayer *>( layer );
+  return vl != nullptr && QgsWkbTypes::flatType( vl->wkbType() ) == Qgis::WkbType::PolyhedralSurface;
+}
+
 
 void Qgs3DPrimitiveEditionToolBar::activate( QgsMapLayer * /*layer*/ )
 {
