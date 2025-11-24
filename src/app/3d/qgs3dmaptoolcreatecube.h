@@ -19,6 +19,8 @@
 #include "qgs3dmaptool.h"
 #include "qgspoint.h"
 #include <QObject>
+#include <Qt3DRender/QRenderSettings>
+#include <Qt3DRender/QScreenRayCaster>
 
 class Qgs3DCreateCubeDialog;
 class QPoint;
@@ -27,6 +29,14 @@ class QgsRubberBand3D;
 namespace Qt3DCore
 {
   class QEntity;
+}
+namespace Qt3DExtras
+{
+  class QPhongMaterial;
+}
+namespace Qt3DRender
+{
+  class QMaterial;
 }
 
 class Qgs3DMapToolCreateCube : public Qgs3DMapTool
@@ -52,6 +62,7 @@ class Qgs3DMapToolCreateCube : public Qgs3DMapTool
     void mousePressEvent( QMouseEvent *event ) override;
     void mouseReleaseEvent( QMouseEvent *event ) override;
     void mouseMoveEvent( QMouseEvent *event ) override;
+    void onTouchedByRay( const Qt3DRender::QAbstractRayCaster::Hits &hits );
 
   private:
     //! Dialog
@@ -64,10 +75,18 @@ class Qgs3DMapToolCreateCube : public Qgs3DMapTool
     //! Check if mouse was moved between mousePress and mouseRelease
     bool mMouseHasMoved = false;
     QPoint mMouseClickPos;
+    QPoint mMouseHoverPos;
     QgsPoint mFirstPointOnMap;
+    Qt3DRender::QPickingSettings::PickMethod mDefaultPickingMethod;
 
     std::unique_ptr<Qt3DCore::QEntity> mPrimitiveLineEntity = nullptr;
     std::unique_ptr<Qt3DCore::QEntity> mHighlightedPointEntity = nullptr;
+    std::unique_ptr<Qt3DRender::QScreenRayCaster> mScreenRayCaster = nullptr;
+
+    Qt3DCore::QEntity *mHighlightedEntity = nullptr;
+    Qt3DCore::QEntity *mHighlightedEntityChild = nullptr;
+    std::unique_ptr<Qt3DExtras::QPhongMaterial> mHighlightedMaterial = nullptr;
+    Qt3DRender::QMaterial *mPreviousHighlightedMaterial = nullptr;
 
     QgsPoint screenToMap( const QPoint &screenPos ) const;
     void updatePrimitive( const QgsPoint &mapPos, double length, double zRotation );
