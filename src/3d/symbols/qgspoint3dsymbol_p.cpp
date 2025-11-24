@@ -223,6 +223,7 @@ void QgsInstancedPoint3DSymbolHandler::makeEntity( Qt3DCore::QEntity *parent, co
 
   // build the entity
   Qt3DCore::QEntity *entity = new Qt3DCore::QEntity;
+  entity->setObjectName( QStringLiteral( "%1-instancedPoint-%2" ).arg( mSymbol->shapeToString( mSymbol->shape() ) ).arg( selected ? "selected" : "normal" ) );
   entity->addComponent( renderer( mSymbol.get(), out.positions ) );
   entity->addComponent( mat );
   entity->addComponent( tr );
@@ -702,6 +703,7 @@ void QgsPoint3DBillboardSymbolHandler::makeEntity( Qt3DCore::QEntity *parent, co
 
   // Build the entity
   Qt3DCore::QEntity *entity = new Qt3DCore::QEntity;
+  entity->setObjectName( QStringLiteral( "billboardPoint-%1" ).arg( selected ? "selected" : "normal" ) );
 
   entity->addComponent( billboardMaterial );
   entity->addComponent( billboardTransform );

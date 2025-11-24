@@ -259,7 +259,10 @@ void QgsPolygon3DSymbolHandler::finalize( Qt3DCore::QEntity *parent, const Qgs3D
     mat->setLineWidth( mSymbol->edgeWidth() );
 
     Qt3DCore::QEntity *entity = new Qt3DCore::QEntity;
-    entity->setObjectName( parent->objectName() + "_EDGES" );
+    if ( outNormal.triangleIndexFids.size() > 1 )
+      entity->setObjectName( QStringLiteral( "%1_MANY_CHUNK_EDGES" ).arg( parent->objectName() ) );
+    else
+      entity->setObjectName( QStringLiteral( "%1_SINGLE_%2_EDGES" ).arg( parent->objectName() ).arg( outNormal.triangleIndexFids.first() ) );
 
     // geometry renderer
     Qt3DRender::QGeometryRenderer *renderer = new Qt3DRender::QGeometryRenderer;
@@ -311,7 +314,10 @@ void QgsPolygon3DSymbolHandler::makeEntity( Qt3DCore::QEntity *parent, const Qgs
 
   // make entity
   Qt3DCore::QEntity *entity = new Qt3DCore::QEntity;
-  entity->setObjectName( parent->objectName() + "_CHUNK_MESH" );
+  if ( polyData.triangleIndexFids.size() > 1 )
+    entity->setObjectName( QStringLiteral( "%1_MANY_CHUNK_TESSELLATED" ).arg( parent->objectName() ) );
+  else
+    entity->setObjectName( QStringLiteral( "%1_SINGLE_%2_TESSELLATED" ).arg( parent->objectName() ).arg( polyData.triangleIndexFids.first() ) );
   entity->addComponent( renderer );
   entity->addComponent( mat );
   entity->addComponent( tr );

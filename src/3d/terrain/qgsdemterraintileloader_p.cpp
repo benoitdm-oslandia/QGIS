@@ -19,10 +19,12 @@
 #include "qgsabstractterrainsettings.h"
 #include "qgschunknode.h"
 #include "qgsdemterraingenerator.h"
+#include "qgsdemterrainsettings.h"
 #include "qgsdemterraintilegeometry_p.h"
 #include "qgseventtracing.h"
 #include "qgsgeotransform.h"
 #include "qgsonlineterraingenerator.h"
+#include "qgsrasterlayer.h"
 #include "qgsterrainentity.h"
 #include "qgsterraingenerator.h"
 #include "qgsterraintexturegenerator_p.h"
@@ -107,6 +109,8 @@ Qt3DCore::QEntity *QgsDemTerrainTileLoader::createEntity( Qt3DCore::QEntity *par
   double side = extent.width();
 
   QgsTerrainTileEntity *entity = new QgsTerrainTileEntity( nodeId );
+  const QgsDemTerrainSettings *terrainSettings = dynamic_cast<const QgsDemTerrainSettings *>( terrain()->mapSettings()->terrainSettings() );
+  entity->setObjectName( terrainSettings->layer()->name() + "_CONTAINER_" + mNode->tileId().text() );
 
   // create geometry renderer
 

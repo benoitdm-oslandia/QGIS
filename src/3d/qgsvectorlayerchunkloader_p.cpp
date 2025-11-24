@@ -50,6 +50,7 @@ QgsVectorLayerChunkLoader::QgsVectorLayerChunkLoader( const QgsVectorLayerChunkL
   , mRenderContext( factory->mRenderContext )
   , mSource( new QgsVectorLayerFeatureSource( factory->mLayer ) )
 {
+  mLayerName = mFactory->mLayer->name();
 }
 
 void QgsVectorLayerChunkLoader::start()
@@ -62,7 +63,6 @@ void QgsVectorLayerChunkLoader::start()
   }
 
   QgsVectorLayer *layer = mFactory->mLayer;
-  mLayerName = mFactory->mLayer->name();
 
   QgsFeature3DHandler *handler = QgsApplication::symbol3DRegistry()->createHandlerForSymbol( layer, mFactory->mSymbol.get() );
   if ( !handler )

@@ -142,6 +142,8 @@ Qt3DCore::QEntity *QgsPointCloudLayerChunkLoader::createEntity( Qt3DCore::QEntit
   Q_ASSERT( pc.hasNode( pcNode ) );
 
   Qt3DCore::QEntity *entity = new Qt3DCore::QEntity( parent );
+  entity->setObjectName( QString( "PointCloud" ) + "_CONTAINER_" + mNode->tileId().text() );
+
   mHandler->finalize( entity, mContext );
   return entity;
 }
