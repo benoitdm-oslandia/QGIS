@@ -26,7 +26,7 @@
      <property name="title">
       <string>Main</string>
      </property>
-     <layout class="QFormLayout" name="formLayout_2">
+     <layout class="QFormLayout" name="paramFormLayout">
       <item row="0" column="0">
        <widget class="QLabel" name="label_2">
         <property name="text">
@@ -36,20 +36,6 @@
       </item>
       <item row="0" column="1">
        <widget class="QLineEdit" name="lineEdit"/>
-      </item>
-      <item row="1" column="1">
-       <widget class="QDoubleSpinBox" name="spinSize">
-        <property name="maximum">
-         <double>99999999.989999994635582</double>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="label">
-        <property name="text">
-         <string>Size</string>
-        </property>
-       </widget>
       </item>
      </layout>
     </widget>

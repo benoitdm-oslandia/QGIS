@@ -1,5 +1,5 @@
 /***************************************************************************
-    qgs3dmaptoolcreatecube.h
+    qgs3dmaptoolcreateprimitive.h
     -------------------
     begin                : November 2025
     copyright            : (C) 2025 Oslandia
@@ -13,8 +13,8 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifndef QGS3DMAPTOOLCREATECUBE_H
-#define QGS3DMAPTOOLCREATECUBE_H
+#ifndef QGS3DMAPTOOLCREATEPRIMITIVE_H
+#define QGS3DMAPTOOLCREATEPRIMITIVE_H
 
 #include "qgs3dmaptool.h"
 #include "qgspoint.h"
@@ -22,7 +22,7 @@
 #include <Qt3DRender/QRenderSettings>
 #include <Qt3DRender/QScreenRayCaster>
 
-class Qgs3DCreateCubeDialog;
+class Qgs3DCreatePrimitiveDialog;
 class QPoint;
 class QgsRubberBand3D;
 
@@ -39,13 +39,13 @@ namespace Qt3DRender
   class QMaterial;
 }
 
-class Qgs3DMapToolCreateCube : public Qgs3DMapTool
+class Qgs3DMapToolCreatePrimitive : public Qgs3DMapTool
 {
     Q_OBJECT
 
   public:
-    Qgs3DMapToolCreateCube( Qgs3DMapCanvas *canvas );
-    ~Qgs3DMapToolCreateCube() override;
+    Qgs3DMapToolCreatePrimitive( Qgs3DMapCanvas *canvas, const QString &type );
+    ~Qgs3DMapToolCreatePrimitive() override;
 
     void activate() override;
     void deactivate() override;
@@ -65,8 +65,9 @@ class Qgs3DMapToolCreateCube : public Qgs3DMapTool
     void onTouchedByRay( const Qt3DRender::QAbstractRayCaster::Hits &hits );
 
   private:
+    QString mType;
     //! Dialog
-    std::unique_ptr<Qgs3DCreateCubeDialog> mDialog;
+    std::unique_ptr<Qgs3DCreatePrimitiveDialog> mDialog;
     std::unique_ptr<QgsRubberBand3D> mRubberBand;
 
     //! Indicates whether we've just done a right mouse click
@@ -174,4 +175,4 @@ namespace QgsPrivate
 
 } //namespace QgsPrivate
 
-#endif // QGS3DMAPTOOLCREATECUBE_H
+#endif // QGS3DMAPTOOLCREATEPRIMITIVE_H

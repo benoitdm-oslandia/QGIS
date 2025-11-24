@@ -388,8 +388,10 @@ if (WITH_3D)
     3d/qgs3dviewsmanagerdialog.cpp
     3d/qgs3ddebugwidget.cpp
     3d/qgsmaptoolclippingplanes.cpp
-    3d/qgs3dcreatecubedialog.cpp
-    3d/qgs3dmaptoolcreatecube.cpp
+    3d/qgs3dcreateprimitivedialog.cpp
+    3d/qgs3dcreateprimitivecubedialog.cpp
+    3d/qgs3dcreateprimitivespheredialog.cpp
+    3d/qgs3dmaptoolcreateprimitive.cpp
   )
 endif()
 

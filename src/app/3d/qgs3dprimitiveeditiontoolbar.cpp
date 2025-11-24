@@ -14,7 +14,7 @@
  ***************************************************************************/
 
 #include "qgs3dprimitiveeditiontoolbar.h"
-#include "qgs3dmaptoolcreatecube.h"
+#include "qgs3dmaptoolcreateprimitive.h"
 
 #include <QAction>
 #include <QLabel>
@@ -38,7 +38,9 @@ Qgs3DPrimitiveEditionToolBar::Qgs3DPrimitiveEditionToolBar( Qgs3DMapCanvasWidget
   QToolButton *createPrimitiveButton = qobject_cast<QToolButton *>( widgetForAction( mCreatePrimitiveAction ) );
   createPrimitiveButton->setPopupMode( QToolButton::ToolButtonPopupMode::InstantPopup );
 
-  /* QAction *actionPointCloudChangeAttributeTool =*/mCreatePrimitiveMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIconEsriI3s.svg" ) ) ), tr( "Create a cube" ), this, &Qgs3DPrimitiveEditionToolBar::createCube );
+  /* QAction *actionPointCloudChangeAttributeTool =*/
+  mCreatePrimitiveMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIconEsriI3s.svg" ) ) ), tr( "Create a cube" ), this, &Qgs3DPrimitiveEditionToolBar::createCube );
+  mCreatePrimitiveMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIconEsriI3s.svg" ) ) ), tr( "Create a sphere" ), this, &Qgs3DPrimitiveEditionToolBar::createSphere );
 }
 
 void Qgs3DPrimitiveEditionToolBar::activate( QgsMapLayer * /*layer*/ )
@@ -68,10 +70,22 @@ void Qgs3DPrimitiveEditionToolBar::createCube()
   if ( !action )
     return;
 
-  if ( mCreateCubeMapTool != nullptr )
-    mCreateCubeMapTool->deleteLater();
-  mCreateCubeMapTool = new Qgs3DMapToolCreateCube( mParentWidget->mapCanvas3D() );
-  //onPointCloudChangeAttributeSettingsChanged();
-  mParentWidget->mapCanvas3D()->setMapTool( mCreateCubeMapTool );
+  if ( mCreatePrimitiveMapTool != nullptr )
+    mCreatePrimitiveMapTool->deleteLater();
+  mCreatePrimitiveMapTool = new Qgs3DMapToolCreatePrimitive( mParentWidget->mapCanvas3D(), "cube" );
+  mParentWidget->mapCanvas3D()->setMapTool( mCreatePrimitiveMapTool );
+  mCreatePrimitiveAction->setIcon( action->icon() );
+}
+
+void Qgs3DPrimitiveEditionToolBar::createSphere()
+{
+  const QAction *action = qobject_cast<QAction *>( sender() );
+  if ( !action )
+    return;
+
+  if ( mCreatePrimitiveMapTool != nullptr )
+    mCreatePrimitiveMapTool->deleteLater();
+  mCreatePrimitiveMapTool = new Qgs3DMapToolCreatePrimitive( mParentWidget->mapCanvas3D(), "sphere" );
+  mParentWidget->mapCanvas3D()->setMapTool( mCreatePrimitiveMapTool );
   mCreatePrimitiveAction->setIcon( action->icon() );
 }

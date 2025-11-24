@@ -18,7 +18,7 @@
 
 #include "qgs3deditiontoolbar.h"
 
-class Qgs3DMapToolCreateCube;
+class Qgs3DMapToolCreatePrimitive;
 
 class Qgs3DPrimitiveEditionToolBar : public Qgs3DEditionToolBar
 {
@@ -33,12 +33,13 @@ class Qgs3DPrimitiveEditionToolBar : public Qgs3DEditionToolBar
 
   private slots:
     void createCube();
+    void createSphere();
 
   private:
     QMenu *mCreatePrimitiveMenu = nullptr;
     QAction *mCreatePrimitiveAction = nullptr;
 
-    Qgs3DMapToolCreateCube *mCreateCubeMapTool = nullptr;
+    Qgs3DMapToolCreatePrimitive *mCreatePrimitiveMapTool = nullptr;
 };
 
 #endif // QGS3DPRIMITIVEEDITIONTOOLBAR_H

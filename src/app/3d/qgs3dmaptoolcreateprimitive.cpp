@@ -13,10 +13,10 @@
  *                                                                         *
  ***************************************************************************/
 
-#include "qgs3dmaptoolcreatecube.h"
+#include "qgs3dmaptoolcreateprimitive.h"
 //#include "qgs3dmaptoolcreatecube.moc"
 //#include "moc_qgs3dmaptoolcreatecube.cpp"
-#include "qgs3dcreatecubedialog.h"
+#include "qgs3dcreateprimitivedialog.h"
 #include "qgs3dutils.h"
 #include "qgswindow3dengine.h"
 #include "qgsframegraph.h"
@@ -28,6 +28,8 @@
 #include "qgs3drendercontext.h"
 #include "qgsgeotransform.h"
 #include "qgsforwardrenderview.h"
+#include "qgs3dcreateprimitivecubedialog.h"
+#include "qgs3dcreateprimitivespheredialog.h"
 
 #include <QMouseEvent>
 #include <Qt3DExtras/QPhongMaterial>
@@ -35,17 +37,22 @@
 #include <Qt3DRender/QScreenRayCaster>
 #include <Qt3DRender/QRenderSettings>
 
-Qgs3DMapToolCreateCube::Qgs3DMapToolCreateCube( Qgs3DMapCanvas *canvas )
-  : Qgs3DMapTool( canvas )
+Qgs3DMapToolCreatePrimitive::Qgs3DMapToolCreatePrimitive( Qgs3DMapCanvas *canvas, const QString &type )
+  : Qgs3DMapTool( canvas ), mType( type )
 {
   // Dialog
-  mDialog = std::make_unique<Qgs3DCreateCubeDialog>();
+  if ( mType == "cube" )
+    mDialog.reset( new Qgs3DCreatePrimitiveCubeDialog() );
+  else if ( mType == "sphere" )
+    mDialog.reset( new Qgs3DCreatePrimitiveSphereDialog() );
+
+  connect( mDialog.get(), &Qgs3DCreatePrimitiveDialog::valueChanged, this, [this]() { updatePrimitive( mFirstPointOnMap, mDialog->defaultSize(), mDialog->rotZ() ); } );
   //mDialog->restorePosition();
 }
 
-Qgs3DMapToolCreateCube::~Qgs3DMapToolCreateCube() = default;
+Qgs3DMapToolCreatePrimitive::~Qgs3DMapToolCreatePrimitive() = default;
 
-void Qgs3DMapToolCreateCube::activate()
+void Qgs3DMapToolCreatePrimitive::activate()
 {
   qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString();
   restart();
@@ -56,7 +63,7 @@ void Qgs3DMapToolCreateCube::activate()
   mDialog->show();
 }
 
-void Qgs3DMapToolCreateCube::deactivate()
+void Qgs3DMapToolCreatePrimitive::deactivate()
 {
   finish();
 
@@ -64,21 +71,11 @@ void Qgs3DMapToolCreateCube::deactivate()
   mDialog->hide();
 }
 
-void Qgs3DMapToolCreateCube::finish()
+void Qgs3DMapToolCreatePrimitive::finish()
 {
   qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString();
-  mRubberBand.reset();
   mPrimitiveLineEntity.reset();
   mHighlightedPointEntity.reset();
-
-  if ( mScreenRayCaster != nullptr )
-  {
-    mScreenRayCaster->setEnabled( false );
-    //disconnect( mScreenRayCaster.get(), &Qt3DRender::QScreenRayCaster::hitsChanged, this, &Qgs3DMapToolCreateCube::onTouchedByRay );
-    mCanvas->engine()->renderSettings()->pickingSettings()->setPickMethod( mDefaultPickingMethod );
-    mCanvas->engine()->root()->removeComponent( mScreenRayCaster.get() );
-    mScreenRayCaster.reset();
-  }
 
   if ( mHighlightedEntity != nullptr )
   {
@@ -87,15 +84,26 @@ void Qgs3DMapToolCreateCube::finish()
       mHighlightedEntity->addComponent( mPreviousHighlightedMaterial );
     mHighlightedMaterial.reset();
   }
+
+  if ( mScreenRayCaster != nullptr )
+  {
+    mScreenRayCaster->setEnabled( false );
+    //disconnect( mScreenRayCaster.get(), &Qt3DRender::QScreenRayCaster::hitsChanged, this, &Qgs3DMapToolCreatePrimitive::onTouchedByRay );
+    mCanvas->engine()->renderSettings()->pickingSettings()->setPickMethod( mDefaultPickingMethod );
+    mCanvas->engine()->root()->removeComponent( mScreenRayCaster.get() );
+    mScreenRayCaster.reset();
+  }
+
+  mRubberBand.reset();
   mDone = true;
 }
 
-QCursor Qgs3DMapToolCreateCube::cursor() const
+QCursor Qgs3DMapToolCreatePrimitive::cursor() const
 {
   return Qt::CrossCursor;
 }
 
-void Qgs3DMapToolCreateCube::restart()
+void Qgs3DMapToolCreatePrimitive::restart()
 {
   qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString();
 
@@ -130,10 +138,10 @@ void Qgs3DMapToolCreateCube::restart()
   mHighlightedMaterial.reset( new Qt3DExtras::QPhongMaterial );
   mHighlightedMaterial->setAmbient( Qt::blue );
 
-  //connect( mScreenRayCaster.get(), &Qt3DRender::QScreenRayCaster::hitsChanged, this, &Qgs3DMapToolCreateCube::onTouchedByRay );
+  //connect( mScreenRayCaster.get(), &Qt3DRender::QScreenRayCaster::hitsChanged, this, &Qgs3DMapToolCreatePrimitive::onTouchedByRay );
 }
 
-void Qgs3DMapToolCreateCube::onTouchedByRay( const Qt3DRender::QAbstractRayCaster::Hits &hits )
+void Qgs3DMapToolCreatePrimitive::onTouchedByRay( const Qt3DRender::QAbstractRayCaster::Hits &hits )
 {
   mScreenRayCaster->setEnabled( false );
   // int hitFoundIdx = -1;
@@ -269,7 +277,7 @@ void Qgs3DMapToolCreateCube::onTouchedByRay( const Qt3DRender::QAbstractRayCaste
   }
 }
 
-QgsPoint Qgs3DMapToolCreateCube::screenToMap( const QPoint &screenPos ) const
+QgsPoint Qgs3DMapToolCreatePrimitive::screenToMap( const QPoint &screenPos ) const
 {
   QgsRayCastContext context;
   context.setSingleResult( false );
@@ -298,7 +306,7 @@ QgsPoint Qgs3DMapToolCreateCube::screenToMap( const QPoint &screenPos ) const
   return QgsPoint( mapCoords.x(), mapCoords.y(), mapCoords.z() );
 }
 
-void Qgs3DMapToolCreateCube::updatePrimitive( const QgsPoint &mapPos, double length, double zRotation )
+void Qgs3DMapToolCreatePrimitive::updatePrimitive( const QgsPoint &mapPos, double length, double zRotation )
 {
   QgsGeoTransform *transform;
   if ( mPrimitiveLineEntity.get() == nullptr )
@@ -306,11 +314,22 @@ void Qgs3DMapToolCreateCube::updatePrimitive( const QgsPoint &mapPos, double len
     mPrimitiveLineEntity.reset( new Qt3DCore::QEntity( mCanvas->engine()->frameGraph()->rubberBandsRootEntity() ) );
     mPrimitiveLineEntity->setObjectName( "new_primitive" );
 
-    QgsPrivate::Qgs3DWiredMesh *mesh = new QgsPrivate::Qgs3DWiredMesh;
-    QgsAABB box = QgsAABB( -0.5f, -0.5f, 0, //
-                           0.5f, 0.5f, 1.0 );
-    mesh->setVertices( box.verticesForLines() );
-    mPrimitiveLineEntity->addComponent( mesh );
+    if ( mType == "cube" )
+    {
+      QgsPrivate::Qgs3DWiredMesh *mesh = new QgsPrivate::Qgs3DWiredMesh;
+      QgsAABB box = QgsAABB( -0.5f, -0.5f, 0, //
+                             0.5f, 0.5f, 1.0 );
+      mesh->setVertices( box.verticesForLines() );
+      mPrimitiveLineEntity->addComponent( mesh );
+    }
+    else if ( mType == "sphere" )
+    {
+      Qt3DExtras::QSphereMesh *mesh = new Qt3DExtras::QSphereMesh();
+      mesh->setRadius( 0.5 );
+      mesh->setRings( 6 );
+      mesh->setSlices( 6 );
+      mPrimitiveLineEntity->addComponent( mesh );
+    }
 
     Qt3DExtras::QPhongMaterial *material = new Qt3DExtras::QPhongMaterial;
     material->setAmbient( Qt::blue );
@@ -329,12 +348,14 @@ void Qgs3DMapToolCreateCube::updatePrimitive( const QgsPoint &mapPos, double len
   }
 
   transform->setOrigin( mCanvas->mapSettings()->origin() );
+  transform->setRotationX( static_cast<float>( mDialog->rotX() ) );
+  transform->setRotationY( static_cast<float>( mDialog->rotY() ) );
   transform->setRotationZ( static_cast<float>( zRotation ) );
   transform->setGeoTranslation( QgsVector3D( mapPos.x(), mapPos.y(), mapPos.z() ) );
-  transform->setScale3D( { static_cast<float>( length ), static_cast<float>( length ), static_cast<float>( length ) } );
+  transform->setScale3D( { static_cast<float>( mDialog->scaleX() * length ), static_cast<float>( mDialog->scaleY() * length ), static_cast<float>( mDialog->scaleZ() * length ) } );
 }
 
-void Qgs3DMapToolCreateCube::updateHLPoint( const QgsPoint &mapPos, const QPoint &screenPos )
+void Qgs3DMapToolCreatePrimitive::updateHLPoint( const QgsPoint &mapPos, const QPoint &screenPos )
 {
   QgsGeoTransform *transform;
   if ( mHighlightedPointEntity.get() == nullptr )
@@ -380,7 +401,7 @@ void Qgs3DMapToolCreateCube::updateHLPoint( const QgsPoint &mapPos, const QPoint
   transform->setScale3D( { static_cast<float>( length ), static_cast<float>( length ), static_cast<float>( length ) } );
 }
 
-void Qgs3DMapToolCreateCube::handleClick( const QPoint &screenPos )
+void Qgs3DMapToolCreatePrimitive::handleClick( const QPoint &screenPos )
 {
   qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString();
   if ( mDone )
@@ -408,11 +429,11 @@ void Qgs3DMapToolCreateCube::handleClick( const QPoint &screenPos )
   }
 }
 
-void Qgs3DMapToolCreateCube::mousePressEvent( QMouseEvent * /*event*/ )
+void Qgs3DMapToolCreatePrimitive::mousePressEvent( QMouseEvent * /*event*/ )
 {
 }
 
-void Qgs3DMapToolCreateCube::mouseMoveEvent( QMouseEvent *event )
+void Qgs3DMapToolCreatePrimitive::mouseMoveEvent( QMouseEvent *event )
 {
   if ( !mMouseHasMoved && ( event->pos() - mMouseClickPos ).manhattanLength() >= QApplication::startDragDistance() )
   {
@@ -447,14 +468,23 @@ void Qgs3DMapToolCreateCube::mouseMoveEvent( QMouseEvent *event )
     double length = pointMap.distance3D( mFirstPointOnMap );
     double angle = -1.0 * QgsGeometryUtilsBase::lineAngle( pointMap.x(), pointMap.y(), mFirstPointOnMap.x(), mFirstPointOnMap.y() );
     angle *= 180.0 / M_PI;
-    qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "cube size:" << length << "/ rotation: " << angle;
+    qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "prim size:" << length << "/ rotation: " << angle;
+
     updatePrimitive( mFirstPointOnMap, length, angle );
-    mDialog->setRotation( 0.0, 0.0, ( angle < 0.0 ? 360.0 + angle : angle ) );
-    mDialog->setSize( length );
+
+    mDialog->setRotation( mDialog->rotX(), mDialog->rotY(), ( angle < 0.0 ? 360.0 + angle : angle ) );
+    if ( mType == "cube" )
+    {
+      dynamic_cast<Qgs3DCreatePrimitiveCubeDialog *>( mDialog.get() )->setSize( length );
+    }
+    else if ( mType == "sphere" )
+    {
+      dynamic_cast<Qgs3DCreatePrimitiveSphereDialog *>( mDialog.get() )->setRadius( length );
+    }
   }
 }
 
-void Qgs3DMapToolCreateCube::mouseReleaseEvent( QMouseEvent *event )
+void Qgs3DMapToolCreatePrimitive::mouseReleaseEvent( QMouseEvent *event )
 {
   if ( event->button() == Qt::LeftButton )
   {
