@@ -18,13 +18,18 @@
 
 #include "qgs3dmaptool.h"
 #include "qgspoint.h"
+#include "qgsfeatureid.h"
 #include <QObject>
 #include <Qt3DRender/QRenderSettings>
 #include <Qt3DRender/QScreenRayCaster>
+#include <QRecursiveMutex>
 
 class Qgs3DCreatePrimitiveDialog;
 class QPoint;
 class QgsRubberBand3D;
+class QgsMapLayer;
+class QgsFeature;
+class QVector3D;
 
 namespace Qt3DCore
 {
@@ -81,7 +86,11 @@ class Qgs3DMapToolCreatePrimitive : public Qgs3DMapTool
     Qt3DRender::QPickingSettings::PickMethod mDefaultPickingMethod;
 
     std::unique_ptr<Qt3DCore::QEntity> mPrimitiveLineEntity = nullptr;
+
     std::unique_ptr<Qt3DCore::QEntity> mHighlightedPointEntity = nullptr;
+    QgsFeatureId mHighlightedFeatureId = -1;
+    QRecursiveMutex mHighlightedMutex;
+
     std::unique_ptr<Qt3DRender::QScreenRayCaster> mScreenRayCaster = nullptr;
 
     Qt3DCore::QEntity *mHighlightedEntity = nullptr;
@@ -89,9 +98,11 @@ class Qgs3DMapToolCreatePrimitive : public Qgs3DMapTool
     std::unique_ptr<Qt3DExtras::QPhongMaterial> mHighlightedMaterial = nullptr;
     Qt3DRender::QMaterial *mPreviousHighlightedMaterial = nullptr;
 
-    QgsPoint screenToMap( const QPoint &screenPos ) const;
+    QgsPoint screenToMap( const QPoint &screenPos, QString *layerId = nullptr, QgsFeatureId *nearestFid = nullptr, QVector3D ( *facePoints )[3] = nullptr ) const;
     void updatePrimitive( const QgsPoint &mapPos, double length, double zRotation );
-    void updateHLPoint( const QgsPoint &mapPos, const QPoint &screenPos );
+    void updateHLPoint( const QgsPoint &mapPos, const QPoint &screenPos, QgsMapLayer *layer, const QgsFeature &feat, const QVector3D ( &facePoints )[3] );
+
+    void clearHighlightedPointEntity();
 };
 
 ///@cond PRIVATE
