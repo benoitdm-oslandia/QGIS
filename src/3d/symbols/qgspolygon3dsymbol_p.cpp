@@ -161,6 +161,21 @@ void QgsPolygon3DSymbolHandler::processPolygon( const QgsPolygon *poly, QgsFeatu
   out.triangleIndexStartingIndices.append( startingTriangleIndex );
   out.triangleIndexFids.append( fid );
   out.tessellator->addPolygon( *polyClone, extrusionHeight );
+  // if ( fid == 10 )
+  // {
+  //   qDebug() << "FEATURE 10 vertices:" << mChunkOrigin.toVector3D();
+  //   int idx = 0;
+  //   for ( int f = 0; f < 5; f++ )
+  //   {
+  //     QString outStr;
+  //     for ( int pt = 0; pt < 3; pt++, idx += 6 )
+  //     {
+  //       outStr += QStringLiteral( "(%1 %2 %3)" ).arg( out.tessellator->data()[idx] + mChunkOrigin.x() ).arg( out.tessellator->data()[idx + 1] + mChunkOrigin.y() ).arg( out.tessellator->data()[idx + 2] );
+  //       outStr += QStringLiteral( "[%1 %2 %3] " ).arg( out.tessellator->data()[idx + 3] ).arg( out.tessellator->data()[idx + 4] ).arg( out.tessellator->data()[idx + 5] );
+  //     }
+  //     qDebug() << outStr;
+  //   }
+  // }
   if ( !out.tessellator->error().isEmpty() )
   {
     QgsMessageLog::logMessage( out.tessellator->error(), QObject::tr( "3D" ) );
