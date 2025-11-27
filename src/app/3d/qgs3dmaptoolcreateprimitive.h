@@ -100,7 +100,7 @@ class Qgs3DMapToolCreatePrimitive : public Qgs3DMapTool
 
     QgsPoint screenToMap( const QPoint &screenPos, QString *layerId = nullptr, QgsFeatureId *nearestFid = nullptr, QVector3D ( *facePoints )[3] = nullptr ) const;
     void updatePrimitive( const QgsPoint &mapPos, double length, double zRotation );
-    void updateHLPoint( const QgsPoint &mapPos, const QPoint &screenPos, QgsMapLayer *layer, const QgsFeature &feat, const QVector3D ( &facePoints )[3] );
+    void updateHighlighted( const QgsPoint &mapPos, const QPoint &screenPos, QgsMapLayer *layer, const QgsFeature &feat, const QVector3D ( &facePoints )[3] );
 
     void clearHighlightedPointEntity();
     bool setEnableOnNode( Qt3DCore::QNode *currEnt, const QString &name, bool enabled );

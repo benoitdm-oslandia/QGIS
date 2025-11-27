@@ -329,7 +329,7 @@ QgsPoint Qgs3DMapToolCreatePrimitive::screenToMap( const QPoint &screenPos, QStr
     ( *facePoints )[0] = qvariant_cast<QVector3D>( bestHit.properties().value( QStringLiteral( "facePoint0" ) ) );
     ( *facePoints )[1] = qvariant_cast<QVector3D>( bestHit.properties().value( QStringLiteral( "facePoint1" ) ) );
     ( *facePoints )[2] = qvariant_cast<QVector3D>( bestHit.properties().value( QStringLiteral( "facePoint2" ) ) );
-    qDebug() << "Hit face: " << ( *facePoints )[0] << "/" << ( *facePoints )[1] << "/" << ( *facePoints )[2];
+    //qDebug() << "Hit face: " << ( *facePoints )[0] << "/" << ( *facePoints )[1] << "/" << ( *facePoints )[2];
   }
 
   mapCoords = bestHit.mapCoordinates();
@@ -388,7 +388,7 @@ void Qgs3DMapToolCreatePrimitive::updatePrimitive( const QgsPoint &mapPos, doubl
   transform->setScale3D( { static_cast<float>( mDialog->scaleX() * length ), static_cast<float>( mDialog->scaleY() * length ), static_cast<float>( mDialog->scaleZ() * length ) } );
 }
 
-void Qgs3DMapToolCreatePrimitive::updateHLPoint( const QgsPoint &mapPos, const QPoint &screenPos, QgsMapLayer *layer, const QgsFeature &feat, const QVector3D ( &facePoints )[3] )
+void Qgs3DMapToolCreatePrimitive::updateHighlighted( const QgsPoint &mapPos, const QPoint &screenPos, QgsMapLayer *layer, const QgsFeature &feat, const QVector3D ( &facePoints )[3] )
 {
   QMutexLocker locker( &mHighlightedMutex );
   if ( !mHighlightedPointEntity )
@@ -406,13 +406,18 @@ void Qgs3DMapToolCreatePrimitive::updateHLPoint( const QgsPoint &mapPos, const Q
     if ( vectorRenderer )
     {
       QgsPhongMaterialSettings *phong = dynamic_cast<QgsPhongMaterialSettings *>( QgsPhongMaterialSettings::create() );
-      phong->setAmbient( Qt::red );
+      phong->setAmbient( Qt::darkRed );
+      phong->setDiffuse( Qt::darkGray );
+      phong->setOpacity( 0.4f );
       QgsAbstract3DSymbol *sym = nullptr;
       if ( QgsPolygon3DSymbol *clonedSymb = dynamic_cast<QgsPolygon3DSymbol *>( vectorRenderer->symbol()->clone() ) )
       {
         clonedSymb->setMaterialSettings( phong );
+        clonedSymb->setAddBackFaces( false );
+        clonedSymb->setCullingMode( Qgs3DTypes::CullingMode::NoCulling );
         clonedSymb->setEdgesEnabled( true );
         clonedSymb->setEdgeColor( Qt::green );
+        clonedSymb->setEdgeWidth( 1.5f );
         sym = clonedSymb;
       }
       else if ( QgsPoint3DSymbol *clonedSymb = dynamic_cast<QgsPoint3DSymbol *>( vectorRenderer->symbol()->clone() ) )
@@ -432,10 +437,10 @@ void Qgs3DMapToolCreatePrimitive::updateHLPoint( const QgsPoint &mapPos, const Q
 
       if ( sym != nullptr )
       {
-        QgsFeature3DHandler *feat3DHandler = QgsApplication::symbol3DRegistry()->createHandlerForSymbol( dynamic_cast<QgsVectorLayer *>( layer ), sym );
-
         Qgs3DRenderContext renderContext = Qgs3DRenderContext::fromMapSettings( mCanvas->mapSettings() );
         QSet<QString> attributeNames;
+
+        QgsFeature3DHandler *feat3DHandler = QgsApplication::symbol3DRegistry()->createHandlerForSymbol( dynamic_cast<QgsVectorLayer *>( layer ), sym );
         feat3DHandler->prepare( renderContext, attributeNames, QgsVector3D() );
         feat3DHandler->processFeature( feat, renderContext );
         feat3DHandler->finalize( mHighlightedPointEntity.get(), renderContext );
@@ -450,7 +455,6 @@ void Qgs3DMapToolCreatePrimitive::updateHLPoint( const QgsPoint &mapPos, const Q
               trans->setGeoTranslation( { -mCanvas->mapSettings()->origin().x(), -mCanvas->mapSettings()->origin().y(), -mCanvas->mapSettings()->origin().z() } );
               trans->setOrigin( QgsVector3D() );
             }
-            ent->setObjectName( "HL_OBJECT" );
             break;
           }
         }
@@ -496,8 +500,8 @@ void Qgs3DMapToolCreatePrimitive::updateHLPoint( const QgsPoint &mapPos, const Q
     QgsVector3D mapPoint;
     mapPoint = Qgs3DUtils::worldToMapCoordinates( QVector3D( facePoints[0].x(), facePoints[0].y(), facePoints[0].z() ), QgsVector3D() /*mCanvas->mapSettings()->origin()*/ );
     transform->setGeoTranslation( mapPoint );
-    qDebug() << "facepoint:" << facePoints[0];
-    qDebug() << "mapPoint:" << mapPoint.toVector3D();
+    // qDebug() << "facepoint:" << facePoints[0];
+    // qDebug() << "mapPoint:" << mapPoint.toVector3D();
   }
 }
 
@@ -615,7 +619,7 @@ void Qgs3DMapToolCreatePrimitive::mouseMoveEvent( QMouseEvent *event )
           QgsFeature feat;
           if ( ite.nextFeature( feat ) )
           {
-            updateHLPoint( pointMap, mMouseHoverPos, layer, feat, facePoints );
+            updateHighlighted( pointMap, mMouseHoverPos, layer, feat, facePoints );
           }
           break;
         }
