@@ -190,7 +190,7 @@ Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructRubberBandsPass()
 
   mRubberBandsStateSet = new Qt3DRender::QRenderStateSet( mRubberBandsLayerFilter );
   Qt3DRender::QDepthTest *depthTest = new Qt3DRender::QDepthTest;
-  depthTest->setDepthFunction( Qt3DRender::QDepthTest::Always );
+  depthTest->setDepthFunction( Qt3DRender::QDepthTest::LessOrEqual );
   mRubberBandsStateSet->addRenderState( depthTest );
   mRubberBandsStateSet->addRenderState( blendState );
   mRubberBandsStateSet->addRenderState( blendEquation );
@@ -200,6 +200,9 @@ Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructRubberBandsPass()
   // to rubber bands too. Ideally we would want them on top of everything.
   mRubberBandsRenderTargetSelector = new Qt3DRender::QRenderTargetSelector( mRubberBandsStateSet );
   mRubberBandsRenderTargetSelector->setTarget( forwardRenderView().renderTargetSelector()->target() );
+
+  Qt3DRender::QClearBuffers *clear = new Qt3DRender::QClearBuffers( mRubberBandsRenderTargetSelector );
+  clear->setBuffers( Qt3DRender::QClearBuffers::DepthBuffer );
 
   return mRubberBandsCameraSelector;
 }
