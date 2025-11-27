@@ -103,6 +103,7 @@ class Qgs3DMapToolCreatePrimitive : public Qgs3DMapTool
     void updateHLPoint( const QgsPoint &mapPos, const QPoint &screenPos, QgsMapLayer *layer, const QgsFeature &feat, const QVector3D ( &facePoints )[3] );
 
     void clearHighlightedPointEntity();
+    bool setEnableOnNode( Qt3DCore::QNode *currEnt, const QString &name, bool enabled );
 };
 
 ///@cond PRIVATE

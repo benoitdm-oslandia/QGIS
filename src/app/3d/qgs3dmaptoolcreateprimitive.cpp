@@ -454,6 +454,8 @@ void Qgs3DMapToolCreatePrimitive::updateHLPoint( const QgsPoint &mapPos, const Q
             break;
           }
         }
+
+        setEnableOnNode( mHighlightedPointEntity->parentNode()->parentNode(), "Drapé_2/3/1_SINGLE_10_TESSELLATED", false );
       }
     }
   } // end if feature id changed
@@ -531,6 +533,25 @@ void Qgs3DMapToolCreatePrimitive::mousePressEvent( QMouseEvent * /*event*/ )
 {
 }
 
+bool Qgs3DMapToolCreatePrimitive::setEnableOnNode( Qt3DCore::QNode *currEnt, const QString &name, bool enabled )
+{
+  for ( auto child : currEnt->childNodes() )
+  {
+    if ( Qt3DCore::QEntity *ent = dynamic_cast<Qt3DCore::QEntity *>( child ) )
+      if ( ent->objectName() == name )
+      {
+        ent->setEnabled( enabled );
+        ent->parentNode()->setEnabled( enabled );
+        ent->parentNode()->parentNode()->setEnabled( enabled );
+        qDebug() << "========= Found entity: " << ent->objectName() << "/enabled:" << ent->isEnabled();
+        return true;
+      }
+
+    if ( setEnableOnNode( child, name, enabled ) )
+      return true;
+  }
+  return false;
+}
 
 void Qgs3DMapToolCreatePrimitive::clearHighlightedPointEntity()
 {
@@ -549,6 +570,8 @@ void Qgs3DMapToolCreatePrimitive::clearHighlightedPointEntity()
     }
   }
   mHighlightedFeatureId = -1;
+
+  setEnableOnNode( mHighlightedPointEntity->parentNode()->parentNode(), "Drapé_2/3/1_SINGLE_10_TESSELLATED", true );
 }
 
 void Qgs3DMapToolCreatePrimitive::mouseMoveEvent( QMouseEvent *event )
