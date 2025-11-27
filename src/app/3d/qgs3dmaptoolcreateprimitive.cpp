@@ -550,9 +550,9 @@ void Qgs3DMapToolCreatePrimitive::updateHLPoint( const QgsPoint &mapPos, const Q
       ent->setObjectName( "HL_point" );
 
       Qt3DExtras::QSphereMesh *mesh = new Qt3DExtras::QSphereMesh;
-      mesh->setRadius( 50.0 );
-      mesh->setSlices( 2 );
-      mesh->setRings( 2 );
+      mesh->setRadius( 1.0 );
+      mesh->setSlices( 4 );
+      mesh->setRings( 4 );
       ent->addComponent( mesh );
 
       Qt3DExtras::QPhongMaterial *material = new Qt3DExtras::QPhongMaterial;
@@ -564,9 +564,9 @@ void Qgs3DMapToolCreatePrimitive::updateHLPoint( const QgsPoint &mapPos, const Q
     }
 
     QgsVector3D mapPoint;
-    mapPoint = Qgs3DUtils::worldToMapCoordinates( QVector3D( facePoints[0].y(), facePoints[0].x(), facePoints[0].z() ), mCanvas->mapSettings()->origin() );
+    mapPoint = Qgs3DUtils::worldToMapCoordinates( QVector3D( facePoints[0].x(), facePoints[0].y(), facePoints[0].z() ), QgsVector3D() /*mCanvas->mapSettings()->origin()*/ );
     transform->setGeoTranslation( mapPoint );
-    transform->setOrigin( mCanvas->mapSettings()->origin() );
+    //transform->setOrigin( mCanvas->mapSettings()->origin() );
     qDebug() << "QGIS origin:" << mCanvas->mapSettings()->origin().toVector3D();
     qDebug() << "facepoint:" << facePoints[0];
     qDebug() << "mapPoint:" << mapPoint.toVector3D();
