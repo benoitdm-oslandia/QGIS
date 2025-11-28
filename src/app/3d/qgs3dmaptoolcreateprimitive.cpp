@@ -18,13 +18,10 @@
 #include "qgs3dcreateprimitivedialog.h"
 #include "qgs3dutils.h"
 #include "qgsabstract3drenderer.h"
-#include "qgspolygon3dsymbol.h"
 #include "qgsvectorlayer.h"
 #include "qgswindow3dengine.h"
 #include "qgsframegraph.h"
 #include "qgsrubberband3d.h"
-#include "qgsraycastcontext.h"
-#include "qgsraycasthit.h"
 #include "qgsraycastingutils.h"
 #include "qgscameracontroller.h"
 #include "qgs3drendercontext.h"
@@ -32,15 +29,7 @@
 #include "qgsforwardrenderview.h"
 #include "qgs3dcreateprimitivecubedialog.h"
 #include "qgs3dcreateprimitivespheredialog.h"
-#include "qgsfeaturesource.h"
-#include "qgsfeatureiterator.h"
-#include "qgsvectorlayer3drenderer.h"
-#include "qgspolygon3dsymbol.h"
-#include "qgspoint3dsymbol.h"
-#include "qgsline3dsymbol.h"
-#include "qgs3dsymbolregistry.h"
-#include "qgsfeature3dhandler_p.h"
-#include "qgsapplication.h"
+#include "qgs3dsnappingmanager.h"
 
 #include <QMutexLocker>
 #include <QMouseEvent>
@@ -51,8 +40,8 @@
 #include <Qt3DRender/QScreenRayCaster>
 #include <Qt3DRender/QRenderSettings>
 
-Qgs3DMapToolCreatePrimitive::Qgs3DMapToolCreatePrimitive( Qgs3DMapCanvas *canvas, const QString &type )
-  : Qgs3DMapTool( canvas ), mType( type )
+Qgs3DMapToolCreatePrimitive::Qgs3DMapToolCreatePrimitive( Qgs3DMapCanvas *canvas, const QString &type, Qgs3DSnappingManager *snapper )
+  : Qgs3DMapTool( canvas ), mType( type ), mSnapper( snapper )
 {
   // Dialog
   if ( mType == "cube" )
@@ -90,15 +79,7 @@ void Qgs3DMapToolCreatePrimitive::finish()
   qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString();
   mPrimitiveLineEntity.reset();
 
-  {
-    QMutexLocker locker( &mHighlightedMutex );
-    if ( mHighlightedPointEntity.get() != nullptr )
-    {
-      mHighlightedPointEntity->setParent( ( Qt3DCore::QNode * ) nullptr );
-      mHighlightedPointEntity->deleteLater();
-    }
-    mHighlightedPointEntity.reset();
-  }
+  mSnapper->finish();
 
   // if ( mScreenRayCaster != nullptr )
   // {
@@ -166,9 +147,7 @@ void Qgs3DMapToolCreatePrimitive::restart()
   // }
   // else
   {
-    QMutexLocker locker( &mHighlightedMutex );
-    mHighlightedPointEntity.reset( new Qt3DCore::QEntity( mCanvas->engine()->frameGraph()->rubberBandsRootEntity() ) );
-    mHighlightedPointEntity->setObjectName( "ROOT_HL_OBJECT" );
+    mSnapper->restart();
   }
 
   //connect( mScreenRayCaster.get(), &Qt3DRender::QScreenRayCaster::hitsChanged, this, &Qgs3DMapToolCreatePrimitive::onTouchedByRay );
@@ -295,50 +274,6 @@ void Qgs3DMapToolCreatePrimitive::restart()
 //   }
 // }
 
-QgsPoint Qgs3DMapToolCreatePrimitive::screenToMap( const QPoint &screenPos, QString *layerId, QgsFeatureId *nearestFid, QVector3D ( *facePoints )[3] ) const
-{
-  QgsRayCastContext context;
-  context.setSingleResult( false );
-  context.setMaximumDistance( mCanvas->cameraController()->camera()->farPlane() );
-  context.setAngleThreshold( 0.5f );
-  const QgsRayCastResult results = mCanvas->castRay( screenPos, context );
-
-  if ( results.isEmpty() )
-    return QgsPoint();
-
-  QgsVector3D mapCoords;
-  double minDist = -1;
-  const QList<QgsRayCastHit> allHits = results.allHits();
-  QgsRayCastHit bestHit;
-  for ( const QgsRayCastHit &hit : allHits )
-  {
-    const double resDist = hit.distance();
-    if ( minDist < 0 || resDist < minDist )
-    {
-      minDist = resDist;
-      bestHit = hit;
-    }
-  }
-
-  if ( layerId != nullptr )
-    *layerId = bestHit.properties().value( QStringLiteral( "layerId" ), QString() ).toString();
-  if ( nearestFid != nullptr )
-    *nearestFid = bestHit.properties().value( QStringLiteral( "fid" ), -1 ).toLongLong();
-  if ( facePoints != nullptr && bestHit.properties().contains( QStringLiteral( "facePoint0" ) ) )
-  {
-    ( *facePoints )[0] = qvariant_cast<QVector3D>( bestHit.properties().value( QStringLiteral( "facePoint0" ) ) );
-    ( *facePoints )[1] = qvariant_cast<QVector3D>( bestHit.properties().value( QStringLiteral( "facePoint1" ) ) );
-    ( *facePoints )[2] = qvariant_cast<QVector3D>( bestHit.properties().value( QStringLiteral( "facePoint2" ) ) );
-    //qDebug() << "Hit face: " << ( *facePoints )[0] << "/" << ( *facePoints )[1] << "/" << ( *facePoints )[2];
-  }
-
-  mapCoords = bestHit.mapCoordinates();
-  if ( std::isnan( mapCoords.z() ) )
-    return QgsPoint( mapCoords.x(), mapCoords.y(), 0 );
-
-  return QgsPoint( mapCoords.x(), mapCoords.y(), mapCoords.z() );
-}
-
 void Qgs3DMapToolCreatePrimitive::updatePrimitive( const QgsPoint &mapPos, double length, double zRotation )
 {
   QgsGeoTransform *transform;
@@ -388,123 +323,6 @@ void Qgs3DMapToolCreatePrimitive::updatePrimitive( const QgsPoint &mapPos, doubl
   transform->setScale3D( { static_cast<float>( mDialog->scaleX() * length ), static_cast<float>( mDialog->scaleY() * length ), static_cast<float>( mDialog->scaleZ() * length ) } );
 }
 
-void Qgs3DMapToolCreatePrimitive::updateHighlighted( const QgsPoint &mapPos, const QPoint &screenPos, QgsMapLayer *layer, const QgsFeature &feat, const QVector3D ( &facePoints )[3] )
-{
-  QMutexLocker locker( &mHighlightedMutex );
-  if ( !mHighlightedPointEntity )
-    return;
-
-  if ( mHighlightedFeatureId != feat.id() )
-  {
-    qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "Switching from:" << mHighlightedFeatureId << "to:" << feat.id();
-
-    clearHighlightedPointEntity();
-
-    mHighlightedFeatureId = feat.id();
-
-    QgsVectorLayer3DRenderer *vectorRenderer = dynamic_cast<QgsVectorLayer3DRenderer *>( layer->renderer3D() );
-    if ( vectorRenderer )
-    {
-      QgsPhongMaterialSettings *phong = dynamic_cast<QgsPhongMaterialSettings *>( QgsPhongMaterialSettings::create() );
-      phong->setAmbient( Qt::darkRed );
-      phong->setDiffuse( Qt::darkGray );
-      phong->setOpacity( 0.4f );
-      QgsAbstract3DSymbol *sym = nullptr;
-      if ( QgsPolygon3DSymbol *clonedSymb = dynamic_cast<QgsPolygon3DSymbol *>( vectorRenderer->symbol()->clone() ) )
-      {
-        clonedSymb->setMaterialSettings( phong );
-        clonedSymb->setAddBackFaces( false );
-        clonedSymb->setCullingMode( Qgs3DTypes::CullingMode::NoCulling );
-        clonedSymb->setEdgesEnabled( true );
-        clonedSymb->setEdgeColor( Qt::green );
-        clonedSymb->setEdgeWidth( 1.5f );
-        sym = clonedSymb;
-      }
-      else if ( QgsPoint3DSymbol *clonedSymb = dynamic_cast<QgsPoint3DSymbol *>( vectorRenderer->symbol()->clone() ) )
-      {
-        clonedSymb->setMaterialSettings( phong );
-        sym = clonedSymb;
-      }
-      else if ( QgsLine3DSymbol *clonedSymb = dynamic_cast<QgsLine3DSymbol *>( vectorRenderer->symbol()->clone() ) )
-      {
-        clonedSymb->setMaterialSettings( phong );
-        sym = clonedSymb;
-      }
-      else
-      {
-        delete phong;
-      }
-
-      if ( sym != nullptr )
-      {
-        Qgs3DRenderContext renderContext = Qgs3DRenderContext::fromMapSettings( mCanvas->mapSettings() );
-        QSet<QString> attributeNames;
-
-        QgsFeature3DHandler *feat3DHandler = QgsApplication::symbol3DRegistry()->createHandlerForSymbol( dynamic_cast<QgsVectorLayer *>( layer ), sym );
-        feat3DHandler->prepare( renderContext, attributeNames, QgsVector3D() );
-        feat3DHandler->processFeature( feat, renderContext );
-        feat3DHandler->finalize( mHighlightedPointEntity.get(), renderContext );
-
-        // retrieve created entity
-        for ( auto child : mHighlightedPointEntity->childNodes() )
-        {
-          if ( Qt3DCore::QEntity *ent = dynamic_cast<Qt3DCore::QEntity *>( child ) )
-          {
-            for ( auto trans : ent->componentsOfType<QgsGeoTransform>() )
-            {
-              trans->setGeoTranslation( { -mCanvas->mapSettings()->origin().x(), -mCanvas->mapSettings()->origin().y(), -mCanvas->mapSettings()->origin().z() } );
-              trans->setOrigin( QgsVector3D() );
-            }
-            break;
-          }
-        }
-
-        setEnableOnNode( mHighlightedPointEntity->parentNode()->parentNode(), "Drapé_2/3/1_SINGLE_10_TESSELLATED", false );
-      }
-    }
-  } // end if feature id changed
-
-  { // HL nearest vertex
-    QgsGeoTransform *transform = nullptr;
-    // search for existing HL vertex
-    for ( auto child : mHighlightedPointEntity->childNodes() )
-    {
-      if ( Qt3DCore::QEntity *childEnt = dynamic_cast<Qt3DCore::QEntity *>( child ) )
-        if ( childEnt->objectName() == "HL_point" )
-        {
-          for ( auto childComp : childEnt->componentsOfType<QgsGeoTransform>() )
-            transform = childComp;
-          break;
-        }
-    }
-
-    if ( transform == nullptr )
-    {
-      Qt3DCore::QEntity *ent = new Qt3DCore::QEntity( mHighlightedPointEntity.get() );
-      ent->setObjectName( "HL_point" );
-
-      Qt3DExtras::QSphereMesh *mesh = new Qt3DExtras::QSphereMesh;
-      mesh->setRadius( 1.0 );
-      mesh->setSlices( 4 );
-      mesh->setRings( 4 );
-      ent->addComponent( mesh );
-
-      Qt3DExtras::QPhongMaterial *material = new Qt3DExtras::QPhongMaterial;
-      material->setAmbient( Qt::green );
-      ent->addComponent( material );
-
-      transform = new QgsGeoTransform;
-      ent->addComponent( transform );
-    }
-
-    QgsVector3D mapPoint;
-    mapPoint = Qgs3DUtils::worldToMapCoordinates( QVector3D( facePoints[0].x(), facePoints[0].y(), facePoints[0].z() ), QgsVector3D() /*mCanvas->mapSettings()->origin()*/ );
-    transform->setGeoTranslation( mapPoint );
-    // qDebug() << "facepoint:" << facePoints[0];
-    // qDebug() << "mapPoint:" << mapPoint.toVector3D();
-  }
-}
-
 void Qgs3DMapToolCreatePrimitive::handleClick( const QPoint &screenPos )
 {
   qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString();
@@ -516,9 +334,13 @@ void Qgs3DMapToolCreatePrimitive::handleClick( const QPoint &screenPos )
   if ( mMouseClickPos == QPoint() )
   {
     qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "First click";
+    bool ok;
+    mFirstPointOnMap = mSnapper->screenToMap( screenPos, &ok );
+    if ( !ok )
+      return;
+
     mMouseClickPos = screenPos;
 
-    mFirstPointOnMap = screenToMap( screenPos );
     updatePrimitive( mFirstPointOnMap, 10.0, 0.0 );
 
     QgsPoint rbPoint( mFirstPointOnMap );
@@ -537,47 +359,6 @@ void Qgs3DMapToolCreatePrimitive::mousePressEvent( QMouseEvent * /*event*/ )
 {
 }
 
-bool Qgs3DMapToolCreatePrimitive::setEnableOnNode( Qt3DCore::QNode *currEnt, const QString &name, bool enabled )
-{
-  for ( auto child : currEnt->childNodes() )
-  {
-    if ( Qt3DCore::QEntity *ent = dynamic_cast<Qt3DCore::QEntity *>( child ) )
-      if ( ent->objectName() == name )
-      {
-        ent->setEnabled( enabled );
-        ent->parentNode()->setEnabled( enabled );
-        ent->parentNode()->parentNode()->setEnabled( enabled );
-        qDebug() << "========= Found entity: " << ent->objectName() << "/enabled:" << ent->isEnabled();
-        return true;
-      }
-
-    if ( setEnableOnNode( child, name, enabled ) )
-      return true;
-  }
-  return false;
-}
-
-void Qgs3DMapToolCreatePrimitive::clearHighlightedPointEntity()
-{
-  QMutexLocker locker( &mHighlightedMutex );
-  if ( mCanvas->engine() && mCanvas->engine()->frameGraph() && mCanvas->scene()->engine() && mHighlightedPointEntity )
-  {
-    qDebug() << "mHighlightedPointEntity cleared!";
-
-    for ( auto child : mHighlightedPointEntity->childNodes() )
-    {
-      if ( Qt3DCore::QEntity *ent = dynamic_cast<Qt3DCore::QEntity *>( child ) )
-      {
-        ent->setParent( ( Qt3DCore::QNode * ) nullptr );
-        ent->deleteLater();
-      }
-    }
-  }
-  mHighlightedFeatureId = -1;
-
-  setEnableOnNode( mHighlightedPointEntity->parentNode()->parentNode(), "Drapé_2/3/1_SINGLE_10_TESSELLATED", true );
-}
-
 void Qgs3DMapToolCreatePrimitive::mouseMoveEvent( QMouseEvent *event )
 {
   if ( !mMouseHasMoved && ( event->pos() - mMouseClickPos ).manhattanLength() >= QApplication::startDragDistance() )
@@ -589,47 +370,16 @@ void Qgs3DMapToolCreatePrimitive::mouseMoveEvent( QMouseEvent *event )
     return;
 
   mMouseHoverPos = event->pos();
-  QString layerId;
-  QgsFeatureId nearestFid;
-  QVector3D facePoints[3];
-  QgsPoint pointMap = screenToMap( mMouseHoverPos, &layerId, &nearestFid, &facePoints );
-
-  QgsPoint rbPoint( pointMap );
-  rbPoint.setZ( rbPoint.z() / mCanvas->mapSettings()->terrainSettings()->verticalScale() );
+  bool ok;
+  QgsPoint pointMap = mSnapper->screenToMap( mMouseHoverPos, &ok );
+  if ( !ok )
+    return;
 
   // if ( mScreenRayCaster.get() != nullptr )
   // {
   //   mScreenRayCaster->setEnabled( true );
   //   onTouchedByRay( mScreenRayCaster->pick( mMouseHoverPos ) );
   // }
-  // else
-  {
-    if ( mHighlightedFeatureId != nearestFid && nearestFid < std::numeric_limits<int>::max() )
-      qDebug() << "HL changed layerId:" << layerId << "/ nearestFid:" << nearestFid;
-    if ( !layerId.isEmpty() && nearestFid > 0 && nearestFid < std::numeric_limits<int>::max() )
-    {
-      const QList<QgsMapLayer *> layers = mCanvas->scene()->layers();
-      for ( QgsMapLayer *layer : layers )
-      {
-        QgsFeatureSource *featureLayer = dynamic_cast<QgsFeatureSource *>( layer );
-        if ( featureLayer && layer->id() == layerId )
-        {
-          QgsFeatureRequest req( nearestFid );
-          QgsFeatureIterator ite = featureLayer->getFeatures( req );
-          QgsFeature feat;
-          if ( ite.nextFeature( feat ) )
-          {
-            updateHighlighted( pointMap, mMouseHoverPos, layer, feat, facePoints );
-          }
-          break;
-        }
-      }
-    }
-    else if ( mHighlightedFeatureId != -1 )
-    {
-      clearHighlightedPointEntity();
-    }
-  }
 
   if ( mPrimitiveLineEntity.get() == nullptr )
   {
@@ -637,6 +387,8 @@ void Qgs3DMapToolCreatePrimitive::mouseMoveEvent( QMouseEvent *event )
   }
   else
   {
+    QgsPoint rbPoint( pointMap );
+    rbPoint.setZ( rbPoint.z() / mCanvas->mapSettings()->terrainSettings()->verticalScale() );
     mRubberBand->moveLastPoint( rbPoint );
 
     double length = pointMap.distance3D( mFirstPointOnMap );

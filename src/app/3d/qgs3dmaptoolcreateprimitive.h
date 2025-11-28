@@ -30,6 +30,7 @@ class QgsRubberBand3D;
 class QgsMapLayer;
 class QgsFeature;
 class QVector3D;
+class Qgs3DSnappingManager;
 
 namespace Qt3DCore
 {
@@ -49,7 +50,7 @@ class Qgs3DMapToolCreatePrimitive : public Qgs3DMapTool
     Q_OBJECT
 
   public:
-    Qgs3DMapToolCreatePrimitive( Qgs3DMapCanvas *canvas, const QString &type );
+    Qgs3DMapToolCreatePrimitive( Qgs3DMapCanvas *canvas, const QString &type, Qgs3DSnappingManager *snapper );
     ~Qgs3DMapToolCreatePrimitive() override;
 
     void activate() override;
@@ -85,11 +86,9 @@ class Qgs3DMapToolCreatePrimitive : public Qgs3DMapTool
     QgsPoint mFirstPointOnMap;
     // Qt3DRender::QPickingSettings::PickMethod mDefaultPickingMethod;
 
-    std::unique_ptr<Qt3DCore::QEntity> mPrimitiveLineEntity = nullptr;
+    Qgs3DSnappingManager *mSnapper;
 
-    std::unique_ptr<Qt3DCore::QEntity> mHighlightedPointEntity = nullptr;
-    QgsFeatureId mHighlightedFeatureId = -1;
-    QRecursiveMutex mHighlightedMutex;
+    std::unique_ptr<Qt3DCore::QEntity> mPrimitiveLineEntity = nullptr;
 
     // std::unique_ptr<Qt3DRender::QScreenRayCaster> mScreenRayCaster = nullptr;
 
@@ -99,10 +98,6 @@ class Qgs3DMapToolCreatePrimitive : public Qgs3DMapTool
     // Qt3DRender::QMaterial *mPreviousHighlightedMaterial = nullptr;
 
     void updatePrimitive( const QgsPoint &mapPos, double length, double zRotation );
-    void updateHighlighted( const QgsPoint &mapPos, const QPoint &screenPos, QgsMapLayer *layer, const QgsFeature &feat, const QVector3D ( &facePoints )[3] );
-
-    void clearHighlightedPointEntity();
-    bool setEnableOnNode( Qt3DCore::QNode *currEnt, const QString &name, bool enabled );
 };
 
 ///@cond PRIVATE

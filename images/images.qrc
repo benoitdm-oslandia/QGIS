@@ -474,6 +474,10 @@
         <file>themes/default/mActionFilterTableFields.svg</file>
         <file>themes/default/mActionFirst.svg</file>
         <file>themes/default/mIcon3dAxis.svg</file>
+        <file>themes/default/mIcon3DSnappingDisabled.svg</file>
+        <file>themes/default/mIcon3DAddCube.svg</file>
+        <file>themes/default/mIcon3DAddSphere.svg</file>
+        <file>themes/default/mIcon3DAddTorus.svg</file>
         <file>themes/default/mIconAtlas.svg</file>
         <file>themes/default/mIconAutoPlacementSettings.svg</file>
         <file>themes/default/mIconCamera.svg</file>

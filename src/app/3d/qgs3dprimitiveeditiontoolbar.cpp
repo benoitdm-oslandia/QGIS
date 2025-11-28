@@ -24,12 +24,50 @@
 
 #include "qgsapplication.h"
 #include "qgs3dmapcanvas.h"
+#include "qgs3dsnappingmanager.h"
 
 Qgs3DPrimitiveEditionToolBar::Qgs3DPrimitiveEditionToolBar( Qgs3DMapCanvasWidget *parent )
   : Qgs3DEditionToolBar( QStringLiteral( "Primitive edition" ), parent )
 {
   addWidget( new QLabel( tr( "PRIMITIVE" ) ) );
 
+  mSnapper.reset( new Qgs3DSnappingManager( mParentWidget ) );
+
+  mSnappingAction = new QAction( QgsApplication::getThemeIcon( QStringLiteral( "mIconSnapping.svg" ) ), tr( "Snapping" ), this );
+
+  QMenu *snappingMenu = new QMenu( this );
+  mSnappingAction->setMenu( snappingMenu );
+
+  addAction( mSnappingAction );
+  QToolButton *snappingButton = qobject_cast<QToolButton *>( widgetForAction( mSnappingAction ) );
+  snappingButton->setPopupMode( QToolButton::ToolButtonPopupMode::InstantPopup );
+
+  snappingMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DSnappingDisabled.svg" ) ) ), tr( "Disable snapping" ), this, [this]() {
+    const QAction *action = qobject_cast<QAction *>( sender() );
+    mSnappingAction->setIcon( action->icon() );
+    mSnapper->setSnappingMode( Qgs3DSnappingManager::Off );
+  } );
+
+  snappingMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DSnappingVertex.svg" ) ) ), tr( "Snap on vertex" ), this, [this]() {
+    const QAction *action = qobject_cast<QAction *>( sender() );
+    mSnappingAction->setIcon( action->icon() );
+    mSnapper->setSnappingMode( Qgs3DSnappingManager::Vertex );
+  } );
+
+  snappingMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DSnappingMidEdge.svg" ) ) ), tr( "Snap on mid edge" ), this, [this]() {
+    const QAction *action = qobject_cast<QAction *>( sender() );
+    mSnappingAction->setIcon( action->icon() );
+    mSnapper->setSnappingMode( Qgs3DSnappingManager::MiddleEdge );
+  } );
+
+  snappingMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DSnappingCenterFace.svg" ) ) ), tr( "Snap on face center" ), this, [this]() {
+    const QAction *action = qobject_cast<QAction *>( sender() );
+    mSnappingAction->setIcon( action->icon() );
+    mSnapper->setSnappingMode( Qgs3DSnappingManager::CenterFace );
+  } );
+
+
+  // ==================
   mCreatePrimitiveAction = new QAction( QgsApplication::getThemeIcon( QStringLiteral( "mActionAddBasicShape.svg" ) ), tr( "Create new primitive" ), this );
 
   QMenu *createPrimitiveMenu = new QMenu( this );
@@ -81,7 +119,7 @@ void Qgs3DPrimitiveEditionToolBar::createCube()
 
   if ( mCreatePrimitiveMapTool != nullptr )
     mCreatePrimitiveMapTool->deleteLater();
-  mCreatePrimitiveMapTool = new Qgs3DMapToolCreatePrimitive( mParentWidget->mapCanvas3D(), "cube" );
+  mCreatePrimitiveMapTool = new Qgs3DMapToolCreatePrimitive( mParentWidget->mapCanvas3D(), "cube", mSnapper.get() );
   mParentWidget->mapCanvas3D()->setMapTool( mCreatePrimitiveMapTool );
   mCreatePrimitiveAction->setIcon( action->icon() );
 }
@@ -94,7 +132,7 @@ void Qgs3DPrimitiveEditionToolBar::createSphere()
 
   if ( mCreatePrimitiveMapTool != nullptr )
     mCreatePrimitiveMapTool->deleteLater();
-  mCreatePrimitiveMapTool = new Qgs3DMapToolCreatePrimitive( mParentWidget->mapCanvas3D(), "sphere" );
+  mCreatePrimitiveMapTool = new Qgs3DMapToolCreatePrimitive( mParentWidget->mapCanvas3D(), "sphere", mSnapper.get() );
   mParentWidget->mapCanvas3D()->setMapTool( mCreatePrimitiveMapTool );
   mCreatePrimitiveAction->setIcon( action->icon() );
 }

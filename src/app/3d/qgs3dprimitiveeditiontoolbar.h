@@ -17,6 +17,7 @@
 #define QGS3DPRIMITIVEEDITIONTOOLBAR_H
 
 #include "qgs3deditiontoolbar.h"
+#include "qgs3dsnappingmanager.h"
 
 class Qgs3DMapToolCreatePrimitive;
 
@@ -37,9 +38,11 @@ class Qgs3DPrimitiveEditionToolBar : public Qgs3DEditionToolBar
 
   private:
     QAction *mCreatePrimitiveAction = nullptr;
+    QAction *mSnappingAction = nullptr;
     QList<QAction *> mActions;
 
     Qgs3DMapToolCreatePrimitive *mCreatePrimitiveMapTool = nullptr;
+    std::unique_ptr<Qgs3DSnappingManager> mSnapper = nullptr;
 };
 
 #endif // QGS3DPRIMITIVEEDITIONTOOLBAR_H
