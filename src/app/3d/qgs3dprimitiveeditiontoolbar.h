@@ -36,8 +36,8 @@ class Qgs3DPrimitiveEditionToolBar : public Qgs3DEditionToolBar
     void createSphere();
 
   private:
-    QMenu *mCreatePrimitiveMenu = nullptr;
     QAction *mCreatePrimitiveAction = nullptr;
+    QList<QAction *> mActions;
 
     Qgs3DMapToolCreatePrimitive *mCreatePrimitiveMapTool = nullptr;
 };
