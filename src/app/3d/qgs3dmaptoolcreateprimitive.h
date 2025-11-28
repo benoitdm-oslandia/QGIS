@@ -67,7 +67,7 @@ class Qgs3DMapToolCreatePrimitive : public Qgs3DMapTool
     void mousePressEvent( QMouseEvent *event ) override;
     void mouseReleaseEvent( QMouseEvent *event ) override;
     void mouseMoveEvent( QMouseEvent *event ) override;
-    void onTouchedByRay( const Qt3DRender::QAbstractRayCaster::Hits &hits );
+    // void onTouchedByRay( const Qt3DRender::QAbstractRayCaster::Hits &hits );
 
   private:
     QString mType;
@@ -83,7 +83,7 @@ class Qgs3DMapToolCreatePrimitive : public Qgs3DMapTool
     QPoint mMouseClickPos;
     QPoint mMouseHoverPos;
     QgsPoint mFirstPointOnMap;
-    Qt3DRender::QPickingSettings::PickMethod mDefaultPickingMethod;
+    // Qt3DRender::QPickingSettings::PickMethod mDefaultPickingMethod;
 
     std::unique_ptr<Qt3DCore::QEntity> mPrimitiveLineEntity = nullptr;
 
@@ -91,14 +91,13 @@ class Qgs3DMapToolCreatePrimitive : public Qgs3DMapTool
     QgsFeatureId mHighlightedFeatureId = -1;
     QRecursiveMutex mHighlightedMutex;
 
-    std::unique_ptr<Qt3DRender::QScreenRayCaster> mScreenRayCaster = nullptr;
+    // std::unique_ptr<Qt3DRender::QScreenRayCaster> mScreenRayCaster = nullptr;
 
-    Qt3DCore::QEntity *mHighlightedEntity = nullptr;
-    Qt3DCore::QEntity *mHighlightedEntityChild = nullptr;
-    std::unique_ptr<Qt3DExtras::QPhongMaterial> mHighlightedMaterial = nullptr;
-    Qt3DRender::QMaterial *mPreviousHighlightedMaterial = nullptr;
+    // Qt3DCore::QEntity *mHighlightedEntity = nullptr;
+    // Qt3DCore::QEntity *mHighlightedEntityChild = nullptr;
+    // std::unique_ptr<Qt3DExtras::QPhongMaterial> mHighlightedMaterial = nullptr;
+    // Qt3DRender::QMaterial *mPreviousHighlightedMaterial = nullptr;
 
-    QgsPoint screenToMap( const QPoint &screenPos, QString *layerId = nullptr, QgsFeatureId *nearestFid = nullptr, QVector3D ( *facePoints )[3] = nullptr ) const;
     void updatePrimitive( const QgsPoint &mapPos, double length, double zRotation );
     void updateHighlighted( const QgsPoint &mapPos, const QPoint &screenPos, QgsMapLayer *layer, const QgsFeature &feat, const QVector3D ( &facePoints )[3] );
 

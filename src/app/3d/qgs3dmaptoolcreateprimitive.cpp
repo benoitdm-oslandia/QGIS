@@ -100,22 +100,22 @@ void Qgs3DMapToolCreatePrimitive::finish()
     mHighlightedPointEntity.reset();
   }
 
-  if ( mHighlightedEntity != nullptr )
-  {
-    mHighlightedEntity->removeComponent( mHighlightedMaterial.get() );
-    if ( mPreviousHighlightedMaterial != nullptr )
-      mHighlightedEntity->addComponent( mPreviousHighlightedMaterial );
-    mHighlightedMaterial.reset();
-  }
+  // if ( mScreenRayCaster != nullptr )
+  // {
+  //   if ( mHighlightedEntity != nullptr )
+  //   {
+  //     mHighlightedEntity->removeComponent( mHighlightedMaterial.get() );
+  //     if ( mPreviousHighlightedMaterial != nullptr )
+  //       mHighlightedEntity->addComponent( mPreviousHighlightedMaterial );
+  //     mHighlightedMaterial.reset();
+  //   }
 
-  if ( mScreenRayCaster != nullptr )
-  {
-    mScreenRayCaster->setEnabled( false );
-    //disconnect( mScreenRayCaster.get(), &Qt3DRender::QScreenRayCaster::hitsChanged, this, &Qgs3DMapToolCreatePrimitive::onTouchedByRay );
-    mCanvas->engine()->renderSettings()->pickingSettings()->setPickMethod( mDefaultPickingMethod );
-    mCanvas->engine()->root()->removeComponent( mScreenRayCaster.get() );
-    mScreenRayCaster.reset();
-  }
+  //   mScreenRayCaster->setEnabled( false );
+  //   //disconnect( mScreenRayCaster.get(), &Qt3DRender::QScreenRayCaster::hitsChanged, this, &Qgs3DMapToolCreatePrimitive::onTouchedByRay );
+  //   mCanvas->engine()->renderSettings()->pickingSettings()->setPickMethod( mDefaultPickingMethod );
+  //   mCanvas->engine()->root()->removeComponent( mScreenRayCaster.get() );
+  //   mScreenRayCaster.reset();
+  // }
 
   mRubberBand.reset();
   mDone = true;
@@ -142,29 +142,29 @@ void Qgs3DMapToolCreatePrimitive::restart()
   mRubberBand->setWidth( 3 );
   mRubberBand->setColor( QColor( myRed, myGreen, myBlue ) );
 
-  mDefaultPickingMethod = mCanvas->engine()->renderSettings()->pickingSettings()->pickMethod();
+  // mDefaultPickingMethod = mCanvas->engine()->renderSettings()->pickingSettings()->pickMethod();
 
-  // Create screencaster to be used by EventFilter:
-  //   1- Perform ray casting tests by specifying "touch" coordinates in screen space
-  //   2- connect screencaster results to onTouchedByRay
-  //   3- screencaster will be triggered by EventFilter
+  // // Create screencaster to be used by EventFilter:
+  // //   1- Perform ray casting tests by specifying "touch" coordinates in screen space
+  // //   2- connect screencaster results to onTouchedByRay
+  // //   3- screencaster will be triggered by EventFilter
 
-  //mScreenRayCaster.reset( new Qt3DRender::QScreenRayCaster( mCanvas->engine()->root() ) );
-  if ( mScreenRayCaster != nullptr )
-  {
-    mScreenRayCaster->addLayer( mCanvas->engine()->frameGraph()->forwardRenderView().renderLayer() );
-    mScreenRayCaster->setFilterMode( Qt3DRender::QScreenRayCaster::AcceptAllMatchingLayers );
-    mScreenRayCaster->setRunMode( Qt3DRender::QAbstractRayCaster::SingleShot );
+  // //mScreenRayCaster.reset( new Qt3DRender::QScreenRayCaster( mCanvas->engine()->root() ) );
+  // if ( mScreenRayCaster != nullptr )
+  // {
+  //   mScreenRayCaster->addLayer( mCanvas->engine()->frameGraph()->forwardRenderView().renderLayer() );
+  //   mScreenRayCaster->setFilterMode( Qt3DRender::QScreenRayCaster::AcceptAllMatchingLayers );
+  //   mScreenRayCaster->setRunMode( Qt3DRender::QAbstractRayCaster::SingleShot );
 
-    mCanvas->engine()->root()->addComponent( mScreenRayCaster.get() );
-    mCanvas->engine()->renderSettings()->pickingSettings()->setPickMethod( Qt3DRender::QPickingSettings::TrianglePicking );
-    mCanvas->engine()->renderSettings()->pickingSettings()->setPickResultMode( Qt3DRender::QPickingSettings::NearestPick );
-    mCanvas->engine()->renderSettings()->pickingSettings()->setWorldSpaceTolerance( 0.05 );
+  //   mCanvas->engine()->root()->addComponent( mScreenRayCaster.get() );
+  //   mCanvas->engine()->renderSettings()->pickingSettings()->setPickMethod( Qt3DRender::QPickingSettings::TrianglePicking );
+  //   mCanvas->engine()->renderSettings()->pickingSettings()->setPickResultMode( Qt3DRender::QPickingSettings::NearestPick );
+  //   mCanvas->engine()->renderSettings()->pickingSettings()->setWorldSpaceTolerance( 0.05 );
 
-    mHighlightedMaterial.reset( new Qt3DExtras::QPhongMaterial );
-    mHighlightedMaterial->setAmbient( Qt::blue );
-  }
-  else
+  //   mHighlightedMaterial.reset( new Qt3DExtras::QPhongMaterial );
+  //   mHighlightedMaterial->setAmbient( Qt::blue );
+  // }
+  // else
   {
     QMutexLocker locker( &mHighlightedMutex );
     mHighlightedPointEntity.reset( new Qt3DCore::QEntity( mCanvas->engine()->frameGraph()->rubberBandsRootEntity() ) );
@@ -174,126 +174,126 @@ void Qgs3DMapToolCreatePrimitive::restart()
   //connect( mScreenRayCaster.get(), &Qt3DRender::QScreenRayCaster::hitsChanged, this, &Qgs3DMapToolCreatePrimitive::onTouchedByRay );
 }
 
-void Qgs3DMapToolCreatePrimitive::onTouchedByRay( const Qt3DRender::QAbstractRayCaster::Hits &hits )
-{
-  mScreenRayCaster->setEnabled( false );
-  // int hitFoundIdx = -1;
-  if ( !hits.empty() )
-  {
-    if ( mHighlightedEntity != hits.at( 0 ).entity() )
-    {
-      qDebug() << "================================================";
-      std::ostringstream os;
-      os << "Qgs3DAxis::onTouchedByRay " << hits.length() << " hits at pos " << mMouseHoverPos << "\n";
-      for ( int i = 0; i < hits.length(); ++i )
-      {
-        Qt3DCore::QEntity *hitEntity = hits.at( i ).entity();
-        if ( hits.at( i ).distance() > 0 && hitEntity->isEnabled() )
-        {
-          os << "\tHit entity name: " << hitEntity->objectName().toStdString() << "\n";
+// void Qgs3DMapToolCreatePrimitive::onTouchedByRay( const Qt3DRender::QAbstractRayCaster::Hits &hits )
+// {
+//   mScreenRayCaster->setEnabled( false );
+//   // int hitFoundIdx = -1;
+//   if ( !hits.empty() )
+//   {
+//     if ( mHighlightedEntity != hits.at( 0 ).entity() )
+//     {
+//       qDebug() << "================================================";
+//       std::ostringstream os;
+//       os << "Qgs3DAxis::onTouchedByRay " << hits.length() << " hits at pos " << mMouseHoverPos << "\n";
+//       for ( int i = 0; i < hits.length(); ++i )
+//       {
+//         Qt3DCore::QEntity *hitEntity = hits.at( i ).entity();
+//         if ( hits.at( i ).distance() > 0 && hitEntity->isEnabled() )
+//         {
+//           os << "\tHit entity name: " << hitEntity->objectName().toStdString() << "\n";
 
-          while ( hitEntity != nullptr && hitEntity->objectName().isEmpty() )
-            hitEntity = hitEntity->parentEntity();
-          if ( hitEntity != nullptr && hitEntity != hits.at( i ).entity() )
-            os << "\t Hit parent entity name: " << hitEntity->objectName().toStdString() << "\n";
-          else
-            os << "\t Hit parent entity name: " << "<None>" << "\n";
+//           while ( hitEntity != nullptr && hitEntity->objectName().isEmpty() )
+//             hitEntity = hitEntity->parentEntity();
+//           if ( hitEntity != nullptr && hitEntity != hits.at( i ).entity() )
+//             os << "\t Hit parent entity name: " << hitEntity->objectName().toStdString() << "\n";
+//           else
+//             os << "\t Hit parent entity name: " << "<None>" << "\n";
 
-          // os << "\t Hit Type: " << hits.at( i ).type() << "\n";
-          // os << "\t Hit triangle id: " << hits.at( i ).primitiveIndex() << "\n";
-          os << "\t Hit distance: " << hits.at( i ).distance() << "\n";
-        }
-      }
-      qDebug() << os.str().c_str();
+//           // os << "\t Hit Type: " << hits.at( i ).type() << "\n";
+//           // os << "\t Hit triangle id: " << hits.at( i ).primitiveIndex() << "\n";
+//           os << "\t Hit distance: " << hits.at( i ).distance() << "\n";
+//         }
+//       }
+//       qDebug() << os.str().c_str();
 
 
-      // remove old HL
-      if ( mPreviousHighlightedMaterial != nullptr )
-      {
-        qDebug() << "Removing HL mat from previous entity: " << mHighlightedEntityChild->objectName();
-        mHighlightedEntityChild->removeComponent( mHighlightedMaterial.get() );
-        mHighlightedEntityChild->addComponent( mPreviousHighlightedMaterial );
-      }
+//       // remove old HL
+//       if ( mPreviousHighlightedMaterial != nullptr )
+//       {
+//         qDebug() << "Removing HL mat from previous entity: " << mHighlightedEntityChild->objectName();
+//         mHighlightedEntityChild->removeComponent( mHighlightedMaterial.get() );
+//         mHighlightedEntityChild->addComponent( mPreviousHighlightedMaterial );
+//       }
 
-      mHighlightedEntity = hits.at( 0 ).entity();
-      Qt3DCore::QEntity *hitEntity = mHighlightedEntity;
-      if ( hitEntity->objectName().isEmpty() )
-      {
-        while ( hitEntity != nullptr && hitEntity->objectName().isEmpty() )
-          hitEntity = hitEntity->parentEntity();
-        qDebug() << "Parent entity is: " << hitEntity->objectName();
-      }
-      else
-      {
-        qDebug() << "Main entity is: " << hitEntity->objectName();
-      }
+//       mHighlightedEntity = hits.at( 0 ).entity();
+//       Qt3DCore::QEntity *hitEntity = mHighlightedEntity;
+//       if ( hitEntity->objectName().isEmpty() )
+//       {
+//         while ( hitEntity != nullptr && hitEntity->objectName().isEmpty() )
+//           hitEntity = hitEntity->parentEntity();
+//         qDebug() << "Parent entity is: " << hitEntity->objectName();
+//       }
+//       else
+//       {
+//         qDebug() << "Main entity is: " << hitEntity->objectName();
+//       }
 
-      // ===================== search all MAT
-      for ( auto comp : hitEntity->components() )
-      {
-        if ( Qt3DRender::QMaterial *mat = dynamic_cast<Qt3DRender::QMaterial *>( comp ) )
-        {
-          qDebug() << "searching for mat from top '" << hitEntity->objectName() << "': " << mat;
-        }
-        // search for mat in entity children
-        for ( auto child : hitEntity->findChildren<Qt3DCore::QEntity *>() )
-        {
-          for ( auto comp : child->components() )
-          {
-            if ( Qt3DRender::QMaterial *mat = dynamic_cast<Qt3DRender::QMaterial *>( comp ) )
-            {
-              qDebug() << "In sub entity '" << child->objectName() << "', found mat: " << mat;
-            }
-          }
-        }
-      }
+//       // ===================== search all MAT
+//       for ( auto comp : hitEntity->components() )
+//       {
+//         if ( Qt3DRender::QMaterial *mat = dynamic_cast<Qt3DRender::QMaterial *>( comp ) )
+//         {
+//           qDebug() << "searching for mat from top '" << hitEntity->objectName() << "': " << mat;
+//         }
+//         // search for mat in entity children
+//         for ( auto child : hitEntity->findChildren<Qt3DCore::QEntity *>() )
+//         {
+//           for ( auto comp : child->components() )
+//           {
+//             if ( Qt3DRender::QMaterial *mat = dynamic_cast<Qt3DRender::QMaterial *>( comp ) )
+//             {
+//               qDebug() << "In sub entity '" << child->objectName() << "', found mat: " << mat;
+//             }
+//           }
+//         }
+//       }
 
-      // search for mat in entity
-      for ( auto comp : hitEntity->components() )
-      {
-        if ( Qt3DRender::QMaterial *mat = dynamic_cast<Qt3DRender::QMaterial *>( comp ) )
-        {
-          mPreviousHighlightedMaterial = mat;
-          mHighlightedEntityChild = hitEntity;
-          qDebug() << "In main entity, found mat: " << mat;
-          break;
-        }
-      }
-      if ( mPreviousHighlightedMaterial == nullptr )
-      {
-        // search for mat in entity children
-        for ( auto child : hitEntity->findChildren<Qt3DCore::QEntity *>() )
-        {
-          for ( auto comp : child->components() )
-          {
-            if ( Qt3DRender::QMaterial *mat = dynamic_cast<Qt3DRender::QMaterial *>( comp ) )
-            {
-              mPreviousHighlightedMaterial = mat;
-              mHighlightedEntityChild = child;
-              qDebug() << "In sub entity, found mat: " << mat;
-              break;
-            }
-          }
-          if ( mPreviousHighlightedMaterial != nullptr )
-            break;
-        }
-      }
+//       // search for mat in entity
+//       for ( auto comp : hitEntity->components() )
+//       {
+//         if ( Qt3DRender::QMaterial *mat = dynamic_cast<Qt3DRender::QMaterial *>( comp ) )
+//         {
+//           mPreviousHighlightedMaterial = mat;
+//           mHighlightedEntityChild = hitEntity;
+//           qDebug() << "In main entity, found mat: " << mat;
+//           break;
+//         }
+//       }
+//       if ( mPreviousHighlightedMaterial == nullptr )
+//       {
+//         // search for mat in entity children
+//         for ( auto child : hitEntity->findChildren<Qt3DCore::QEntity *>() )
+//         {
+//           for ( auto comp : child->components() )
+//           {
+//             if ( Qt3DRender::QMaterial *mat = dynamic_cast<Qt3DRender::QMaterial *>( comp ) )
+//             {
+//               mPreviousHighlightedMaterial = mat;
+//               mHighlightedEntityChild = child;
+//               qDebug() << "In sub entity, found mat: " << mat;
+//               break;
+//             }
+//           }
+//           if ( mPreviousHighlightedMaterial != nullptr )
+//             break;
+//         }
+//       }
 
-      if ( mPreviousHighlightedMaterial == nullptr )
-      {
-        qDebug() << "Found NO mat in entity: " << mHighlightedEntity->objectName();
-      }
-      else
-      {
-        mHighlightedEntityChild->removeComponent( mPreviousHighlightedMaterial );
+//       if ( mPreviousHighlightedMaterial == nullptr )
+//       {
+//         qDebug() << "Found NO mat in entity: " << mHighlightedEntity->objectName();
+//       }
+//       else
+//       {
+//         mHighlightedEntityChild->removeComponent( mPreviousHighlightedMaterial );
 
-        mHighlightedMaterial.reset( new Qt3DExtras::QPhongMaterial );
-        mHighlightedMaterial->setAmbient( Qt::blue );
-        mHighlightedEntityChild->addComponent( mHighlightedMaterial.get() );
-      }
-    }
-  }
-}
+//         mHighlightedMaterial.reset( new Qt3DExtras::QPhongMaterial );
+//         mHighlightedMaterial->setAmbient( Qt::blue );
+//         mHighlightedEntityChild->addComponent( mHighlightedMaterial.get() );
+//       }
+//     }
+//   }
+// }
 
 QgsPoint Qgs3DMapToolCreatePrimitive::screenToMap( const QPoint &screenPos, QString *layerId, QgsFeatureId *nearestFid, QVector3D ( *facePoints )[3] ) const
 {
@@ -597,12 +597,12 @@ void Qgs3DMapToolCreatePrimitive::mouseMoveEvent( QMouseEvent *event )
   QgsPoint rbPoint( pointMap );
   rbPoint.setZ( rbPoint.z() / mCanvas->mapSettings()->terrainSettings()->verticalScale() );
 
-  if ( mScreenRayCaster.get() != nullptr )
-  {
-    mScreenRayCaster->setEnabled( true );
-    onTouchedByRay( mScreenRayCaster->pick( mMouseHoverPos ) );
-  }
-  else
+  // if ( mScreenRayCaster.get() != nullptr )
+  // {
+  //   mScreenRayCaster->setEnabled( true );
+  //   onTouchedByRay( mScreenRayCaster->pick( mMouseHoverPos ) );
+  // }
+  // else
   {
     if ( mHighlightedFeatureId != nearestFid && nearestFid < std::numeric_limits<int>::max() )
       qDebug() << "HL changed layerId:" << layerId << "/ nearestFid:" << nearestFid;
