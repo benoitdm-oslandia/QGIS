@@ -17,6 +17,7 @@
 #define QGS3DMAPCANVASWIDGET_H
 
 #include "qgis_app.h"
+#include "qgs3dsnappingmanager.h"
 #include "qgscamerapose.h"
 #include "qgsrectangle.h"
 #include "qobjectuniqueptr.h"
@@ -209,6 +210,11 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     Qgs3DDebugWidget *mDebugWidget = nullptr;
 
     QToolBar *mEditingToolBar = nullptr;
+
+    // snapping toolbar
+    std::unique_ptr<Qgs3DSnappingManager> mSnapper = nullptr;
+    QToolBar *mSnappingToolBar = nullptr;
+    QAction *mSnappingAction = nullptr;
 
     QMenu *mToolbarMenu = nullptr;
 };

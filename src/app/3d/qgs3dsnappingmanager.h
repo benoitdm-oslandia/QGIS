@@ -5,6 +5,7 @@
 #include "qgsfeatureid.h"
 
 #include <QRecursiveMutex>
+#include <Qt3DCore/QEntity>
 
 class Qgs3DMapCanvasWidget;
 class Qgs3DMapCanvas;
@@ -13,7 +14,6 @@ class QgsFeature;
 
 namespace Qt3DCore
 {
-  class QEntity;
   class QNode;
 } //namespace Qt3DCore
 

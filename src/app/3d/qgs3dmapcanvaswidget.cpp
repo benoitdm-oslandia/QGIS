@@ -81,6 +81,8 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
   zoomFullAction->setShortcut( QKeySequence( tr( "Ctrl+0" ) ) );
 
   // Editing toolbar
+  mSnapper = std::make_unique<Qgs3DSnappingManager>( this );
+
   mEditingToolBar = new QToolBar( this );
   mEditingToolBar->setWindowTitle( tr( "Editing Toolbar" ) );
   //  mEditingToolsMenu = new QMenu( this );
@@ -319,6 +321,49 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
   connect( configureAction, &QAction::triggered, this, &Qgs3DMapCanvasWidget::configure );
   toolBar->addAction( configureAction );
 
+  // Snapping toolbar
+  mSnappingToolBar = new QToolBar( this );
+  mSnappingToolBar->setWindowTitle( tr( "Snapping Toolbar" ) );
+  mSnappingToolBar->setVisible( setting.value( QStringLiteral( "/3D/snappingToolbar/visibility" ), false, QgsSettings::Gui ).toBool() );
+  connect( mSnappingToolBar, &QToolBar::visibilityChanged, this, [this]() {
+    QgsSettings setting;
+    setting.setValue( QStringLiteral( "/3D/snappingToolbar/visibility" ), mSnappingToolBar->isVisible(), QgsSettings::Gui );
+  } );
+
+  mSnappingAction = new QAction( QgsApplication::getThemeIcon( QStringLiteral( "mIconSnapping.svg" ) ), tr( "Snapping" ), this );
+
+  QMenu *snappingMenu = new QMenu( this );
+  mSnappingAction->setMenu( snappingMenu );
+  mSnappingToolBar->addAction( mSnappingAction );
+  mSnappingToolBar->addSeparator();
+
+  QToolButton *snappingButton = qobject_cast<QToolButton *>( mSnappingToolBar->widgetForAction( mSnappingAction ) );
+  snappingButton->setPopupMode( QToolButton::ToolButtonPopupMode::InstantPopup );
+
+  snappingMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DSnappingDisabled.svg" ) ) ), tr( "Disable snapping" ), this, [this]() {
+    const QAction *action = qobject_cast<QAction *>( sender() );
+    mSnappingAction->setIcon( action->icon() );
+    mSnapper->setSnappingMode( Qgs3DSnappingManager::Off );
+  } );
+
+  snappingMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DSnappingVertex.svg" ) ) ), tr( "Snap on vertex" ), this, [this]() {
+    const QAction *action = qobject_cast<QAction *>( sender() );
+    mSnappingAction->setIcon( action->icon() );
+    mSnapper->setSnappingMode( Qgs3DSnappingManager::Vertex );
+  } );
+
+  snappingMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DSnappingMidEdge.svg" ) ) ), tr( "Snap on mid edge" ), this, [this]() {
+    const QAction *action = qobject_cast<QAction *>( sender() );
+    mSnappingAction->setIcon( action->icon() );
+    mSnapper->setSnappingMode( Qgs3DSnappingManager::MiddleEdge );
+  } );
+
+  snappingMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DSnappingCenterFace.svg" ) ) ), tr( "Snap on face center" ), this, [this]() {
+    const QAction *action = qobject_cast<QAction *>( sender() );
+    mSnappingAction->setIcon( action->icon() );
+    mSnapper->setSnappingMode( Qgs3DSnappingManager::CenterFace );
+  } );
+
   mCanvas = new Qgs3DMapCanvas;
   mCanvas->setMinimumSize( QSize( 200, 200 ) );
 
@@ -378,6 +423,7 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
   layout->setSpacing( 0 );
   layout->addLayout( topLayout );
   layout->addWidget( mEditingToolBar );
+  layout->addWidget( mSnappingToolBar );
   layout->addWidget( mMessageBar );
 
   // mContainer takes ownership of Qgs3DMapCanvas
@@ -431,7 +477,7 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
 
   QList<QAction *> toolbarMenuActions;
   // Set action names so that they can be used in customization
-  for ( QToolBar *toolBar : { mEditingToolBar } )
+  for ( QToolBar *toolBar : { mEditingToolBar, mSnappingToolBar } )
   {
     toolBar->toggleViewAction()->setObjectName( "mActionToggle" + toolBar->objectName().mid( 1 ) );
     toolbarMenuActions << toolBar->toggleViewAction();
@@ -446,6 +492,7 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
 
   toolBar->installEventFilter( this );
   mEditingToolBar->installEventFilter( this );
+  mSnappingToolBar->installEventFilter( this );
 }
 
 Qgs3DMapCanvasWidget::~Qgs3DMapCanvasWidget()
