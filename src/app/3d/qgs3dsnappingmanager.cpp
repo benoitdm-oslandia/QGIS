@@ -33,7 +33,9 @@
 #include <Qt3DExtras/QCylinderMesh>
 
 Qgs3DSnappingManager::Qgs3DSnappingManager( Qgs3DMapCanvasWidget *parentWidget, float tolerance )
-  : mMode( Qgs3DSnappingManager::Off ), mParentWidget( parentWidget ), mTolerance( tolerance )
+  : mMode( SnappingMode::Off )
+  , mParentWidget( parentWidget )
+  , mTolerance( tolerance )
 {
 }
 
@@ -197,40 +199,47 @@ QVector3D Qgs3DSnappingManager::screenToWorld( const QPoint &screenPos, bool *su
 
   QVector3D worldPoint = Qgs3DUtils::mapToWorldCoordinates( mapCoords, mCanvas->mapSettings()->origin() ).toVector3D();
   QVector3D outPoint = worldPoint;
+  float minSnapDistance = static_cast<float>( mTolerance );
 
-  if ( mMode == Qgs3DSnappingManager::Vertex )
+  if ( mMode & SnappingMode::Vertex )
   {
     const QVector3D snapPoint = ( *facePoints )[0];
-    if ( ( snapPoint - worldPoint ).length() < mTolerance )
+    const float snapDistance = ( snapPoint - worldPoint ).length();
+    if ( snapDistance < minSnapDistance )
     {
       if ( snapFound )
       {
         *snapFound = true;
       }
+      minSnapDistance = snapDistance;
       outPoint = snapPoint;
     }
   }
-  if ( mMode == Qgs3DSnappingManager::MiddleEdge )
+  if ( mMode & SnappingMode::MiddleEdge )
   {
     const QVector3D snapPoint = ( ( *facePoints )[0] + ( *facePoints )[1] ) / 2.0;
-    if ( ( snapPoint - worldPoint ).length() < mTolerance )
+    const float snapDistance = ( snapPoint - worldPoint ).length();
+    if ( snapDistance < minSnapDistance )
     {
       if ( snapFound )
       {
         *snapFound = true;
       }
+      minSnapDistance = snapDistance;
       outPoint = snapPoint;
     }
   }
-  if ( mMode == Qgs3DSnappingManager::CenterFace )
+  if ( static_cast<int>( mMode & Qgs3DSnappingManager::SnappingMode::CenterFace ) != 0 )
   {
     const QVector3D snapPoint = ( ( *facePoints )[0] + ( *facePoints )[1] + ( *facePoints )[2] ) / 3.0;
-    if ( ( snapPoint - worldPoint ).length() < mTolerance )
+    const float snapDistance = ( snapPoint - worldPoint ).length();
+    if ( snapDistance < minSnapDistance )
     {
       if ( snapFound )
       {
         *snapFound = true;
       }
+      minSnapDistance = snapDistance;
       outPoint = snapPoint;
     }
   }
@@ -314,7 +323,7 @@ void Qgs3DSnappingManager::updateHighlighted( QgsMapLayer *layer, const QgsFeatu
     }
   } // end if feature id changed
 
-  if ( mMode != Qgs3DSnappingManager::Off )
+  if ( mMode != SnappingMode::Off )
   {
     if ( highlightedPoint.isNull() )
     {

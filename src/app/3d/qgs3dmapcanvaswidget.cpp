@@ -1299,7 +1299,7 @@ void Qgs3DMapCanvasWidget::createSnappingToolBar( const QgsSettings &setting )
   snappingToleranceSpinBox->setMaximum( 99999999.990000 );
   snappingToleranceSpinBox->setToolTip( tr( "Snapping Tolerance" ) );
   snappingToleranceSpinBox->setValue( mSnapper->tolerance() );
-  snappingToleranceSpinBox->setEnabled( mSnapper->snappingMode() != Qgs3DSnappingManager::SnappingMode::Off );
+  snappingToleranceSpinBox->setEnabled( true );
 
   connect( snappingToleranceSpinBox, qOverload<double>( &QgsDoubleSpinBox::valueChanged ), this, [this, snappingToleranceSpinBox]() {
     mSnapper->setTolerance( snappingToleranceSpinBox->value() );
@@ -1312,40 +1312,47 @@ void Qgs3DMapCanvasWidget::createSnappingToolBar( const QgsSettings &setting )
   mSnappingToolBar->addAction( mSnappingAction );
 
   QToolButton *snappingButton = qobject_cast<QToolButton *>( mSnappingToolBar->widgetForAction( mSnappingAction ) );
+  snappingButton->setToolTip( tr( "Snapping Type" ) );
   snappingButton->setPopupMode( QToolButton::ToolButtonPopupMode::InstantPopup );
 
-  snappingMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DSnappingDisabled.svg" ) ) ), tr( "Disable snapping" ), this, [this, snappingToleranceSpinBox]() {
-    const QAction *action = qobject_cast<QAction *>( sender() );
-    mSnappingAction->setIcon( action->icon() );
-    mSnapper->setSnappingMode( Qgs3DSnappingManager::Off );
-    snappingToleranceSpinBox->setEnabled( false );
-  } );
+  QAction *snappingVertexAction = new QAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DSnappingVertex.svg" ) ) ), tr( "Snap on vertex" ) );
+  snappingVertexAction->setData( QVariant::fromValue( Qgs3DSnappingManager::SnappingMode::Vertex ) );
+  snappingVertexAction->setCheckable( true );
+  snappingMenu->addAction( snappingVertexAction );
 
-  snappingMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DSnappingVertex.svg" ) ) ), tr( "Snap on vertex" ), this, [this, snappingToleranceSpinBox]() {
-    const QAction *action = qobject_cast<QAction *>( sender() );
-    mSnappingAction->setIcon( action->icon() );
-    mSnapper->setSnappingMode( Qgs3DSnappingManager::Vertex );
-    snappingToleranceSpinBox->setEnabled( true );
-  } );
+  QAction *snappingMidEdgeAction = new QAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DSnappingMidEdge.svg" ) ) ), tr( "Snap on mid edge" ) );
+  snappingMidEdgeAction->setData( QVariant::fromValue( Qgs3DSnappingManager::SnappingMode::MiddleEdge ) );
+  snappingMidEdgeAction->setCheckable( true );
+  snappingMenu->addAction( snappingMidEdgeAction );
 
-  snappingMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DSnappingMidEdge.svg" ) ) ), tr( "Snap on mid edge" ), this, [this, snappingToleranceSpinBox]() {
-    const QAction *action = qobject_cast<QAction *>( sender() );
-    mSnappingAction->setIcon( action->icon() );
-    mSnapper->setSnappingMode( Qgs3DSnappingManager::MiddleEdge );
-    snappingToleranceSpinBox->setEnabled( true );
-  } );
+  QAction *snappingCenterFaceAction = new QAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DSnappingCenterFace.svg" ) ) ), tr( "Snap on face center" ) );
+  snappingCenterFaceAction->setData( QVariant::fromValue( Qgs3DSnappingManager::SnappingMode::CenterFace ) );
+  snappingCenterFaceAction->setCheckable( true );
+  snappingMenu->addAction( snappingCenterFaceAction );
 
-  snappingMenu->addAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DSnappingCenterFace.svg" ) ) ), tr( "Snap on face center" ), this, [this, snappingToleranceSpinBox]() {
-    const QAction *action = qobject_cast<QAction *>( sender() );
-    mSnappingAction->setIcon( action->icon() );
-    mSnapper->setSnappingMode( Qgs3DSnappingManager::CenterFace );
-    snappingToleranceSpinBox->setEnabled( true );
-  } );
+  mSnappingAction->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "mIcon3DSnappingDisabled.svg" ) ) );
+  connect( snappingButton, &QToolButton::triggered, this, &Qgs3DMapCanvasWidget::onSnappingButtonTriggered );
 
   mSnappingToolBar->addWidget( snappingToleranceSpinBox );
   mSnappingToolBar->addSeparator();
 }
 
+void Qgs3DMapCanvasWidget::onSnappingButtonTriggered( QAction *action )
+{
+  unsigned int newSnappingMode = static_cast<int>( mSnapper->snappingMode() );
+  const Qgs3DSnappingManager::SnappingMode actionFlag = static_cast<Qgs3DSnappingManager::SnappingMode>( action->data().toInt() );
+  newSnappingMode ^= actionFlag;
+
+  mSnapper->setSnappingMode( static_cast<Qgs3DSnappingManager::SnappingMode>( newSnappingMode ) );
+  if ( mSnapper->snappingMode() == Qgs3DSnappingManager::SnappingMode::Off )
+  {
+    mSnappingAction->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "mIcon3DSnappingDisabled.svg" ) ) );
+  }
+  else
+  {
+    mSnappingAction->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "mIconSnapping.svg" ) ) );
+  }
+}
 
 ClassValidator::ClassValidator( QWidget *parent )
   : QValidator( parent )

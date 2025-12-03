@@ -22,10 +22,10 @@ class Qgs3DSnappingManager
   public:
     enum SnappingMode
     {
-      Off,
-      Vertex,
-      MiddleEdge,
-      CenterFace,
+      Off = 1 << 0,
+      Vertex = 1 << 1,
+      MiddleEdge = 1 << 2,
+      CenterFace = 1 << 3,
     };
 
     Qgs3DSnappingManager( Qgs3DMapCanvasWidget *parentWidget, float tolerance );
@@ -53,7 +53,7 @@ class Qgs3DSnappingManager
     void updateHighlighted( QgsMapLayer *layer, const QgsFeature &feat, const QVector3D &highlightedPoint );
 
   private:
-    SnappingMode mMode;
+    SnappingMode mMode = SnappingMode::Off;
     Qgs3DMapCanvasWidget *mParentWidget;
     Qgs3DMapCanvas *mCanvas;
     double mTolerance = 0.0;

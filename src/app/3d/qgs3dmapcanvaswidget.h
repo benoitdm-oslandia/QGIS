@@ -144,6 +144,8 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
 
     void onCrossSectionToolFinished();
 
+    void onSnappingButtonTriggered( QAction *action );
+
   private:
     void updateCheckedActionsFromMapSettings( const Qgs3DMapSettings *mapSettings ) const;
 
