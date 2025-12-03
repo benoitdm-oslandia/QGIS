@@ -378,13 +378,13 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
     mLabelNavSpeedHideTimeout->stop();
   } );
 
-  QVBoxLayout *layout = new QVBoxLayout;
-  layout->setContentsMargins( 0, 0, 0, 0 );
-  layout->setSpacing( 0 );
-  layout->addLayout( topLayout );
-  layout->addWidget( mEditingToolBar );
-  layout->addWidget( mSnappingToolBar );
-  layout->addWidget( mMessageBar );
+  QVBoxLayout *mainLayout = new QVBoxLayout;
+  mainLayout->setContentsMargins( 0, 0, 0, 0 );
+  mainLayout->setSpacing( 0 );
+  mainLayout->addLayout( topLayout );
+  mainLayout->addWidget( mEditingToolBar );
+  mainLayout->addWidget( mSnappingToolBar );
+  mainLayout->addWidget( mMessageBar );
 
   // mContainer takes ownership of Qgs3DMapCanvas
   mContainer = QWidget::createWindowContainer( mCanvas );
@@ -408,10 +408,10 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
     setting.value( QStringLiteral( "/3D/navigationWidget/visibility" ), false, QgsSettings::Gui ).toBool()
   );
 
-  layout->addLayout( hLayout );
-  layout->addWidget( mAnimationWidget );
+  mainLayout->addLayout( hLayout );
+  mainLayout->addWidget( mAnimationWidget );
 
-  setLayout( layout );
+  setLayout( mainLayout );
 
   onTotalPendingJobsCountChanged();
 
