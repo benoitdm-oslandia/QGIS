@@ -98,6 +98,7 @@ QgsPoint Qgs3DSnappingManager::screenToMap( const QPoint &screenPos, bool *ok )
       if ( featureLayer && layer->id() == layerId )
       {
         QgsFeatureRequest req( nearestFid );
+        req.setCoordinateTransform( QgsCoordinateTransform( layer->crs3D(), mCanvas->mapSettings()->crs(), mCanvas->mapSettings()->transformContext() ) );
         QgsFeatureIterator ite = featureLayer->getFeatures( req );
         QgsFeature feat;
         if ( ite.nextFeature( feat ) )
