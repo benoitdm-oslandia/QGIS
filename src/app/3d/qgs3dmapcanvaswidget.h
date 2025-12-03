@@ -51,6 +51,7 @@ class QgsDockableWidgetHelper;
 class QgsMessageBar;
 class QgsRubberBand;
 class QgsDoubleSpinBox;
+class QgsSettings;
 
 class Qgs3DPointCloudEditionToolBar;
 class Qgs3DPrimitiveEditionToolBar;
@@ -147,6 +148,7 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     void updateCheckedActionsFromMapSettings( const Qgs3DMapSettings *mapSettings ) const;
 
     void updateEditionToolBar();
+    void createSnappingToolBar( const QgsSettings &setting );
 
     // TODO fixed version:
     QList<QgsMapLayer *> editableLayers() const;
