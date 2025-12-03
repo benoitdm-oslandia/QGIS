@@ -71,7 +71,7 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
   mToolbarMenu = new QMenu( tr( "Toolbars" ), this );
   mToolbarMenu->setObjectName( QStringLiteral( "mToolbarMenu" ) );
 
-  QToolBar *toolBar = new QToolBar( this );
+  QToolBar *toolBar = new QToolBar( QStringLiteral( "Main 3D toolbar" ), this );
   toolBar->setIconSize( QgisApp::instance()->iconSize( isDocked ) );
 
   QAction *actionCameraControl = toolBar->addAction( QIcon( QgsApplication::iconPath( "mActionPan.svg" ) ), tr( "Camera Control" ), this, &Qgs3DMapCanvasWidget::cameraControl );
@@ -382,8 +382,11 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
   mainLayout->setContentsMargins( 0, 0, 0, 0 );
   mainLayout->setSpacing( 0 );
   mainLayout->addLayout( topLayout );
-  mainLayout->addWidget( mEditingToolBar );
-  mainLayout->addWidget( mSnappingToolBar );
+
+  QHBoxLayout *toolbarLayout = new QHBoxLayout;
+  toolbarLayout->setContentsMargins( 0, 0, 0, 0 );
+  mainLayout->addLayout( toolbarLayout );
+
   mainLayout->addWidget( mMessageBar );
 
   // mContainer takes ownership of Qgs3DMapCanvas
@@ -441,6 +444,8 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
   {
     toolBar->toggleViewAction()->setObjectName( "mActionToggle" + toolBar->objectName().mid( 1 ) );
     toolbarMenuActions << toolBar->toggleViewAction();
+    toolBar->setMovable( true );
+    toolbarLayout->addWidget( toolBar );
   }
 
   // sort actions in toolbar menu
