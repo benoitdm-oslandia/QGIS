@@ -71,7 +71,7 @@ void Qgs3DSnappingManager::setSnappingMode( SnappingMode mode )
   mMode = mode;
 }
 
-void Qgs3DSnappingManager::setTolerance( float tolerance )
+void Qgs3DSnappingManager::setTolerance( double tolerance )
 {
   mTolerance = tolerance;
 }
