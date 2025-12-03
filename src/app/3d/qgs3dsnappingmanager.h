@@ -46,10 +46,11 @@ class Qgs3DSnappingManager
 
     QgsPoint screenToMap( const QPoint &screenPos, bool *ok = nullptr );
 
-    void updateHighlighted( QgsMapLayer *layer, const QgsFeature &feat, const QVector3D &highlightedPoint );
-
-    void clearHighlightedPointEntity();
     bool setEnableOnNode( Qt3DCore::QNode *currEnt, const QString &name, bool enabled );
+
+  private:
+    void clearHighlightedPointEntity();
+    void updateHighlighted( QgsMapLayer *layer, const QgsFeature &feat, const QVector3D &highlightedPoint );
 
   private:
     SnappingMode mMode;
