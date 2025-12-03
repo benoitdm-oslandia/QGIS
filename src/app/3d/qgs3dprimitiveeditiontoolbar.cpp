@@ -31,7 +31,7 @@ Qgs3DPrimitiveEditionToolBar::Qgs3DPrimitiveEditionToolBar( Qgs3DMapCanvasWidget
 {
   addWidget( new QLabel( tr( "PRIMITIVE" ) ) );
 
-  mSnapper.reset( new Qgs3DSnappingManager( mParentWidget ) );
+  mSnapper.reset( new Qgs3DSnappingManager( mParentWidget, 5.0f ) );
 
   mSnappingAction = new QAction( QgsApplication::getThemeIcon( QStringLiteral( "mIconSnapping.svg" ) ), tr( "Snapping" ), this );
 

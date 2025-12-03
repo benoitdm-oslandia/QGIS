@@ -28,7 +28,7 @@ class Qgs3DSnappingManager
       CenterFace,
     };
 
-    Qgs3DSnappingManager( Qgs3DMapCanvasWidget *parentWidget );
+    Qgs3DSnappingManager( Qgs3DMapCanvasWidget *parentWidget, float tolerance );
     virtual ~Qgs3DSnappingManager();
 
     void restart();
@@ -36,7 +36,13 @@ class Qgs3DSnappingManager
 
     void setSnappingMode( SnappingMode mode );
 
-    QVector3D screenToWorld( const QPoint &screenPos, bool *ok = nullptr, QString *layerId = nullptr, QgsFeatureId *nearestFid = nullptr, QVector3D ( *facePoints )[3] = nullptr ) const;
+    SnappingMode snappingMode() { return mMode; }
+
+    void setTolerance( double tolerance );
+
+    double tolerance() const { return mTolerance; }
+
+    QVector3D screenToWorld( const QPoint &screenPos, bool *success = nullptr, bool *snapFound = nullptr, QString *layerId = nullptr, QgsFeatureId *nearestFid = nullptr, QVector3D ( *facePoints )[3] = nullptr ) const;
 
     QgsPoint screenToMap( const QPoint &screenPos, bool *ok = nullptr );
 
@@ -49,6 +55,7 @@ class Qgs3DSnappingManager
     SnappingMode mMode;
     Qgs3DMapCanvasWidget *mParentWidget;
     Qgs3DMapCanvas *mCanvas;
+    double mTolerance = 0.0;
 
     std::unique_ptr<Qt3DCore::QEntity> mHighlightedPointEntity = nullptr;
     QgsFeatureId mHighlightedFeatureId = -1;

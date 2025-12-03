@@ -81,7 +81,7 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
   zoomFullAction->setShortcut( QKeySequence( tr( "Ctrl+0" ) ) );
 
   // Editing toolbar
-  mSnapper = std::make_unique<Qgs3DSnappingManager>( this );
+  mSnapper = std::make_unique<Qgs3DSnappingManager>( this, 5.0f );
 
   mEditingToolBar = new QToolBar( this );
   mEditingToolBar->setWindowTitle( tr( "Editing Toolbar" ) );

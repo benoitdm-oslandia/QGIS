@@ -32,8 +32,8 @@
 #include <Qt3DExtras/QSphereMesh>
 #include <Qt3DExtras/QCylinderMesh>
 
-Qgs3DSnappingManager::Qgs3DSnappingManager( Qgs3DMapCanvasWidget *parentWidget )
-  : mMode( Qgs3DSnappingManager::Off ), mParentWidget( parentWidget )
+Qgs3DSnappingManager::Qgs3DSnappingManager( Qgs3DMapCanvasWidget *parentWidget, float tolerance )
+  : mMode( Qgs3DSnappingManager::Off ), mParentWidget( parentWidget ), mTolerance( tolerance )
 {
 }
 
@@ -71,6 +71,11 @@ void Qgs3DSnappingManager::setSnappingMode( SnappingMode mode )
   mMode = mode;
 }
 
+void Qgs3DSnappingManager::setTolerance( float tolerance )
+{
+  mTolerance = tolerance;
+}
+
 QgsPoint Qgs3DSnappingManager::screenToMap( const QPoint &screenPos, bool *ok )
 {
   QString layerId;
@@ -78,11 +83,17 @@ QgsPoint Qgs3DSnappingManager::screenToMap( const QPoint &screenPos, bool *ok )
   QVector3D facePoints[3];
 
   bool okWorld;
-  QVector3D worldPoint = screenToWorld( screenPos, &okWorld, &layerId, &nearestFid, &facePoints );
+  bool snapFound;
+  QVector3D worldPoint = screenToWorld( screenPos, &okWorld, &snapFound, &layerId, &nearestFid, &facePoints );
+  // qDebug() << "Screen to world: success" << okWorld << "/ snapFound:" << snapFound << "/ layerId" << layerId << "/ nearestFid" << nearestFid;
   if ( ok )
+  {
     *ok = okWorld;
+  }
   if ( !okWorld )
   {
+    // Unable to compute position
+    qDebug() << "Unable to compute position";
     clearHighlightedPointEntity();
     return QgsPoint();
   }
@@ -91,6 +102,8 @@ QgsPoint Qgs3DSnappingManager::screenToMap( const QPoint &screenPos, bool *ok )
     qDebug() << "HL changed layerId:" << layerId << "/ nearestFid:" << nearestFid;
   if ( !layerId.isEmpty() && nearestFid > 0 && nearestFid < std::numeric_limits<int>::max() )
   {
+    // Inside a feature
+    // Highlight the feature and display a sphere if a snapPoint was found
     const QList<QgsMapLayer *> layers = mCanvas->scene()->layers();
     for ( QgsMapLayer *layer : layers )
     {
@@ -103,7 +116,8 @@ QgsPoint Qgs3DSnappingManager::screenToMap( const QPoint &screenPos, bool *ok )
         QgsFeature feat;
         if ( ite.nextFeature( feat ) )
         {
-          updateHighlighted( layer, feat, worldPoint );
+          const QVector3D highlightPoint = snapFound ? worldPoint : QVector3D();
+          updateHighlighted( layer, feat, highlightPoint );
         }
         break;
       }
@@ -111,6 +125,9 @@ QgsPoint Qgs3DSnappingManager::screenToMap( const QPoint &screenPos, bool *ok )
   }
   else if ( mHighlightedFeatureId != -1 )
   {
+    qDebug() << "on est sortie d'un batiment on clean";
+    // Not Inside a feature anymore
+    // clear all the highlight
     clearHighlightedPointEntity();
   }
 
@@ -118,8 +135,18 @@ QgsPoint Qgs3DSnappingManager::screenToMap( const QPoint &screenPos, bool *ok )
   return QgsPoint( mapPoint.x(), mapPoint.y(), mapPoint.z() );
 }
 
-QVector3D Qgs3DSnappingManager::screenToWorld( const QPoint &screenPos, bool *ok, QString *layerId, QgsFeatureId *nearestFid, QVector3D ( *facePoints )[3] ) const
+QVector3D Qgs3DSnappingManager::screenToWorld( const QPoint &screenPos, bool *success, bool *snapFound, QString *layerId, QgsFeatureId *nearestFid, QVector3D ( *facePoints )[3] ) const
 {
+  if ( success )
+  {
+    *success = false;
+  }
+
+  if ( snapFound )
+  {
+    *snapFound = false;
+  }
+
   QgsRayCastContext context;
   context.setSingleResult( false );
   context.setMaximumDistance( mCanvas->cameraController()->camera()->farPlane() );
@@ -127,7 +154,14 @@ QVector3D Qgs3DSnappingManager::screenToWorld( const QPoint &screenPos, bool *ok
   const QgsRayCastResult results = mCanvas->castRay( screenPos, context );
 
   if ( results.isEmpty() )
+  {
     return QVector3D();
+  }
+
+  if ( success )
+  {
+    *success = true;
+  }
 
   QgsVector3D mapCoords;
   double minDist = -1;
@@ -155,35 +189,53 @@ QVector3D Qgs3DSnappingManager::screenToWorld( const QPoint &screenPos, bool *ok
     //qDebug() << "Hit face: " << ( *facePoints )[0] << "/" << ( *facePoints )[1] << "/" << ( *facePoints )[2];
   }
 
-  if ( mMode != Qgs3DSnappingManager::Off && !bestHit.properties().contains( QStringLiteral( "facePoint0" ) ) )
+  mapCoords = bestHit.mapCoordinates();
+  if ( std::isnan( mapCoords.z() ) )
   {
-    if ( ok )
-      *ok = false;
-    return QVector3D();
+    mapCoords.setZ( 0.0 );
   }
 
-  if ( ok )
-    *ok = true;
+  QVector3D worldPoint = Qgs3DUtils::mapToWorldCoordinates( mapCoords, mCanvas->mapSettings()->origin() ).toVector3D();
+  QVector3D outPoint = worldPoint;
 
   if ( mMode == Qgs3DSnappingManager::Vertex )
   {
-    return ( *facePoints )[0];
+    const QVector3D snapPoint = ( *facePoints )[0];
+    if ( ( snapPoint - worldPoint ).length() < mTolerance )
+    {
+      if ( snapFound )
+      {
+        *snapFound = true;
+      }
+      outPoint = snapPoint;
+    }
   }
   if ( mMode == Qgs3DSnappingManager::MiddleEdge )
   {
-    return ( ( *facePoints )[0] + ( *facePoints )[1] ) / 2.0;
+    const QVector3D snapPoint = ( ( *facePoints )[0] + ( *facePoints )[1] ) / 2.0;
+    if ( ( snapPoint - worldPoint ).length() < mTolerance )
+    {
+      if ( snapFound )
+      {
+        *snapFound = true;
+      }
+      outPoint = snapPoint;
+    }
   }
   if ( mMode == Qgs3DSnappingManager::CenterFace )
   {
-    return ( ( *facePoints )[0] + ( *facePoints )[1] + ( *facePoints )[2] ) / 3.0;
+    const QVector3D snapPoint = ( ( *facePoints )[0] + ( *facePoints )[1] + ( *facePoints )[2] ) / 3.0;
+    if ( ( snapPoint - worldPoint ).length() < mTolerance )
+    {
+      if ( snapFound )
+      {
+        *snapFound = true;
+      }
+      outPoint = snapPoint;
+    }
   }
 
-  mapCoords = bestHit.mapCoordinates();
-  if ( std::isnan( mapCoords.z() ) )
-    mapCoords = QgsVector3D( mapCoords.x(), mapCoords.y(), 0 );
-
-  QgsVector3D worldPoint = Qgs3DUtils::mapToWorldCoordinates( mapCoords, mCanvas->mapSettings()->origin() );
-  return QVector3D( worldPoint.x(), worldPoint.y(), worldPoint.z() );
+  return outPoint;
 }
 
 void Qgs3DSnappingManager::updateHighlighted( QgsMapLayer *layer, const QgsFeature &feat, const QVector3D &highlightedPoint )
@@ -263,44 +315,68 @@ void Qgs3DSnappingManager::updateHighlighted( QgsMapLayer *layer, const QgsFeatu
   } // end if feature id changed
 
   if ( mMode != Qgs3DSnappingManager::Off )
-  { // HL nearest vertex
-    QgsGeoTransform *transform = nullptr;
-    // search for existing HL vertex
-    for ( auto child : mHighlightedPointEntity->childNodes() )
+  {
+    if ( highlightedPoint.isNull() )
     {
-      if ( Qt3DCore::QEntity *childEnt = dynamic_cast<Qt3DCore::QEntity *>( child ) )
-        if ( childEnt->objectName() == "HL_point" )
+      // no snap found
+      // Remove the snap shpere entity if necessary
+      if ( mCanvas && mCanvas->engine() && mCanvas->engine()->frameGraph() && mCanvas->scene()->engine() )
+      {
+        for ( auto child : mHighlightedPointEntity->childNodes() )
         {
-          for ( auto childComp : childEnt->componentsOfType<QgsGeoTransform>() )
-            transform = childComp;
-          break;
+          if ( Qt3DCore::QEntity *entity = dynamic_cast<Qt3DCore::QEntity *>( child ) )
+          {
+            if ( entity->objectName() == QStringLiteral( "HL_point" ) )
+            {
+              entity->setParent( ( Qt3DCore::QNode * ) nullptr );
+              entity->deleteLater();
+              break;
+            }
+          }
         }
+      }
     }
-
-    if ( transform == nullptr )
+    else
     {
-      Qt3DCore::QEntity *ent = new Qt3DCore::QEntity( mHighlightedPointEntity.get() );
-      ent->setObjectName( "HL_point" );
+      // HL nearest vertex
+      QgsGeoTransform *transform = nullptr;
+      // search for existing HL vertex
+      for ( auto child : mHighlightedPointEntity->childNodes() )
+      {
+        if ( Qt3DCore::QEntity *childEnt = dynamic_cast<Qt3DCore::QEntity *>( child ) )
+          if ( childEnt->objectName() == "HL_point" )
+          {
+            for ( auto childComp : childEnt->componentsOfType<QgsGeoTransform>() )
+              transform = childComp;
+            break;
+          }
+      }
 
-      Qt3DExtras::QSphereMesh *mesh = new Qt3DExtras::QSphereMesh;
-      mesh->setRadius( 1.0 );
-      mesh->setSlices( 4 );
-      mesh->setRings( 4 );
-      ent->addComponent( mesh );
+      if ( transform == nullptr )
+      {
+        Qt3DCore::QEntity *ent = new Qt3DCore::QEntity( mHighlightedPointEntity.get() );
+        ent->setObjectName( "HL_point" );
 
-      Qt3DExtras::QPhongMaterial *material = new Qt3DExtras::QPhongMaterial;
-      material->setAmbient( Qt::green );
-      ent->addComponent( material );
+        Qt3DExtras::QSphereMesh *mesh = new Qt3DExtras::QSphereMesh;
+        mesh->setRadius( 1.0 );
+        mesh->setSlices( 4 );
+        mesh->setRings( 4 );
+        ent->addComponent( mesh );
 
-      transform = new QgsGeoTransform;
-      ent->addComponent( transform );
+        Qt3DExtras::QPhongMaterial *material = new Qt3DExtras::QPhongMaterial;
+        material->setAmbient( Qt::green );
+        ent->addComponent( material );
+
+        transform = new QgsGeoTransform;
+        ent->addComponent( transform );
+      }
+
+      QgsVector3D mapPoint;
+      mapPoint = Qgs3DUtils::worldToMapCoordinates( QVector3D( highlightedPoint.x(), highlightedPoint.y(), highlightedPoint.z() ), QgsVector3D() /*mCanvas->mapSettings()->origin()*/ );
+      transform->setGeoTranslation( mapPoint );
+      // qDebug() << "facepoint:" << facePoints[0];
+      // qDebug() << "mapPoint:" << mapPoint.toVector3D();
     }
-
-    QgsVector3D mapPoint;
-    mapPoint = Qgs3DUtils::worldToMapCoordinates( QVector3D( highlightedPoint.x(), highlightedPoint.y(), highlightedPoint.z() ), QgsVector3D() /*mCanvas->mapSettings()->origin()*/ );
-    transform->setGeoTranslation( mapPoint );
-    // qDebug() << "facepoint:" << facePoints[0];
-    // qDebug() << "mapPoint:" << mapPoint.toVector3D();
   }
 }
 
