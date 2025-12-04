@@ -27,6 +27,10 @@
 #include "qgs3dutils.h"
 #include "qgs3dmapcanvaswidget.h"
 
+#include "qgspoint3dsymbol.h"
+#include "qgsmarkersymbol.h"
+#include "qgsmarkersymbollayer.h"
+
 #include <Qt3DRender/QCamera>
 #include <Qt3DExtras/QPhongMaterial>
 #include <Qt3DExtras/QSphereMesh>
@@ -51,7 +55,7 @@ void Qgs3DSnappingManager::restart()
 
   QMutexLocker locker( &mHighlightedMutex );
   mHighlightedPointEntity.reset( new Qt3DCore::QEntity( mCanvas->engine()->frameGraph()->rubberBandsRootEntity() ) );
-  mHighlightedPointEntity->setObjectName( "ROOT_HL_OBJECT" );
+  mHighlightedPointEntity->setObjectName( QStringLiteral( "ROOT_HL_OBJECT" ) );
 }
 
 void Qgs3DSnappingManager::finish()
@@ -309,12 +313,15 @@ void Qgs3DSnappingManager::updateHighlighted( QgsMapLayer *layer, const QgsFeatu
         {
           if ( Qt3DCore::QEntity *ent = dynamic_cast<Qt3DCore::QEntity *>( child ) )
           {
-            for ( auto trans : ent->componentsOfType<QgsGeoTransform>() )
+            if ( ent->objectName().startsWith( QStringLiteral( "ROOT_HL_OBJECT" ) ) )
             {
-              trans->setGeoTranslation( mCanvas->mapSettings()->origin() * -1.0 );
-              trans->setOrigin( QgsVector3D() );
+              for ( auto trans : ent->componentsOfType<QgsGeoTransform>() )
+              {
+                trans->setGeoTranslation( mCanvas->mapSettings()->origin() * -1.0 );
+                trans->setOrigin( QgsVector3D() );
+              }
+              break;
             }
-            break;
           }
         }
 
@@ -323,54 +330,87 @@ void Qgs3DSnappingManager::updateHighlighted( QgsMapLayer *layer, const QgsFeatu
     }
   } // end if feature id changed
 
-  if ( mMode != SnappingMode::Off )
+  if ( mMode != SnappingMode::Off && mPreviousHighlightedPoint != highlightedPoint )
   {
-    if ( highlightedPoint.isNull() )
-    {
-      // no snap found
-      // Remove the snap shpere entity if necessary
-      clearHighlightedEntityByName( QStringLiteral( "HL_point" ) );
-    }
-    else
+    mPreviousHighlightedPoint = highlightedPoint;
+    // Remove the snap sphere entity if necessary
+    clearHighlightedEntityByName( QStringLiteral( "HL_point" ) );
+    if ( !highlightedPoint.isNull() )
     {
       // HL nearest vertex
+
+      QgsFeature hlPointFeat;
+      QgsPoint hlPointGeom( 0.0, 0.0, 0.0 );
+      hlPointFeat.setGeometry( QgsGeometry::fromPoint( hlPointGeom ) );
+
+      QgsMarkerSymbol *markerSymbol = static_cast<QgsMarkerSymbol *>( QgsSymbol::defaultSymbol( Qgis::GeometryType::Point ) );
+      markerSymbol->setColor( QColor( 255, 0, 0, 150 ) );
+      markerSymbol->setSize( 2 );
+      QgsSimpleMarkerSymbolLayer *sl = static_cast<QgsSimpleMarkerSymbolLayer *>( markerSymbol->symbolLayer( 0 ) );
+      switch ( snapFound )
+      {
+        case SnappingMode::Vertex:
+          sl->setShape( Qgis::MarkerShape::Square );
+          break;
+        case SnappingMode::MiddleEdge:
+          sl->setShape( Qgis::MarkerShape::Triangle );
+          break;
+        case SnappingMode::CenterFace:
+          sl->setShape( Qgis::MarkerShape::Circle );
+          break;
+        default:
+          sl->setShape( Qgis::MarkerShape::Cross );
+          break;
+      }
+
+      sl->setStrokeColor( QColor( 0, 255, 255 ) );
+      sl->setStrokeWidth( 0.5 );
+      QgsPoint3DSymbol *point3DSymbol = new QgsPoint3DSymbol();
+      point3DSymbol->setBillboardSymbol( markerSymbol );
+      point3DSymbol->setShape( Qgis::Point3DShape::Billboard );
+
+      Qgs3DRenderContext renderContext = Qgs3DRenderContext::fromMapSettings( mCanvas->mapSettings() );
+      QSet<QString> attributeNames;
+
+      QgsFeature3DHandler *feat3DHandler = QgsApplication::symbol3DRegistry()->createHandlerForSymbol( dynamic_cast<QgsVectorLayer *>( layer ), point3DSymbol );
+      feat3DHandler->prepare( renderContext, attributeNames, QgsVector3D() );
+      feat3DHandler->processFeature( hlPointFeat, renderContext );
+      feat3DHandler->finalize( mHighlightedPointEntity.get(), renderContext );
+
+      // retrieve created entity
       QgsGeoTransform *transform = nullptr;
-      // search for existing HL vertex
       for ( auto child : mHighlightedPointEntity->childNodes() )
       {
-        if ( Qt3DCore::QEntity *childEnt = dynamic_cast<Qt3DCore::QEntity *>( child ) )
-          if ( childEnt->objectName() == "HL_point" )
+        if ( Qt3DCore::QEntity *ent = dynamic_cast<Qt3DCore::QEntity *>( child ) )
+        {
+          if ( ent->objectName().startsWith( QStringLiteral( "billboardPoint-normal" ) ) )
           {
-            for ( auto childComp : childEnt->componentsOfType<QgsGeoTransform>() )
-              transform = childComp;
+            for ( auto trans : ent->componentsOfType<QgsGeoTransform>() )
+            {
+              transform = trans;
+              qDebug() << "Found HL transform for new entity entity: " << ent->objectName() << "/ id:" << ent->id() << "/ transform:" << transform->id();
+            }
+            ent->setObjectName( QStringLiteral( "HL_point" ) );
             break;
           }
+          else
+            qDebug() << "Searching for new HL point, found root child: " << ent->objectName() << "/ id:" << ent->id();
+        }
       }
+      // cleanup useless double entity
+      clearHighlightedEntityByName( QStringLiteral( "billboardPoint-selected" ) );
 
       if ( transform == nullptr )
       {
-        Qt3DCore::QEntity *ent = new Qt3DCore::QEntity( mHighlightedPointEntity.get() );
-        ent->setObjectName( "HL_point" );
-
-        Qt3DExtras::QSphereMesh *mesh = new Qt3DExtras::QSphereMesh;
-        mesh->setRadius( 1.0 );
-        mesh->setSlices( 4 );
-        mesh->setRings( 4 );
-        ent->addComponent( mesh );
-
-        Qt3DExtras::QPhongMaterial *material = new Qt3DExtras::QPhongMaterial;
-        material->setAmbient( Qt::green );
-        ent->addComponent( material );
-
-        transform = new QgsGeoTransform;
-        ent->addComponent( transform );
+        qDebug() << "=================================== Unable to find transform!!!";
+        mPreviousHighlightedPoint = QVector3D();
       }
-
-      QgsVector3D mapPoint;
-      mapPoint = Qgs3DUtils::worldToMapCoordinates( QVector3D( highlightedPoint.x(), highlightedPoint.y(), highlightedPoint.z() ), QgsVector3D() /*mCanvas->mapSettings()->origin()*/ );
-      transform->setGeoTranslation( mapPoint );
-      // qDebug() << "facepoint:" << facePoints[0];
-      // qDebug() << "mapPoint:" << mapPoint.toVector3D();
+      else
+      {
+        // QgsVector3D mapPoint = Qgs3DUtils::worldToMapCoordinates( highlightedPoint, mCanvas->mapSettings()->origin() );
+        transform->setGeoTranslation( QgsVector3D( highlightedPoint.x(), highlightedPoint.y(), highlightedPoint.z() ) );
+        transform->setOrigin( QgsVector3D() );
+      }
     }
   }
 }

@@ -61,6 +61,7 @@ class Qgs3DSnappingManager
 
     std::unique_ptr<Qt3DCore::QEntity> mHighlightedPointEntity = nullptr;
     QgsFeatureId mHighlightedFeatureId = -1;
+    QVector3D mPreviousHighlightedPoint;
     QRecursiveMutex mHighlightedMutex;
 };
 
