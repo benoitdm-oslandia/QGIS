@@ -760,6 +760,9 @@ void Qgs3DMapCanvasWidget::setMapSettings( Qgs3DMapSettings *map )
   // none of the actions in the Camera menu are supported by globe yet, so just hide it completely
   mActionCamera->setVisible( map->sceneMode() == Qgis::SceneMode::Local );
 
+  // snapping toolbar
+  mSnappingUnitLabel->setText( QgsUnitTypes::encodeUnit( map->crs().mapUnits() ) );
+
   connect( map, &Qgs3DMapSettings::viewFrustumVisualizationEnabledChanged, this, &Qgs3DMapCanvasWidget::onViewFrustumVisualizationEnabledChanged );
   connect( map, &Qgs3DMapSettings::extentChanged, this, &Qgs3DMapCanvasWidget::onExtentChanged );
   connect( map, &Qgs3DMapSettings::showExtentIn2DViewChanged, this, &Qgs3DMapCanvasWidget::onExtentChanged );
@@ -1305,6 +1308,8 @@ void Qgs3DMapCanvasWidget::createSnappingToolBar( const QgsSettings &setting )
     mSnapper->setTolerance( snappingToleranceSpinBox->value() );
   } );
 
+  mSnappingUnitLabel = new QLabel( this );
+
   mSnappingAction = new QAction( QgsApplication::getThemeIcon( QStringLiteral( "mIconSnapping.svg" ) ), tr( "Snapping" ), this );
 
   QMenu *snappingMenu = new QMenu( this );
@@ -1334,6 +1339,10 @@ void Qgs3DMapCanvasWidget::createSnappingToolBar( const QgsSettings &setting )
   connect( snappingButton, &QToolButton::triggered, this, &Qgs3DMapCanvasWidget::onSnappingButtonTriggered );
 
   mSnappingToolBar->addWidget( snappingToleranceSpinBox );
+  QWidget *snappingSpacer = new QWidget( this );
+  snappingSpacer->setFixedWidth( 6 );
+  mSnappingToolBar->addWidget( snappingSpacer );
+  mSnappingToolBar->addWidget( mSnappingUnitLabel );
   mSnappingToolBar->addSeparator();
 }
 

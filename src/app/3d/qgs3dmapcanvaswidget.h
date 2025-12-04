@@ -219,6 +219,7 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     std::unique_ptr<Qgs3DSnappingManager> mSnapper = nullptr;
     QToolBar *mSnappingToolBar = nullptr;
     QAction *mSnappingAction = nullptr;
+    QLabel *mSnappingUnitLabel = nullptr;
 
     QMenu *mToolbarMenu = nullptr;
 };
