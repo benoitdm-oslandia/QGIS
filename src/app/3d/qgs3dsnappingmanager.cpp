@@ -85,7 +85,7 @@ QgsPoint Qgs3DSnappingManager::screenToMap( const QPoint &screenPos, bool *ok )
   QVector3D facePoints[3];
 
   bool okWorld;
-  bool snapFound;
+  SnappingMode snapFound;
   QVector3D worldPoint = screenToWorld( screenPos, &okWorld, &snapFound, &layerId, &nearestFid, &facePoints );
   // qDebug() << "Screen to world: success" << okWorld << "/ snapFound:" << snapFound << "/ layerId" << layerId << "/ nearestFid" << nearestFid;
   if ( ok )
@@ -118,8 +118,8 @@ QgsPoint Qgs3DSnappingManager::screenToMap( const QPoint &screenPos, bool *ok )
         QgsFeature feat;
         if ( ite.nextFeature( feat ) )
         {
-          const QVector3D highlightPoint = snapFound ? worldPoint : QVector3D();
-          updateHighlighted( layer, feat, highlightPoint );
+          const QVector3D highlightPoint = snapFound != SnappingMode::Off ? worldPoint : QVector3D();
+          updateHighlighted( layer, feat, highlightPoint, snapFound );
         }
         break;
       }
@@ -137,7 +137,7 @@ QgsPoint Qgs3DSnappingManager::screenToMap( const QPoint &screenPos, bool *ok )
   return QgsPoint( mapPoint.x(), mapPoint.y(), mapPoint.z() );
 }
 
-QVector3D Qgs3DSnappingManager::screenToWorld( const QPoint &screenPos, bool *success, bool *snapFound, QString *layerId, QgsFeatureId *nearestFid, QVector3D ( *facePoints )[3] ) const
+QVector3D Qgs3DSnappingManager::screenToWorld( const QPoint &screenPos, bool *success, SnappingMode *snapFound, QString *layerId, QgsFeatureId *nearestFid, QVector3D ( *facePoints )[3] ) const
 {
   if ( success )
   {
@@ -146,7 +146,7 @@ QVector3D Qgs3DSnappingManager::screenToWorld( const QPoint &screenPos, bool *su
 
   if ( snapFound )
   {
-    *snapFound = false;
+    *snapFound = SnappingMode::Off;
   }
 
   QgsRayCastContext context;
@@ -209,7 +209,7 @@ QVector3D Qgs3DSnappingManager::screenToWorld( const QPoint &screenPos, bool *su
     {
       if ( snapFound )
       {
-        *snapFound = true;
+        *snapFound = SnappingMode::Vertex;
       }
       minSnapDistance = snapDistance;
       outPoint = snapPoint;
@@ -223,7 +223,7 @@ QVector3D Qgs3DSnappingManager::screenToWorld( const QPoint &screenPos, bool *su
     {
       if ( snapFound )
       {
-        *snapFound = true;
+        *snapFound = SnappingMode::MiddleEdge;
       }
       minSnapDistance = snapDistance;
       outPoint = snapPoint;
@@ -237,7 +237,7 @@ QVector3D Qgs3DSnappingManager::screenToWorld( const QPoint &screenPos, bool *su
     {
       if ( snapFound )
       {
-        *snapFound = true;
+        *snapFound = SnappingMode::CenterFace;
       }
       minSnapDistance = snapDistance;
       outPoint = snapPoint;
@@ -247,7 +247,7 @@ QVector3D Qgs3DSnappingManager::screenToWorld( const QPoint &screenPos, bool *su
   return outPoint;
 }
 
-void Qgs3DSnappingManager::updateHighlighted( QgsMapLayer *layer, const QgsFeature &feat, const QVector3D &highlightedPoint )
+void Qgs3DSnappingManager::updateHighlighted( QgsMapLayer *layer, const QgsFeature &feat, const QVector3D &highlightedPoint, SnappingMode snapFound )
 {
   QMutexLocker locker( &mHighlightedMutex );
   if ( !mHighlightedPointEntity )

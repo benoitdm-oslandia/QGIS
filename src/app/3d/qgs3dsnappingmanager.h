@@ -42,7 +42,7 @@ class Qgs3DSnappingManager
 
     double tolerance() const { return mTolerance; }
 
-    QVector3D screenToWorld( const QPoint &screenPos, bool *success = nullptr, bool *snapFound = nullptr, QString *layerId = nullptr, QgsFeatureId *nearestFid = nullptr, QVector3D ( *facePoints )[3] = nullptr ) const;
+    QVector3D screenToWorld( const QPoint &screenPos, bool *success = nullptr, SnappingMode *snapFound = nullptr, QString *layerId = nullptr, QgsFeatureId *nearestFid = nullptr, QVector3D ( *facePoints )[3] = nullptr ) const;
 
     QgsPoint screenToMap( const QPoint &screenPos, bool *ok = nullptr );
 
@@ -51,7 +51,7 @@ class Qgs3DSnappingManager
   private:
     void clearAllHighlightedEntities();
     void clearHighlightedEntityByName( const QString &name = QString() );
-    void updateHighlighted( QgsMapLayer *layer, const QgsFeature &feat, const QVector3D &highlightedPoint );
+    void updateHighlighted( QgsMapLayer *layer, const QgsFeature &feat, const QVector3D &highlightedPoint, SnappingMode snapFound );
 
   private:
     SnappingMode mMode = SnappingMode::Off;
