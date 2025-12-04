@@ -265,68 +265,11 @@ void Qgs3DSnappingManager::updateHighlighted( QgsMapLayer *layer, const QgsFeatu
 
     mHighlightedFeatureId = feat.id();
 
-    QgsVectorLayer3DRenderer *vectorRenderer = dynamic_cast<QgsVectorLayer3DRenderer *>( layer->renderer3D() );
-    if ( vectorRenderer )
+    QgsVectorLayer *vLayer = dynamic_cast<QgsVectorLayer *>( layer );
+    if ( vLayer )
     {
-      QgsPhongMaterialSettings *phong = dynamic_cast<QgsPhongMaterialSettings *>( QgsPhongMaterialSettings::create() );
-      phong->setAmbient( Qt::darkRed );
-      phong->setDiffuse( Qt::darkGray );
-      phong->setOpacity( 0.4f );
-      QgsAbstract3DSymbol *sym = nullptr;
-      if ( QgsPolygon3DSymbol *clonedSymb = dynamic_cast<QgsPolygon3DSymbol *>( vectorRenderer->symbol()->clone() ) )
-      {
-        clonedSymb->setMaterialSettings( phong );
-        clonedSymb->setAddBackFaces( false );
-        clonedSymb->setCullingMode( Qgs3DTypes::CullingMode::NoCulling );
-        clonedSymb->setEdgesEnabled( false ); // TODO: edges are in another entity and the transform process (search and update) is only done for the first ent->objectName().startsWith( QStringLiteral( "ROOT_HL_OBJECT" ) )
-        // clonedSymb->setEdgeColor( Qt::green );
-        // clonedSymb->setEdgeWidth( 1.5f );
-        sym = clonedSymb;
-      }
-      else if ( QgsPoint3DSymbol *clonedSymb = dynamic_cast<QgsPoint3DSymbol *>( vectorRenderer->symbol()->clone() ) )
-      {
-        clonedSymb->setMaterialSettings( phong );
-        sym = clonedSymb;
-      }
-      else if ( QgsLine3DSymbol *clonedSymb = dynamic_cast<QgsLine3DSymbol *>( vectorRenderer->symbol()->clone() ) )
-      {
-        clonedSymb->setMaterialSettings( phong );
-        sym = clonedSymb;
-      }
-      else
-      {
-        delete phong;
-      }
-
-      if ( sym != nullptr )
-      {
-        Qgs3DRenderContext renderContext = Qgs3DRenderContext::fromMapSettings( mCanvas->mapSettings() );
-        QSet<QString> attributeNames;
-
-        QgsFeature3DHandler *feat3DHandler = QgsApplication::symbol3DRegistry()->createHandlerForSymbol( dynamic_cast<QgsVectorLayer *>( layer ), sym );
-        feat3DHandler->prepare( renderContext, attributeNames, QgsVector3D() );
-        feat3DHandler->processFeature( feat, renderContext );
-        feat3DHandler->finalize( mHighlightedPointEntity.get(), renderContext );
-
-        // retrieve created entity
-        for ( auto child : mHighlightedPointEntity->childNodes() )
-        {
-          if ( Qt3DCore::QEntity *ent = dynamic_cast<Qt3DCore::QEntity *>( child ) )
-          {
-            if ( ent->objectName().startsWith( QStringLiteral( "ROOT_HL_OBJECT" ) ) )
-            {
-              for ( auto trans : ent->componentsOfType<QgsGeoTransform>() )
-              {
-                trans->setGeoTranslation( mCanvas->mapSettings()->origin() * -1.0 );
-                trans->setOrigin( QgsVector3D() );
-              }
-              break;
-            }
-          }
-        }
-
-        //setEnableOnNode( mHighlightedPointEntity->parentNode()->parentNode(), "Drapé_2/3/1_SINGLE_10_TESSELLATED", false );
-      }
+      mCanvas->scene()->highlightEntity(mHighlightedPointEntity.get(), vLayer, feat );
+      //setEnableOnNode( mHighlightedPointEntity->parentNode()->parentNode(), "Drapé_2/3/1_SINGLE_10_TESSELLATED", false );
     }
   } // end if feature id changed
 
