@@ -286,7 +286,7 @@ void Qgs3DSnappingManager::updateHighlightedEntites( QgsMapLayer *layer, const Q
   if ( mMode != SnappingMode::Off && mPreviousHighlightedPoint != highlightedPoint )
   {
     mPreviousHighlightedPoint = highlightedPoint;
-    // Remove the snap sphere entity if necessary
+    // Remove the snap billboard entity if necessary
     clearHighlightedEntityByName( QStringLiteral( "HL_point" ) );
     if ( !highlightedPoint.isNull() )
     {
@@ -328,41 +328,18 @@ void Qgs3DSnappingManager::updateHighlightedEntites( QgsMapLayer *layer, const Q
       QgsFeature3DHandler *feat3DHandler = QgsApplication::symbol3DRegistry()->createHandlerForSymbol( dynamic_cast<QgsVectorLayer *>( layer ), point3DSymbol );
       feat3DHandler->prepare( renderContext, attributeNames, QgsVector3D() );
       feat3DHandler->processFeature( hlPointFeat, renderContext );
-      feat3DHandler->finalize( mHighlightedPointEntity.get(), renderContext );
+      QList<Qt3DCore::QEntity *> billboardEntities = feat3DHandler->finalize( mHighlightedPointEntity.get(), renderContext );
 
-      // retrieve created entity
-      QgsGeoTransform *transform = nullptr;
-      for ( auto child : mHighlightedPointEntity->childNodes() )
+      // Set billboard entity transform
+      for ( auto billboardEntity : billboardEntities )
       {
-        if ( Qt3DCore::QEntity *ent = dynamic_cast<Qt3DCore::QEntity *>( child ) )
+        billboardEntity->setObjectName( QStringLiteral( "HL_point" ) );
+        for ( auto transform : billboardEntity->componentsOfType<QgsGeoTransform>() )
         {
-          if ( ent->objectName().startsWith( QStringLiteral( "billboardPoint-normal" ) ) )
-          {
-            for ( auto trans : ent->componentsOfType<QgsGeoTransform>() )
-            {
-              transform = trans;
-              qDebug() << "Found HL transform for new entity entity: " << ent->objectName() << "/ id:" << ent->id() << "/ transform:" << transform->id();
-            }
-            ent->setObjectName( QStringLiteral( "HL_point" ) );
-            break;
-          }
-          else
-            qDebug() << "Searching for new HL point, found root child: " << ent->objectName() << "/ id:" << ent->id();
+          // QgsVector3D mapPoint = Qgs3DUtils::worldToMapCoordinates( highlightedPoint, mCanvas->mapSettings()->origin() );
+          transform->setGeoTranslation( QgsVector3D( highlightedPoint.x(), highlightedPoint.y(), highlightedPoint.z() ) );
+          transform->setOrigin( QgsVector3D() );
         }
-      }
-      // cleanup useless double entity
-      clearHighlightedEntityByName( QStringLiteral( "billboardPoint-selected" ) );
-
-      if ( transform == nullptr )
-      {
-        qDebug() << "=================================== Unable to find transform!!!";
-        mPreviousHighlightedPoint = QVector3D();
-      }
-      else
-      {
-        // QgsVector3D mapPoint = Qgs3DUtils::worldToMapCoordinates( highlightedPoint, mCanvas->mapSettings()->origin() );
-        transform->setGeoTranslation( QgsVector3D( highlightedPoint.x(), highlightedPoint.y(), highlightedPoint.z() ) );
-        transform->setOrigin( QgsVector3D() );
       }
     }
   }
