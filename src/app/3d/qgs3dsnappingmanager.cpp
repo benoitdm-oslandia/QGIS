@@ -172,16 +172,26 @@ QVector3D Qgs3DSnappingManager::screenToWorld( const QPoint &screenPos, bool *su
   QgsVector3D mapCoords;
   double minDist = -1;
   const QList<QgsRayCastHit> allHits = results.allHits();
-  QgsRayCastHit bestHit;
+  QgsRayCastHit hitLayer;
+  QgsRayCastHit hitTerrain;
+  bool hitLayerFound = false;
   for ( const QgsRayCastHit &hit : allHits )
   {
     const double resDist = hit.distance();
-    if ( minDist < 0 || resDist < minDist )
+    const QString layer = hit.properties().value( QStringLiteral( "layerId" ), QString() ).toString();
+    if ( layer == QStringLiteral( "terrain" ) )
+    {
+      hitTerrain = hit;
+    }
+    else if ( minDist < 0 || resDist < minDist )
     {
       minDist = resDist;
-      bestHit = hit;
+      hitLayer = hit;
+      hitLayerFound = true;
     }
   }
+
+  const QgsRayCastHit bestHit = hitLayerFound ? hitLayer : hitTerrain;
 
   if ( layerId != nullptr )
     *layerId = bestHit.properties().value( QStringLiteral( "layerId" ), QString() ).toString();
