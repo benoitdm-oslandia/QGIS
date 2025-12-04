@@ -274,9 +274,9 @@ void Qgs3DSnappingManager::updateHighlighted( QgsMapLayer *layer, const QgsFeatu
         clonedSymb->setMaterialSettings( phong );
         clonedSymb->setAddBackFaces( false );
         clonedSymb->setCullingMode( Qgs3DTypes::CullingMode::NoCulling );
-        clonedSymb->setEdgesEnabled( true );
-        clonedSymb->setEdgeColor( Qt::green );
-        clonedSymb->setEdgeWidth( 1.5f );
+        clonedSymb->setEdgesEnabled( false ); // TODO: edges are in another entity and the transform process (search and update) is only done for the first ent->objectName().startsWith( QStringLiteral( "ROOT_HL_OBJECT" ) )
+        // clonedSymb->setEdgeColor( Qt::green );
+        // clonedSymb->setEdgeWidth( 1.5f );
         sym = clonedSymb;
       }
       else if ( QgsPoint3DSymbol *clonedSymb = dynamic_cast<QgsPoint3DSymbol *>( vectorRenderer->symbol()->clone() ) )
