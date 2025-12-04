@@ -119,11 +119,11 @@ QgsPoint Qgs3DSnappingManager::screenToMap( const QPoint &screenPos, bool *ok )
         QgsFeatureRequest req( nearestFid );
         req.setCoordinateTransform( QgsCoordinateTransform( layer->crs3D(), mCanvas->mapSettings()->crs(), mCanvas->mapSettings()->transformContext() ) );
         QgsFeatureIterator ite = featureLayer->getFeatures( req );
-        QgsFeature feat;
-        if ( ite.nextFeature( feat ) )
+        QgsFeature feature;
+        if ( ite.nextFeature( feature ) )
         {
           const QVector3D highlightPoint = snapFound != SnappingMode::Off ? worldPoint : QVector3D();
-          updateHighlighted( layer, feat, highlightPoint, snapFound );
+          updateHighlighted( layer, feature, highlightPoint, snapFound );
         }
         break;
       }
@@ -251,24 +251,24 @@ QVector3D Qgs3DSnappingManager::screenToWorld( const QPoint &screenPos, bool *su
   return outPoint;
 }
 
-void Qgs3DSnappingManager::updateHighlighted( QgsMapLayer *layer, const QgsFeature &feat, const QVector3D &highlightedPoint, SnappingMode snapFound )
+void Qgs3DSnappingManager::updateHighlighted( QgsMapLayer *layer, const QgsFeature &feature, const QVector3D &highlightedPoint, SnappingMode snapFound )
 {
   QMutexLocker locker( &mHighlightedMutex );
   if ( !mHighlightedPointEntity )
     return;
 
-  if ( mHighlightedFeatureId != feat.id() )
+  if ( mHighlightedFeatureId != feature.id() )
   {
-    qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "Switching from:" << mHighlightedFeatureId << "to:" << feat.id();
+    qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "Switching from:" << mHighlightedFeatureId << "to:" << feature.id();
 
     clearAllHighlightedEntities();
 
-    mHighlightedFeatureId = feat.id();
+    mHighlightedFeatureId = feature.id();
 
     QgsVectorLayer *vLayer = dynamic_cast<QgsVectorLayer *>( layer );
     if ( vLayer )
     {
-      mCanvas->scene()->highlightEntity(mHighlightedPointEntity.get(), vLayer, feat );
+      mCanvas->scene()->highlightEntity( mHighlightedPointEntity.get(), vLayer, feature );
       //setEnableOnNode( mHighlightedPointEntity->parentNode()->parentNode(), "Drapé_2/3/1_SINGLE_10_TESSELLATED", false );
     }
   } // end if feature id changed
