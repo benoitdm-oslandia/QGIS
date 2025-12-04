@@ -51,7 +51,7 @@ class Qgs3DSnappingManager
   private:
     void clearAllHighlightedEntities();
     void clearHighlightedEntityByName( const QString &name = QString() );
-    void updateHighlighted( QgsMapLayer *layer, const QgsFeature &feature, const QVector3D &highlightedPoint, SnappingMode snapFound );
+    void updateHighlightedEntites( QgsMapLayer *layer, const QgsFeature &feature, const QVector3D &highlightedPoint, SnappingMode snapFound );
 
   private:
     SnappingMode mMode = SnappingMode::Off;

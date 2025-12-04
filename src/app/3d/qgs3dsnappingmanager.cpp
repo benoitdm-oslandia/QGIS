@@ -123,7 +123,7 @@ QgsPoint Qgs3DSnappingManager::screenToMap( const QPoint &screenPos, bool *ok )
         if ( ite.nextFeature( feature ) )
         {
           const QVector3D highlightPoint = snapFound != SnappingMode::Off ? worldPoint : QVector3D();
-          updateHighlighted( layer, feature, highlightPoint, snapFound );
+          updateHighlightedEntites( layer, feature, highlightPoint, snapFound );
         }
         break;
       }
@@ -251,7 +251,7 @@ QVector3D Qgs3DSnappingManager::screenToWorld( const QPoint &screenPos, bool *su
   return outPoint;
 }
 
-void Qgs3DSnappingManager::updateHighlighted( QgsMapLayer *layer, const QgsFeature &feature, const QVector3D &highlightedPoint, SnappingMode snapFound )
+void Qgs3DSnappingManager::updateHighlightedEntites( QgsMapLayer *layer, const QgsFeature &feature, const QVector3D &highlightedPoint, SnappingMode snapFound )
 {
   QMutexLocker locker( &mHighlightedMutex );
   if ( !mHighlightedPointEntity )
