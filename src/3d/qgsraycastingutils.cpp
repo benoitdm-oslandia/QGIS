@@ -287,7 +287,8 @@ namespace QgsRayCastingUtils
       }
       else if ( QgsRayCastingUtils::rayTriangleMinAngle( r, { tA, tB, tC }, minAnglePt ) < context.angleThreshold() )
       {
-        intersectionPt = r.projectedPoint( minAnglePt );
+        // intersectionPt = r.projectedPoint( minAnglePt );
+        intersectionPt = minAnglePt;
       }
       else
       {
