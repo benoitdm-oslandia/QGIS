@@ -18,6 +18,7 @@
 
 #include "qgis_3d.h"
 #include "qgscameracontroller.h"
+#include "qgsfeature.h"
 #include "qgsrectangle.h"
 
 #include <QVector4D>
@@ -302,6 +303,10 @@ class _3D_EXPORT Qgs3DMapScene : public QObject
      * \since QGIS 3.44
      */
     QList<QVector4D> clipPlaneEquations() const { return mClipPlanesEquations; };
+
+    bool unhighlightEntity( Qt3DCore::QEntity *parent, const QgsFeatureId &featureId ) SIP_SKIP;
+
+    bool highlightEntity( Qt3DCore::QEntity *parent, QgsVectorLayer *layer, const QgsFeature &feature ) SIP_SKIP;
 
 #ifndef SIP_RUN
     //! Static function for returning open 3D map scenes

@@ -18,6 +18,7 @@
 #include "qgs3daxis.h"
 #include "qgs3dmapexportsettings.h"
 #include "qgs3dmapsettings.h"
+#include "qgs3dsymbolregistry.h"
 #include "qgs3dsceneexporter.h"
 #include "qgs3dutils.h"
 #include "qgsaabb.h"
@@ -33,11 +34,13 @@
 #include "qgschunknode.h"
 #include "qgsdirectionallightsettings.h"
 #include "qgseventtracing.h"
+#include "qgsfeature3dhandler_p.h"
 #include "qgsforwardrenderview.h"
 #include "qgsframegraph.h"
 #include "qgsgeotransform.h"
 #include "qgsglobechunkedentity.h"
 #include "qgslinematerial_p.h"
+#include "qgsline3dsymbol.h"
 #include "qgslogger.h"
 #include "qgsmaplayerelevationproperties.h"
 #include "qgsmaplayertemporalproperties.h"
@@ -49,6 +52,7 @@
 #include "qgspoint3dsymbol.h"
 #include "qgspointcloudlayer.h"
 #include "qgspointcloudlayer3drenderer.h"
+#include "qgspolygon3dsymbol.h"
 #include "qgspostprocessingentity.h"
 #include "qgsrulebased3drenderer.h"
 #include "qgsskyboxentity.h"
@@ -1417,4 +1421,103 @@ void Qgs3DMapScene::disableClipping()
 void Qgs3DMapScene::onStopUpdatesChanged()
 {
   mSceneUpdatesEnabled = !mMap.stopUpdates();
+}
+
+bool Qgs3DMapScene::unhighlightEntity( Qt3DCore::QEntity *parent, const QgsFeatureId &featureId )
+{
+  bool found = false;
+  for ( Qt3DCore::QEntity *childEntity : parent->componentsOfType<Qt3DCore::QEntity>() )
+  {
+    const QVariant propId = childEntity->property( "featureId" );
+    bool valid;
+    const int entityId = propId.toInt( &valid );
+    if ( valid && entityId == featureId )
+    {
+      found = true;
+      childEntity->setParent( ( Qt3DCore::QNode * ) nullptr );
+      childEntity->deleteLater();
+    }
+  }
+
+  return found;
+}
+
+bool Qgs3DMapScene::highlightEntity( Qt3DCore::QEntity *parent, QgsVectorLayer *layer, const QgsFeature &feature )
+{
+  // create symbol
+  QgsAbstract3DSymbol *symbol = nullptr;
+  QgsVectorLayer3DRenderer *vectorRenderer = dynamic_cast<QgsVectorLayer3DRenderer *>( layer->renderer3D() );
+  if ( vectorRenderer )
+  {
+    QgsPhongMaterialSettings *phong = dynamic_cast<QgsPhongMaterialSettings *>( QgsPhongMaterialSettings::create() );
+    phong->setAmbient( Qt::darkRed );
+    phong->setDiffuse( Qt::darkGray );
+    phong->setOpacity( 0.4f );
+    if ( QgsPolygon3DSymbol *clonedSymb = dynamic_cast<QgsPolygon3DSymbol *>( vectorRenderer->symbol()->clone() ) )
+    {
+      clonedSymb->setMaterialSettings( phong );
+      clonedSymb->setAddBackFaces( false );
+      clonedSymb->setCullingMode( Qgs3DTypes::CullingMode::NoCulling );
+      clonedSymb->setEdgesEnabled( true );
+      clonedSymb->setEdgeColor( Qt::green );
+      clonedSymb->setEdgeWidth( 1.5f );
+      symbol = clonedSymb;
+    }
+    else if ( QgsPoint3DSymbol *clonedSymb = dynamic_cast<QgsPoint3DSymbol *>( vectorRenderer->symbol()->clone() ) )
+    {
+      clonedSymb->setMaterialSettings( phong );
+      symbol = clonedSymb;
+    }
+    else if ( QgsLine3DSymbol *clonedSymb = dynamic_cast<QgsLine3DSymbol *>( vectorRenderer->symbol()->clone() ) )
+    {
+      clonedSymb->setMaterialSettings( phong );
+      symbol = clonedSymb;
+    }
+    else
+    {
+      delete phong;
+    }
+  }
+
+  if ( !symbol )
+  {
+    return false;
+  }
+
+  QgsVector3D chunkOrigin;
+  for ( QgsMapLayer *sceneLayer : layers() )
+  {
+    if ( sceneLayer->id() == layer->id() )
+    {
+      Qt3DCore::QEntity *entity = layerEntity( sceneLayer );
+      if ( QgsChunkedEntity *chunkedEntity = qobject_cast<QgsChunkedEntity *>( entity ) )
+      {
+        QList<QgsChunkNode *> activeNodes = chunkedEntity->activeNodes();
+        for ( QgsChunkNode *node : chunkedEntity->activeNodes() )
+        {
+          const QgsRectangle rect = node->box3D().toRectangle();
+          if ( rect.intersects( feature.geometry().boundingBox() ) )
+          {
+            chunkOrigin = QgsVector3D( rect.center().x(), rect.center().y(), 0 );
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  Qgs3DRenderContext renderContext = Qgs3DRenderContext::fromMapSettings( &mMap );
+  QSet<QString> attributeNames;
+  QgsFeature3DHandler *feat3DHandler = QgsApplication::symbol3DRegistry()->createHandlerForSymbol( dynamic_cast<QgsVectorLayer *>( layer ), symbol );
+  feat3DHandler->prepare( renderContext, attributeNames, chunkOrigin );
+  feat3DHandler->processFeature( feature, renderContext );
+  QList<Qt3DCore::QEntity *> entities = feat3DHandler->finalize( parent, renderContext );
+
+  for ( Qt3DCore::QEntity *entity : entities )
+  {
+    finalizeNewEntity( entity );
+    entity->setProperty( "featureId", QVariant( feature.id() ) );
+  }
+
+  return true;
 }
