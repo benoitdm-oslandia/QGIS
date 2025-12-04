@@ -58,7 +58,7 @@ void Qgs3DSnappingManager::finish()
 {
   QMutexLocker locker( &mHighlightedMutex );
 
-  clearHighlightedPointEntity();
+  clearAllHighlightedEntities();
 
   if ( mHighlightedPointEntity.get() != nullptr )
   {
@@ -96,7 +96,7 @@ QgsPoint Qgs3DSnappingManager::screenToMap( const QPoint &screenPos, bool *ok )
   {
     // Unable to compute position
     qDebug() << "Unable to compute position";
-    clearHighlightedPointEntity();
+    clearAllHighlightedEntities();
     return QgsPoint();
   }
 
@@ -130,7 +130,7 @@ QgsPoint Qgs3DSnappingManager::screenToMap( const QPoint &screenPos, bool *ok )
     qDebug() << "on est sortie d'un batiment on clean";
     // Not Inside a feature anymore
     // clear all the highlight
-    clearHighlightedPointEntity();
+    clearAllHighlightedEntities();
   }
 
   QgsVector3D mapPoint = Qgs3DUtils::worldToMapCoordinates( QgsVector3D( worldPoint ), mCanvas->mapSettings()->origin() );
@@ -257,7 +257,7 @@ void Qgs3DSnappingManager::updateHighlighted( QgsMapLayer *layer, const QgsFeatu
   {
     qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "Switching from:" << mHighlightedFeatureId << "to:" << feat.id();
 
-    clearHighlightedPointEntity();
+    clearAllHighlightedEntities();
 
     mHighlightedFeatureId = feat.id();
 
@@ -329,21 +329,7 @@ void Qgs3DSnappingManager::updateHighlighted( QgsMapLayer *layer, const QgsFeatu
     {
       // no snap found
       // Remove the snap shpere entity if necessary
-      if ( mCanvas && mCanvas->engine() && mCanvas->engine()->frameGraph() && mCanvas->scene()->engine() )
-      {
-        for ( auto child : mHighlightedPointEntity->childNodes() )
-        {
-          if ( Qt3DCore::QEntity *entity = dynamic_cast<Qt3DCore::QEntity *>( child ) )
-          {
-            if ( entity->objectName() == QStringLiteral( "HL_point" ) )
-            {
-              entity->setParent( ( Qt3DCore::QNode * ) nullptr );
-              entity->deleteLater();
-              break;
-            }
-          }
-        }
-      }
+      clearHighlightedEntityByName( QStringLiteral( "HL_point" ) );
     }
     else
     {
@@ -390,27 +376,37 @@ void Qgs3DSnappingManager::updateHighlighted( QgsMapLayer *layer, const QgsFeatu
 }
 
 
-void Qgs3DSnappingManager::clearHighlightedPointEntity()
+void Qgs3DSnappingManager::clearHighlightedEntityByName( const QString &name )
 {
   QMutexLocker locker( &mHighlightedMutex );
   if ( mHighlightedPointEntity )
   {
     if ( mCanvas && mCanvas->engine() && mCanvas->engine()->frameGraph() && mCanvas->scene()->engine() )
     {
-      qDebug() << "mHighlightedPointEntity cleared!";
-
       for ( auto child : mHighlightedPointEntity->childNodes() )
       {
-        if ( Qt3DCore::QEntity *ent = dynamic_cast<Qt3DCore::QEntity *>( child ) )
+        if ( Qt3DCore::QEntity *entity = dynamic_cast<Qt3DCore::QEntity *>( child ) )
         {
-          ent->setParent( ( Qt3DCore::QNode * ) nullptr );
-          ent->deleteLater();
+          if ( name.isEmpty() || entity->objectName() == name )
+          {
+            entity->setParent( ( Qt3DCore::QNode * ) nullptr );
+            entity->deleteLater();
+          }
         }
       }
     }
-    mHighlightedFeatureId = -1;
-
     //setEnableOnNode( mHighlightedPointEntity->parentNode()->parentNode(), "Drapé_2/3/1_SINGLE_10_TESSELLATED", true );
+  }
+}
+
+void Qgs3DSnappingManager::clearAllHighlightedEntities()
+{
+  QMutexLocker locker( &mHighlightedMutex );
+  if ( mHighlightedPointEntity )
+  {
+    clearHighlightedEntityByName();
+    mHighlightedFeatureId = -1;
+    qDebug() << "clearAllHighlightedEntities done!";
   }
 }
 

@@ -49,7 +49,8 @@ class Qgs3DSnappingManager
     bool setEnableOnNode( Qt3DCore::QNode *currEnt, const QString &name, bool enabled );
 
   private:
-    void clearHighlightedPointEntity();
+    void clearAllHighlightedEntities();
+    void clearHighlightedEntityByName( const QString &name = QString() );
     void updateHighlighted( QgsMapLayer *layer, const QgsFeature &feat, const QVector3D &highlightedPoint );
 
   private:
