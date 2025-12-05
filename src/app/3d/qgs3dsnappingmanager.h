@@ -45,12 +45,12 @@ class Qgs3DSnappingManager
 
     QVector3D screenToWorld( const QPoint &screenPos, bool *success = nullptr, SnappingMode *snapFound = nullptr, QString *layerId = nullptr, QgsFeatureId *nearestFid = nullptr, QVector3D ( *facePoints )[3] = nullptr ) const;
 
-    QgsPoint screenToMap( const QPoint &screenPos, bool *ok = nullptr );
+    QgsPoint screenToMap( const QPoint &screenPos, bool *ok = nullptr, bool highlightEntity = true, bool highlightSnappedPoint = true );
 
   private:
     void clearAllHighlightedEntities();
     void clearHighlightedEntityByName( const QString &name = QString() );
-    void updateHighlightedEntities( QgsMapLayer *layer, const QgsFeature &feature, const QVector3D &highlightedPoint, SnappingMode snapFound );
+    void updateHighlightedEntities( QgsMapLayer *layer, const QgsFeature &feature, const QVector3D &highlightedPoint, SnappingMode snapFound, bool highlightEntity, bool highlightSnappedPoint );
 
   private:
     SnappingMode mMode = SnappingMode::Off;

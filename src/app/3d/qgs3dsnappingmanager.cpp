@@ -82,7 +82,7 @@ void Qgs3DSnappingManager::setTolerance( double tolerance )
   mTolerance = tolerance;
 }
 
-QgsPoint Qgs3DSnappingManager::screenToMap( const QPoint &screenPos, bool *ok )
+QgsPoint Qgs3DSnappingManager::screenToMap( const QPoint &screenPos, bool *ok, bool highlightEntity, bool highlightSnappedPoint )
 {
   QString layerId;
   QgsFeatureId nearestFid;
@@ -104,36 +104,43 @@ QgsPoint Qgs3DSnappingManager::screenToMap( const QPoint &screenPos, bool *ok )
     return QgsPoint();
   }
 
-  if ( mHighlightedFeatureId != nearestFid && nearestFid < std::numeric_limits<int>::max() )
-    qDebug() << "HL changed layerId:" << layerId << "/ nearestFid:" << nearestFid;
-  if ( !layerId.isEmpty() && nearestFid > 0 && nearestFid < std::numeric_limits<int>::max() )
+  if ( highlightSnappedPoint || highlightEntity )
   {
-    // Inside a feature
-    // Highlight the feature and display a sphere if a snapPoint was found
-    const QList<QgsMapLayer *> layers = mCanvas->scene()->layers();
-    for ( QgsMapLayer *layer : layers )
+    if ( mHighlightedFeatureId != nearestFid && nearestFid < std::numeric_limits<int>::max() )
+      qDebug() << "HL changed layerId:" << layerId << "/ nearestFid:" << nearestFid;
+    if ( !layerId.isEmpty() && nearestFid > 0 && nearestFid < std::numeric_limits<int>::max() )
     {
-      QgsFeatureSource *featureLayer = dynamic_cast<QgsFeatureSource *>( layer );
-      if ( featureLayer && layer->id() == layerId )
+      // Inside a feature
+      // Highlight the feature and display a sphere if a snapPoint was found
+      const QList<QgsMapLayer *> layers = mCanvas->scene()->layers();
+      for ( QgsMapLayer *layer : layers )
       {
-        QgsFeatureRequest req( nearestFid );
-        req.setCoordinateTransform( QgsCoordinateTransform( layer->crs3D(), mCanvas->mapSettings()->crs(), mCanvas->mapSettings()->transformContext() ) );
-        QgsFeatureIterator ite = featureLayer->getFeatures( req );
-        QgsFeature feature;
-        if ( ite.nextFeature( feature ) )
+        QgsFeatureSource *featureLayer = dynamic_cast<QgsFeatureSource *>( layer );
+        if ( featureLayer && layer->id() == layerId )
         {
-          const QVector3D highlightPoint = snapFound != SnappingMode::Off ? worldPoint : QVector3D();
-          updateHighlightedEntities( layer, feature, highlightPoint, snapFound );
+          QgsFeatureRequest req( nearestFid );
+          req.setCoordinateTransform( QgsCoordinateTransform( layer->crs3D(), mCanvas->mapSettings()->crs(), mCanvas->mapSettings()->transformContext() ) );
+          QgsFeatureIterator ite = featureLayer->getFeatures( req );
+          QgsFeature feature;
+          if ( ite.nextFeature( feature ) )
+          {
+            const QVector3D highlightPoint = snapFound != SnappingMode::Off ? worldPoint : QVector3D();
+            updateHighlightedEntities( layer, feature, highlightPoint, snapFound, highlightEntity, highlightSnappedPoint );
+          }
+          break;
         }
-        break;
       }
     }
+    else if ( mHighlightedFeatureId != -1 )
+    {
+      qDebug() << "on est sortie d'un batiment on clean";
+      // Not Inside a feature anymore
+      // clear all the highlight
+      clearAllHighlightedEntities();
+    }
   }
-  else if ( mHighlightedFeatureId != -1 )
+  else
   {
-    qDebug() << "on est sortie d'un batiment on clean";
-    // Not Inside a feature anymore
-    // clear all the highlight
     clearAllHighlightedEntities();
   }
 
@@ -283,13 +290,13 @@ QVector3D Qgs3DSnappingManager::screenToWorld( const QPoint &screenPos, bool *su
   return outPoint;
 }
 
-void Qgs3DSnappingManager::updateHighlightedEntities( QgsMapLayer *layer, const QgsFeature &feature, const QVector3D &highlightedPoint, SnappingMode snapFound )
+void Qgs3DSnappingManager::updateHighlightedEntities( QgsMapLayer *layer, const QgsFeature &feature, const QVector3D &highlightedPoint, SnappingMode snapFound, bool highlightEntity, bool highlightSnappedPoint )
 {
   QMutexLocker locker( &mHighlightedMutex );
   if ( !mHighlightedPointEntity )
     return;
 
-  if ( mHighlightedFeatureId != feature.id() )
+  if ( highlightEntity && mHighlightedFeatureId != feature.id() )
   {
     qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "Switching from:" << mHighlightedFeatureId << "to:" << feature.id();
 
@@ -304,7 +311,7 @@ void Qgs3DSnappingManager::updateHighlightedEntities( QgsMapLayer *layer, const 
     }
   } // end if feature id changed
 
-  if ( mMode != SnappingMode::Off && mPreviousHighlightedPoint != highlightedPoint )
+  if ( highlightSnappedPoint && mMode != SnappingMode::Off && mPreviousHighlightedPoint != highlightedPoint )
   {
     mPreviousHighlightedPoint = highlightedPoint;
     // Remove the snap billboard entity if necessary
@@ -348,6 +355,8 @@ void Qgs3DSnappingManager::updateHighlightedEntities( QgsMapLayer *layer, const 
 
       Qgs3DRenderContext renderContext = Qgs3DRenderContext::fromMapSettings( mCanvas->mapSettings() );
       QSet<QString> attributeNames;
+
+      // TODO do as rubberband
 
       QgsFeature3DHandler *feat3DHandler = QgsApplication::symbol3DRegistry()->createHandlerForSymbol( dynamic_cast<QgsVectorLayer *>( layer ), point3DSymbol );
       feat3DHandler->prepare( renderContext, attributeNames, QgsVector3D() );
