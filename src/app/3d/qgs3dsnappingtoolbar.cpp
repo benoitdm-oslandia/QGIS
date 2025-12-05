@@ -60,19 +60,25 @@ Qgs3DSnappingToolbar::Qgs3DSnappingToolbar( Qgs3DMapCanvasWidget *parent, Qgs3DS
   snappingButton->setToolTip( tr( "Snapping Type" ) );
   snappingButton->setPopupMode( QToolButton::ToolButtonPopupMode::InstantPopup );
 
-  QAction *snappingVertexAction = new QAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DSnappingVertex.svg" ) ) ), tr( "Snap on vertex" ) );
+  QAction *snappingVertexAction = new QAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIconSnappingEndPoint.svg" ) ) ), tr( "Snap on vertex" ) );
   snappingVertexAction->setData( QVariant::fromValue( Qgs3DSnappingManager::SnappingMode::Vertex ) );
   snappingVertexAction->setCheckable( true );
   snappingVertexAction->setChecked( mSnapper->snappingMode() & Qgs3DSnappingManager::SnappingMode::Vertex );
   snappingMenu->addAction( snappingVertexAction );
 
-  QAction *snappingMidEdgeAction = new QAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DSnappingMidEdge.svg" ) ) ), tr( "Snap on mid edge" ) );
+  QAction *snappingMidEdgeAction = new QAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIconSnappingMiddle.svg" ) ) ), tr( "Snap on mid edge" ) );
   snappingMidEdgeAction->setData( QVariant::fromValue( Qgs3DSnappingManager::SnappingMode::MiddleEdge ) );
   snappingMidEdgeAction->setCheckable( true );
   snappingMidEdgeAction->setChecked( mSnapper->snappingMode() & Qgs3DSnappingManager::SnappingMode::MiddleEdge );
   snappingMenu->addAction( snappingMidEdgeAction );
 
-  QAction *snappingCenterFaceAction = new QAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIcon3DSnappingCenterFace.svg" ) ) ), tr( "Snap on face center" ) );
+  QAction *snappingAlongEdgeAction = new QAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIconSnappingSegment.svg" ) ) ), tr( "Snap on edge" ) );
+  snappingAlongEdgeAction->setData( QVariant::fromValue( Qgs3DSnappingManager::SnappingMode::AlongEdge ) );
+  snappingAlongEdgeAction->setCheckable( true );
+  snappingAlongEdgeAction->setChecked( mSnapper->snappingMode() & Qgs3DSnappingManager::SnappingMode::AlongEdge );
+  snappingMenu->addAction( snappingAlongEdgeAction );
+
+  QAction *snappingCenterFaceAction = new QAction( QIcon( QgsApplication::iconPath( QStringLiteral( "mIconSnappingCentroid.svg" ) ) ), tr( "Snap on face center" ) );
   snappingCenterFaceAction->setData( QVariant::fromValue( Qgs3DSnappingManager::SnappingMode::CenterFace ) );
   snappingCenterFaceAction->setCheckable( true );
   snappingCenterFaceAction->setChecked( mSnapper->snappingMode() & Qgs3DSnappingManager::SnappingMode::CenterFace );

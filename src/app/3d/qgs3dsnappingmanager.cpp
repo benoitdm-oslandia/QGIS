@@ -123,7 +123,7 @@ QgsPoint Qgs3DSnappingManager::screenToMap( const QPoint &screenPos, bool *ok )
         if ( ite.nextFeature( feature ) )
         {
           const QVector3D highlightPoint = snapFound != SnappingMode::Off ? worldPoint : QVector3D();
-          updateHighlightedEntites( layer, feature, highlightPoint, snapFound );
+          updateHighlightedEntities( layer, feature, highlightPoint, snapFound );
         }
         break;
       }
@@ -229,6 +229,28 @@ QVector3D Qgs3DSnappingManager::screenToWorld( const QPoint &screenPos, bool *su
       outPoint = snapPoint;
     }
   }
+  if ( mMode & SnappingMode::AlongEdge )
+  {
+    const QVector3D origin = ( *facePoints )[0];
+    const QVector3D dest = ( *facePoints )[1];
+    const QVector3D direction = ( dest - origin ).normalized();
+    const QVector3D snapPoint = origin + QVector3D::dotProduct( worldPoint - origin, direction ) * direction;
+
+    if ( QVector3D::dotProduct( dest - origin, snapPoint - origin ) >= 0 && QVector3D::dotProduct( origin - dest, snapPoint - dest ) >= 0 )
+    {
+      const float snapDistance = ( snapPoint - worldPoint ).length();
+      if ( snapDistance < minSnapDistance )
+      {
+        if ( snapFound )
+        {
+          *snapFound = SnappingMode::AlongEdge;
+        }
+        minSnapDistance = snapDistance;
+        outPoint = snapPoint;
+      }
+    }
+    // else outside segment
+  }
   if ( mMode & SnappingMode::MiddleEdge )
   {
     const QVector3D snapPoint = ( ( *facePoints )[0] + ( *facePoints )[1] ) / 2.0;
@@ -261,7 +283,7 @@ QVector3D Qgs3DSnappingManager::screenToWorld( const QPoint &screenPos, bool *su
   return outPoint;
 }
 
-void Qgs3DSnappingManager::updateHighlightedEntites( QgsMapLayer *layer, const QgsFeature &feature, const QVector3D &highlightedPoint, SnappingMode snapFound )
+void Qgs3DSnappingManager::updateHighlightedEntities( QgsMapLayer *layer, const QgsFeature &feature, const QVector3D &highlightedPoint, SnappingMode snapFound )
 {
   QMutexLocker locker( &mHighlightedMutex );
   if ( !mHighlightedPointEntity )
@@ -308,11 +330,14 @@ void Qgs3DSnappingManager::updateHighlightedEntites( QgsMapLayer *layer, const Q
         case SnappingMode::MiddleEdge:
           sl->setShape( Qgis::MarkerShape::Triangle );
           break;
+        case SnappingMode::AlongEdge:
+          sl->setShape( Qgis::MarkerShape::Cross );
+          break;
         case SnappingMode::CenterFace:
           sl->setShape( Qgis::MarkerShape::Circle );
           break;
         default:
-          sl->setShape( Qgis::MarkerShape::Cross );
+          sl->setShape( Qgis::MarkerShape::Heart );
           break;
       }
 

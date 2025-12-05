@@ -24,8 +24,9 @@ class Qgs3DSnappingManager
     {
       Off = 1 << 0,
       Vertex = 1 << 1,
-      MiddleEdge = 1 << 2,
-      CenterFace = 1 << 3,
+      AlongEdge = 1 << 2,
+      MiddleEdge = 1 << 3,
+      CenterFace = 1 << 4,
     };
 
     Qgs3DSnappingManager( Qgs3DMapCanvasWidget *parentWidget, float tolerance );
@@ -51,7 +52,7 @@ class Qgs3DSnappingManager
   private:
     void clearAllHighlightedEntities();
     void clearHighlightedEntityByName( const QString &name = QString() );
-    void updateHighlightedEntites( QgsMapLayer *layer, const QgsFeature &feature, const QVector3D &highlightedPoint, SnappingMode snapFound );
+    void updateHighlightedEntities( QgsMapLayer *layer, const QgsFeature &feature, const QVector3D &highlightedPoint, SnappingMode snapFound );
 
   private:
     SnappingMode mMode = SnappingMode::Off;
