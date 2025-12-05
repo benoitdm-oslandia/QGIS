@@ -301,7 +301,6 @@ void Qgs3DSnappingManager::updateHighlightedEntities( QgsMapLayer *layer, const 
     if ( vLayer )
     {
       mCanvas->scene()->highlightEntity( mHighlightedPointEntity.get(), vLayer, feature );
-      //setEnableOnNode( mHighlightedPointEntity->parentNode()->parentNode(), "Drapé_2/3/1_SINGLE_10_TESSELLATED", false );
     }
   } // end if feature id changed
 
@@ -390,7 +389,6 @@ void Qgs3DSnappingManager::clearHighlightedEntityByName( const QString &name )
         }
       }
     }
-    //setEnableOnNode( mHighlightedPointEntity->parentNode()->parentNode(), "Drapé_2/3/1_SINGLE_10_TESSELLATED", true );
   }
 }
 
@@ -403,24 +401,4 @@ void Qgs3DSnappingManager::clearAllHighlightedEntities()
     mHighlightedFeatureId = -1;
     qDebug() << "clearAllHighlightedEntities done!";
   }
-}
-
-bool Qgs3DSnappingManager::setEnableOnNode( Qt3DCore::QNode *currEnt, const QString &name, bool enabled )
-{
-  for ( auto child : currEnt->childNodes() )
-  {
-    if ( Qt3DCore::QEntity *ent = dynamic_cast<Qt3DCore::QEntity *>( child ) )
-      if ( ent->objectName() == name )
-      {
-        ent->setEnabled( enabled );
-        ent->parentNode()->setEnabled( enabled );
-        ent->parentNode()->parentNode()->setEnabled( enabled );
-        qDebug() << "========= Found entity: " << ent->objectName() << "/enabled:" << ent->isEnabled();
-        return true;
-      }
-
-    if ( setEnableOnNode( child, name, enabled ) )
-      return true;
-  }
-  return false;
 }

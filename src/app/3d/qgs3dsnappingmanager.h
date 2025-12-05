@@ -47,8 +47,6 @@ class Qgs3DSnappingManager
 
     QgsPoint screenToMap( const QPoint &screenPos, bool *ok = nullptr );
 
-    bool setEnableOnNode( Qt3DCore::QNode *currEnt, const QString &name, bool enabled );
-
   private:
     void clearAllHighlightedEntities();
     void clearHighlightedEntityByName( const QString &name = QString() );
