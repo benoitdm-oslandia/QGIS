@@ -393,6 +393,7 @@ if (WITH_3D)
     3d/qgs3dcreateprimitivespheredialog.cpp
     3d/qgs3dmaptoolcreateprimitive.cpp
     3d/qgs3dsnappingmanager.cpp
+    3d/qgs3dsnappingtoolbar.cpp
   )
 endif()
 

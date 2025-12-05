@@ -55,6 +55,7 @@ class QgsSettings;
 
 class Qgs3DPointCloudEditionToolBar;
 class Qgs3DPrimitiveEditionToolBar;
+class Qgs3DSnappingToolbar;
 
 //! Helper validator for classification classes
 class ClassValidator : public QValidator
@@ -101,6 +102,8 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
 
     bool eventFilter( QObject *watched, QEvent *event ) override;
 
+    Qgs3DSnappingManager *snappingManager() const { return mSnapper.get(); }
+
   private slots:
     void resetView();
     void configure();
@@ -144,13 +147,10 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
 
     void onCrossSectionToolFinished();
 
-    void onSnappingButtonTriggered( QAction *action );
-
   private:
     void updateCheckedActionsFromMapSettings( const Qgs3DMapSettings *mapSettings ) const;
 
     void updateEditionToolBar();
-    void createSnappingToolBar( const QgsSettings &setting );
 
     // TODO fixed version:
     QList<QgsMapLayer *> editableLayers() const;
@@ -214,13 +214,8 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     Qgs3DDebugWidget *mDebugWidget = nullptr;
 
     QToolBar *mEditingToolBar = nullptr;
-
-    // snapping toolbar
     std::unique_ptr<Qgs3DSnappingManager> mSnapper = nullptr;
-    QToolBar *mSnappingToolBar = nullptr;
-    QAction *mSnappingAction = nullptr;
-    QLabel *mSnappingUnitLabel = nullptr;
-
+    Qgs3DSnappingToolbar *mSnappingToolBar = nullptr;
     QMenu *mToolbarMenu = nullptr;
 };
 
