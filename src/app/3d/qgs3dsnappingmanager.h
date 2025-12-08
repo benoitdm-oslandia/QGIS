@@ -11,6 +11,7 @@ class Qgs3DMapCanvasWidget;
 class Qgs3DMapCanvas;
 class QgsMapLayer;
 class QgsFeature;
+class QgsRubberBand3D;
 
 namespace Qt3DCore
 {
@@ -100,8 +101,6 @@ class Qgs3DSnappingManager
   private:
     /// remove all created entities
     void clearAllHighlightedEntities();
-    /// remove created entities by their name
-    void clearHighlightedEntityByName( const QString &name = QString() );
 
     /**
      *
@@ -116,7 +115,7 @@ class Qgs3DSnappingManager
 
     void updateHighlightedEntities( QgsMapLayer *layer, const QgsFeature &feature, const QVector3D &highlightedPoint, SnappingType3D snapFound, bool highlightEntity, bool highlightSnappedPoint );
 
-    void updateHighlightedPoint( QgsMapLayer *layer, const QVector3D &highlightedPoint, SnappingType3D snapFound );
+    void updateHighlightedPoint( const QVector3D &highlightedPoint, SnappingType3D snapFound );
 
   private:
     SnappingType3D mType = SnappingType3D::Off;
@@ -124,7 +123,8 @@ class Qgs3DSnappingManager
     Qgs3DMapCanvas *mCanvas;
     double mTolerance = 0.0;
 
-    std::unique_ptr<Qt3DCore::QEntity> mHighlightedPointEntity = nullptr;
+    std::unique_ptr<Qt3DCore::QEntity> mHighlightedRootEntity = nullptr;
+    std::unique_ptr<QgsRubberBand3D> mHighlightedPointBB = nullptr;
     QgsFeatureId mHighlightedFeatureId = -1;
     QVector3D mPreviousHighlightedPoint;
     QRecursiveMutex mHighlightedMutex;

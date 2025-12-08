@@ -1,37 +1,27 @@
 #include "qgs3dsnappingmanager.h"
 
-#include "qgsraycastcontext.h"
-#include "qgsraycasthit.h"
 #include "qgs3dmapcanvas.h"
-#include "qgscameracontroller.h"
-#include "qgsfeaturesource.h"
-#include "qgsfeatureiterator.h"
-#include "qgsmaplayer.h"
+#include "qgs3dmapcanvaswidget.h"
 #include "qgs3dmapscene.h"
-#include "qgswindow3dengine.h"
+#include "qgs3dsymbolregistry.h"
+#include "qgs3dutils.h"
+#include "qgscameracontroller.h"
+#include "qgsfeature3dhandler_p.h"
+#include "qgsfeatureiterator.h"
+#include "qgsfeaturesource.h"
 #include "qgsframegraph.h"
+#include "qgsmaplayer.h"
 #include "qgsraycastcontext.h"
 #include "qgsraycasthit.h"
-#include "qgsfeaturesource.h"
-#include "qgsfeatureiterator.h"
-#include "qgsvectorlayer3drenderer.h"
-#include "qgspoint3dsymbol.h"
-#include "qgs3dsymbolregistry.h"
-#include "qgsfeature3dhandler_p.h"
-#include "qgsapplication.h"
+#include "qgsrubberband3d.h"
 #include "qgsvectorlayer.h"
-#include "qgsgeotransform.h"
-#include "qgs3dutils.h"
-#include "qgs3dmapcanvaswidget.h"
+#include "qgsvectorlayer3drenderer.h"
+#include "qgswindow3dengine.h"
 
-#include "qgspoint3dsymbol.h"
-#include "qgsmarkersymbol.h"
-#include "qgsmarkersymbollayer.h"
-
-#include <Qt3DRender/QCamera>
+#include <Qt3DExtras/QCylinderMesh>
 #include <Qt3DExtras/QPhongMaterial>
 #include <Qt3DExtras/QSphereMesh>
-#include <Qt3DExtras/QCylinderMesh>
+#include <Qt3DRender/QCamera>
 
 Qgs3DSnappingManager::Qgs3DSnappingManager( Qgs3DMapCanvasWidget *parentWidget, float tolerance )
   : mType( SnappingType3D::Off )
@@ -51,8 +41,8 @@ void Qgs3DSnappingManager::restart()
   Q_ASSERT( mCanvas != nullptr );
 
   QMutexLocker locker( &mHighlightedMutex );
-  mHighlightedPointEntity.reset( new Qt3DCore::QEntity( mCanvas->engine()->frameGraph()->rubberBandsRootEntity() ) );
-  mHighlightedPointEntity->setObjectName( QStringLiteral( "ROOT_HL_OBJECT" ) );
+  mHighlightedRootEntity.reset( new Qt3DCore::QEntity( mCanvas->engine()->frameGraph()->rubberBandsRootEntity() ) );
+  mHighlightedRootEntity->setObjectName( QStringLiteral( "ROOT_HL_OBJECT" ) );
 }
 
 void Qgs3DSnappingManager::finish()
@@ -61,12 +51,12 @@ void Qgs3DSnappingManager::finish()
 
   clearAllHighlightedEntities();
 
-  if ( mHighlightedPointEntity.get() != nullptr )
+  if ( mHighlightedRootEntity.get() != nullptr )
   {
-    mHighlightedPointEntity->setParent( ( Qt3DCore::QNode * ) nullptr );
-    mHighlightedPointEntity->deleteLater();
+    mHighlightedRootEntity->setParent( ( Qt3DCore::QNode * ) nullptr );
+    mHighlightedRootEntity->deleteLater();
   }
-  mHighlightedPointEntity.reset();
+  mHighlightedRootEntity.reset();
 }
 
 void Qgs3DSnappingManager::setSnappingType( SnappingType3D mode )
@@ -116,8 +106,8 @@ QgsPoint Qgs3DSnappingManager::screenToMap( const QPoint &screenPos, bool *ok, b
           QgsFeature feature;
           if ( ite.nextFeature( feature ) )
           {
-            const QVector3D highlightPoint = snapFound != SnappingType3D::Off ? worldPoint : QVector3D();
-            updateHighlightedEntities( layer, feature, highlightPoint, snapFound, highlightEntity, highlightSnappedPoint );
+            const QVector3D highlightedPointInWorld = snapFound != SnappingType3D::Off ? worldPoint : QVector3D();
+            updateHighlightedEntities( layer, feature, highlightedPointInWorld, snapFound, highlightEntity, highlightSnappedPoint );
           }
           break;
         }
@@ -261,10 +251,10 @@ QVector3D Qgs3DSnappingManager::screenToWorld( const QPoint &screenPos, bool *su
   return outPoint;
 }
 
-void Qgs3DSnappingManager::updateHighlightedEntities( QgsMapLayer *layer, const QgsFeature &feature, const QVector3D &highlightedPoint, SnappingType3D snapFound, bool highlightEntity, bool highlightSnappedPoint )
+void Qgs3DSnappingManager::updateHighlightedEntities( QgsMapLayer *layer, const QgsFeature &feature, const QVector3D &highlightedPointInWorld, SnappingType3D snapFound, bool highlightEntity, bool highlightSnappedPoint )
 {
   QMutexLocker locker( &mHighlightedMutex );
-  if ( !mHighlightedPointEntity )
+  if ( !mHighlightedRootEntity )
     return;
 
   if ( mHighlightedFeatureId != feature.id() )
@@ -277,105 +267,53 @@ void Qgs3DSnappingManager::updateHighlightedEntities( QgsMapLayer *layer, const 
 
       if ( QgsVectorLayer *vLayer = dynamic_cast<QgsVectorLayer *>( layer ) )
       {
-        mCanvas->scene()->highlightEntity( mHighlightedPointEntity.get(), vLayer, feature );
+        mCanvas->scene()->highlightEntity( mHighlightedRootEntity.get(), vLayer, feature );
       }
     }
   } // end if feature id changed
 
-
-  if ( highlightSnappedPoint && mType != SnappingType3D::Off && mPreviousHighlightedPoint != highlightedPoint )
+  if ( highlightSnappedPoint && mType != SnappingType3D::Off && mPreviousHighlightedPoint != highlightedPointInWorld )
   {
-    updateHighlightedPoint( layer, highlightedPoint, snapFound );
+    updateHighlightedPoint( highlightedPointInWorld, snapFound );
   }
 }
 
 
-void Qgs3DSnappingManager::updateHighlightedPoint( QgsMapLayer *layer, const QVector3D &highlightedPoint, SnappingType3D snapFound )
+void Qgs3DSnappingManager::updateHighlightedPoint( const QVector3D &highlightedPointInWorld, SnappingType3D snapFound )
 {
-  if ( mType != SnappingType3D::Off && mPreviousHighlightedPoint != highlightedPoint )
+  if ( mType != SnappingType3D::Off && mPreviousHighlightedPoint != highlightedPointInWorld )
   {
-    mPreviousHighlightedPoint = highlightedPoint;
+    mPreviousHighlightedPoint = highlightedPointInWorld;
     // Remove the snap billboard entity if necessary
-    clearHighlightedEntityByName( QStringLiteral( "HL_point" ) );
-    if ( !highlightedPoint.isNull() )
+    if ( highlightedPointInWorld.isNull() )
+      mHighlightedPointBB.reset();
+    else
     {
       // HL nearest vertex
 
-      QgsFeature hlPointFeat;
-      QgsPoint hlPointGeom( 0.0, 0.0, 0.0 );
-      hlPointFeat.setGeometry( QgsGeometry::fromPoint( hlPointGeom ) );
-
-      QgsMarkerSymbol *markerSymbol = static_cast<QgsMarkerSymbol *>( QgsSymbol::defaultSymbol( Qgis::GeometryType::Point ) );
-      markerSymbol->setColor( QColor( 255, 0, 0, 150 ) );
-      markerSymbol->setSize( 2 );
-      QgsSimpleMarkerSymbolLayer *sl = static_cast<QgsSimpleMarkerSymbolLayer *>( markerSymbol->symbolLayer( 0 ) );
+      mHighlightedPointBB.reset( new QgsRubberBand3D( *mCanvas->mapSettings(), mCanvas->engine(), mHighlightedRootEntity.get(), Qgis::GeometryType::Point ) );
+      QgsVector3D mapPoint = Qgs3DUtils::worldToMapCoordinates( highlightedPointInWorld, mCanvas->mapSettings()->origin() );
+      mHighlightedPointBB->addPoint( QgsPoint( mapPoint.x(), mapPoint.y(), mapPoint.z() ) );
+      mHighlightedPointBB->setColor( QColor( 255, 0, 0, 150 ) );
+      mHighlightedPointBB->setOutlineColor( QColor( 0, 255, 255 ) );
+      mHighlightedPointBB->setWidth( 9.f );
       switch ( snapFound )
       {
         case SnappingType3D::Vertex:
-          sl->setShape( Qgis::MarkerShape::Square );
+          mHighlightedPointBB->setMarkerShape( Qgis::MarkerShape::Square );
           break;
         case SnappingType3D::MiddleEdge:
-          sl->setShape( Qgis::MarkerShape::Triangle );
+          mHighlightedPointBB->setMarkerShape( Qgis::MarkerShape::Triangle );
           break;
         case SnappingType3D::AlongEdge:
-          sl->setShape( Qgis::MarkerShape::Cross );
+          mHighlightedPointBB->setMarkerShape( Qgis::MarkerShape::Cross2 );
           break;
         case SnappingType3D::CenterFace:
-          sl->setShape( Qgis::MarkerShape::Circle );
+          mHighlightedPointBB->setMarkerShape( Qgis::MarkerShape::Circle );
           break;
         default:
-          sl->setShape( Qgis::MarkerShape::Heart );
+          mHighlightedPointBB->setMarkerShape( Qgis::MarkerShape::Circle );
           break;
-      }
-
-      sl->setStrokeColor( QColor( 0, 255, 255 ) );
-      sl->setStrokeWidth( 0.5 );
-      QgsPoint3DSymbol *point3DSymbol = new QgsPoint3DSymbol();
-      point3DSymbol->setBillboardSymbol( markerSymbol );
-      point3DSymbol->setShape( Qgis::Point3DShape::Billboard );
-
-      Qgs3DRenderContext renderContext = Qgs3DRenderContext::fromMapSettings( mCanvas->mapSettings() );
-      QSet<QString> attributeNames;
-
-      // TODO do as rubberband
-
-      QgsFeature3DHandler *feat3DHandler = QgsApplication::symbol3DRegistry()->createHandlerForSymbol( dynamic_cast<QgsVectorLayer *>( layer ), point3DSymbol );
-      feat3DHandler->prepare( renderContext, attributeNames, QgsVector3D() );
-      feat3DHandler->processFeature( hlPointFeat, renderContext );
-      QList<Qt3DCore::QEntity *> billboardEntities = feat3DHandler->finalize( mHighlightedPointEntity.get(), renderContext );
-
-      // Set billboard entity transform
-      for ( auto billboardEntity : billboardEntities )
-      {
-        billboardEntity->setObjectName( QStringLiteral( "HL_point" ) );
-        for ( auto transform : billboardEntity->componentsOfType<QgsGeoTransform>() )
-        {
-          // QgsVector3D mapPoint = Qgs3DUtils::worldToMapCoordinates( highlightedPoint, mCanvas->mapSettings()->origin() );
-          transform->setGeoTranslation( QgsVector3D( highlightedPoint.x(), highlightedPoint.y(), highlightedPoint.z() ) );
-          transform->setOrigin( QgsVector3D() );
-        }
-      }
-    }
-  }
-}
-
-void Qgs3DSnappingManager::clearHighlightedEntityByName( const QString &name )
-{
-  QMutexLocker locker( &mHighlightedMutex );
-  if ( mHighlightedPointEntity )
-  {
-    if ( mCanvas && mCanvas->engine() && mCanvas->engine()->frameGraph() && mCanvas->scene()->engine() )
-    {
-      for ( auto child : mHighlightedPointEntity->childNodes() )
-      {
-        if ( Qt3DCore::QEntity *entity = dynamic_cast<Qt3DCore::QEntity *>( child ) )
-        {
-          if ( name.isEmpty() || entity->objectName() == name )
-          {
-            entity->setParent( ( Qt3DCore::QNode * ) nullptr );
-            entity->deleteLater();
-          }
-        }
       }
     }
   }
@@ -384,9 +322,25 @@ void Qgs3DSnappingManager::clearHighlightedEntityByName( const QString &name )
 void Qgs3DSnappingManager::clearAllHighlightedEntities()
 {
   QMutexLocker locker( &mHighlightedMutex );
-  if ( mHighlightedPointEntity )
+  if ( mHighlightedRootEntity )
   {
-    clearHighlightedEntityByName();
+    mHighlightedPointBB.reset();
+
+    if ( mHighlightedRootEntity )
+    {
+      if ( mCanvas && mCanvas->engine() && mCanvas->engine()->frameGraph() && mCanvas->scene()->engine() )
+      {
+        for ( auto child : mHighlightedRootEntity->childNodes() )
+        {
+          if ( Qt3DCore::QEntity *entity = dynamic_cast<Qt3DCore::QEntity *>( child ) )
+          {
+            entity->setParent( ( Qt3DCore::QNode * ) nullptr );
+            entity->deleteLater();
+          }
+        }
+      }
+    }
+
     mHighlightedFeatureId = -1;
     qDebug() << "clearAllHighlightedEntities done!";
   }
