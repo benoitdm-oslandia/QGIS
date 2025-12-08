@@ -33,7 +33,7 @@
 #include "qgsgeometry.h"
 #include "qgspolygon.h"
 #include "qgstessellator.h"
-#include <qobjectuniqueptr.h>
+#include "qobjectuniqueptr.h"
 
 #include <QColor>
 
@@ -84,7 +84,10 @@ namespace Qt3DRender
 class _3D_EXPORT QgsRubberBand3D
 {
   public:
-    //! Icons
+    /**
+     * \brief Icons enum
+     * \deprecated QGIS 4.0. See Qgis::MarkerShape.
+     */
     enum MarkerType
     {
 
@@ -128,13 +131,25 @@ class _3D_EXPORT QgsRubberBand3D
 
     /**
      * Sets the \a marker type to highlight point geometries and line vertices.
+     * \deprecated QGIS 4.0. See setMarkerShape(Qgis::MarkerShape).
      */
     void setMarkerType( MarkerType marker );
 
     /**
+     * Sets the \a marker type to highlight point geometries and line vertices.
+     */
+    void setMarkerShape( Qgis::MarkerShape marker );
+
+    /**
      * Returns the current marker type to highlight point geometries and line vertices.
+     * \deprecated QGIS 4.0. See markerShape().
      */
     MarkerType markerType() const;
+
+    /**
+     * Returns the current marker type to highlight point geometries and line vertices.
+     */
+    Qgis::MarkerShape markerShape() const;
 
     /**
      * Sets the marker outline style
@@ -229,7 +244,7 @@ class _3D_EXPORT QgsRubberBand3D
     Qgis::GeometryType mGeometryType = Qgis::GeometryType::Line;
 
     //! point and vertex marker type
-    MarkerType mMarkerType = Circle;
+    Qgis::MarkerShape mMarkerType = Qgis::MarkerShape::Circle;
     float mWidth = 3.f;
     QColor mColor = Qt::red;
     QColor mOutlineColor;
