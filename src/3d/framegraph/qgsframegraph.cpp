@@ -195,13 +195,7 @@ Qt3DRender::QFrameGraphNode *QgsFrameGraph::constructRubberBandsPass()
   mRubberBandsStateSet->addRenderState( blendState );
   mRubberBandsStateSet->addRenderState( blendEquation );
 
-  // Here we attach our drawings to the render target also used by forward pass.
-  // This is kind of okay, but as a result, post-processing effects get applied
-  // to rubber bands too. Ideally we would want them on top of everything.
-  mRubberBandsRenderTargetSelector = new Qt3DRender::QRenderTargetSelector( mRubberBandsStateSet );
-  mRubberBandsRenderTargetSelector->setTarget( forwardRenderView().renderTargetSelector()->target() );
-
-  Qt3DRender::QClearBuffers *clear = new Qt3DRender::QClearBuffers( mRubberBandsRenderTargetSelector );
+  Qt3DRender::QClearBuffers *clear = new Qt3DRender::QClearBuffers( mRubberBandsStateSet );
   clear->setBuffers( Qt3DRender::QClearBuffers::DepthBuffer );
 
   return mRubberBandsCameraSelector;
