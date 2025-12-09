@@ -23,6 +23,7 @@
 #include <QUrl>
 #include <Qt3DRender/QBlendEquation>
 #include <Qt3DRender/QBlendEquationArguments>
+#include <Qt3DRender/QDepthTest>
 #include <Qt3DRender/QEffect>
 #include <Qt3DRender/QGraphicsApiFilter>
 #include <Qt3DRender/QNoDepthMask>
@@ -96,6 +97,11 @@ QgsPoint3DBillboardMaterial::QgsPoint3DBillboardMaterial( Mode mode )
   renderPass->setShaderProgram( shaderProgram );
   renderPass->addRenderState( blendState );
   renderPass->addRenderState( blendEquation );
+
+  // makes billboard object to be on top
+  Qt3DRender::QDepthTest *depthTest = new Qt3DRender::QDepthTest;
+  depthTest->setDepthFunction( Qt3DRender::QDepthTest::Always );
+  renderPass->addRenderState( depthTest );
 
   // without this filter the default forward renderer would not render this
   Qt3DRender::QFilterKey *filterKey = new Qt3DRender::QFilterKey;
