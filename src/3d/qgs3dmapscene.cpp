@@ -1452,7 +1452,7 @@ bool Qgs3DMapScene::highlightEntity( Qt3DCore::QEntity *parent, QgsVectorLayer *
     QgsPhongMaterialSettings *phong = dynamic_cast<QgsPhongMaterialSettings *>( QgsPhongMaterialSettings::create() );
     phong->setAmbient( Qt::darkRed );
     phong->setDiffuse( Qt::darkGray );
-    phong->setOpacity( 0.4f );
+    phong->setOpacity( 1.0f );
     if ( QgsPolygon3DSymbol *clonedSymb = dynamic_cast<QgsPolygon3DSymbol *>( vectorRenderer->symbol()->clone() ) )
     {
       clonedSymb->setMaterialSettings( phong );
