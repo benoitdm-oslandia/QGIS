@@ -15,6 +15,7 @@
 
 #include "qgsraycastingutils.h"
 
+#include "qgs3dutils.h"
 #include "qgsaabb.h"
 #include "qgslogger.h"
 #include "qgsray3d.h"
@@ -140,14 +141,14 @@ namespace QgsRayCastingUtils
     return minAngle;
   }
 
-  bool rayMeshIntersection( Qt3DRender::QGeometryRenderer *geometryRenderer, const QgsRay3D &r, const QgsRayCastContext &context, const QMatrix4x4 &worldTransform, QVector3D &intPt, int &triangleIndex )
+  bool rayMeshIntersection( Qt3DRender::QGeometryRenderer *geometryRenderer, const QgsRay3D &r, const QgsRayCastContext &context, const QMatrix4x4 &worldTransform, QVector3D &intPt, int &triangleIndex, int &instanceIndex )
   {
     if ( geometryRenderer->primitiveType() != Qt3DRender::QGeometryRenderer::Triangles )
     {
       QgsDebugError( QString( "Unsupported primitive type for intersection: " ).arg( geometryRenderer->primitiveType() ) );
       return false;
     }
-    if ( geometryRenderer->instanceCount() != 1 || geometryRenderer->indexOffset() != 0 || geometryRenderer->indexBufferByteOffset() != 0 || geometryRenderer->firstVertex() != 0 || geometryRenderer->firstInstance() != 0 )
+    if ( geometryRenderer->indexOffset() != 0 || geometryRenderer->indexBufferByteOffset() != 0 || geometryRenderer->firstVertex() != 0 || geometryRenderer->firstInstance() != 0 )
     {
       QgsDebugError( QString( "Unsupported geometry renderer for intersection." ) );
       return false;
@@ -155,6 +156,7 @@ namespace QgsRayCastingUtils
 
     Qt3DQGeometry *geometry = geometryRenderer->geometry();
 
+    Qt3DQAttribute *instanceAttr = nullptr;
     Qt3DQAttribute *positionAttr = nullptr;
     Qt3DQAttribute *indexAttr = nullptr;
     for ( Qt3DQAttribute *attr : geometry->attributes() )
@@ -166,6 +168,10 @@ namespace QgsRayCastingUtils
       else if ( attr->attributeType() == Qt3DQAttribute::IndexAttribute )
       {
         indexAttr = attr;
+      }
+      else if ( attr->name() == Qgs3DUtils::instancePositionAttributeName )
+      {
+        instanceAttr = attr;
       }
     }
 
@@ -227,88 +233,107 @@ namespace QgsRayCastingUtils
       vertexCount = positionAttr->count();
     }
 
+    const float *instancePosPtr = nullptr;
+    size_t instanceCount = 1;
+    if ( instanceAttr != nullptr )
+    {
+      instancePosPtr = reinterpret_cast<const float *>( instanceAttr->buffer()->data().constData() );
+      instanceCount = instanceAttr->count();
+    }
     QVector3D intersectionPt, minIntersectionPt, minAnglePt;
+    int minInstanceIndex;
     float minDistance = -1;
 
-    for ( int i = 0; i < vertexCount; i += 3 )
+    for ( size_t instanceIdx = 0; instanceIdx < instanceCount; ++instanceIdx )
     {
-      int v0index = 0, v1index = 0, v2index = 0;
-      if ( !indexAttr )
+      QVector3D instancePosition( 0.0, 0.0, 0.0 );
+      if ( instancePosPtr != nullptr )
       {
-        v0index = i;
-        v1index = i + 1;
-        v2index = i + 2;
-      }
-      else if ( indexPtrUShort )
-      {
-        v0index = indexPtrUShort[i];
-        v1index = indexPtrUShort[i + 1];
-        v2index = indexPtrUShort[i + 2];
-      }
-      else if ( indexPtrUChar )
-      {
-        v0index = indexPtrUChar[i];
-        v1index = indexPtrUChar[i + 1];
-        v2index = indexPtrUChar[i + 2];
-      }
-      else if ( indexPtrUInt )
-      {
-        v0index = indexPtrUInt[i];
-        v1index = indexPtrUInt[i + 1];
-        v2index = indexPtrUInt[i + 2];
-      }
-      else
-        Q_ASSERT( false );
-
-      const float *v0ptr = reinterpret_cast<const float *>( vertexPtr + v0index * vertexByteStride );
-      const float *v1ptr = reinterpret_cast<const float *>( vertexPtr + v1index * vertexByteStride );
-      const float *v2ptr = reinterpret_cast<const float *>( vertexPtr + v2index * vertexByteStride );
-
-      const QVector3D a( v0ptr[0], v0ptr[1], v0ptr[2] );
-      const QVector3D b( v1ptr[0], v1ptr[1], v1ptr[2] );
-      const QVector3D c( v2ptr[0], v2ptr[1], v2ptr[2] );
-
-      // Currently the worldTransform only has vertical offset, so this could be optimized by applying the transform
-      // to the ray and the resulting intersecting point instead of all triangles
-      // Need to check for potential performance gains.
-      const QVector3D tA = worldTransform * a;
-      const QVector3D tB = worldTransform * b;
-      const QVector3D tC = worldTransform * c;
-
-      QVector3D uvw;
-      float t = 0;
-
-      // We're testing both triangle orientations here and ignoring the culling mode.
-      // We should probably respect the culling mode used for the entity and perform a
-      // single test using the properly oriented triangle.
-      if ( QgsRayCastingUtils::rayTriangleIntersection( r, context.maximumDistance(), tA, tB, tC, uvw, t ) || QgsRayCastingUtils::rayTriangleIntersection( r, context.maximumDistance(), tA, tC, tB, uvw, t ) )
-      {
-        intersectionPt = r.point( t * context.maximumDistance() );
-      }
-      else if ( QgsRayCastingUtils::rayTriangleMinAngle( r, { tA, tB, tC }, minAnglePt ) < context.angleThreshold() )
-      {
-        // intersectionPt = r.projectedPoint( minAnglePt );
-        intersectionPt = minAnglePt;
-      }
-      else
-      {
-        continue;
+        instancePosition = QVector3D( instancePosPtr[0 + instanceIdx * 3], instancePosPtr[1 + instanceIdx * 3], instancePosPtr[2 + instanceIdx * 3] );
       }
 
-      const float distance = r.projectedDistance( intersectionPt );
-
-      // we only want the first intersection of the ray with the mesh (closest to the ray origin)
-      if ( minDistance == -1 || distance < minDistance )
+      for ( int i = 0; i < vertexCount; i += 3 )
       {
-        triangleIndex = static_cast<int>( i / 3 );
-        minDistance = distance;
-        minIntersectionPt = intersectionPt;
+        int v0index = 0, v1index = 0, v2index = 0;
+        if ( !indexAttr )
+        {
+          v0index = i;
+          v1index = i + 1;
+          v2index = i + 2;
+        }
+        else if ( indexPtrUShort )
+        {
+          v0index = indexPtrUShort[i];
+          v1index = indexPtrUShort[i + 1];
+          v2index = indexPtrUShort[i + 2];
+        }
+        else if ( indexPtrUChar )
+        {
+          v0index = indexPtrUChar[i];
+          v1index = indexPtrUChar[i + 1];
+          v2index = indexPtrUChar[i + 2];
+        }
+        else if ( indexPtrUInt )
+        {
+          v0index = indexPtrUInt[i];
+          v1index = indexPtrUInt[i + 1];
+          v2index = indexPtrUInt[i + 2];
+        }
+        else
+          Q_ASSERT( false );
+
+        const float *v0ptr = reinterpret_cast<const float *>( vertexPtr + v0index * vertexByteStride );
+        const float *v1ptr = reinterpret_cast<const float *>( vertexPtr + v1index * vertexByteStride );
+        const float *v2ptr = reinterpret_cast<const float *>( vertexPtr + v2index * vertexByteStride );
+
+        const QVector3D a( v0ptr[0], v0ptr[1], v0ptr[2] );
+        const QVector3D b( v1ptr[0], v1ptr[1], v1ptr[2] );
+        const QVector3D c( v2ptr[0], v2ptr[1], v2ptr[2] );
+
+        // Currently the worldTransform only has vertical offset, so this could be optimized by applying the transform
+        // to the ray and the resulting intersecting point instead of all triangles
+        // Need to check for potential performance gains.
+        const QVector3D tA = worldTransform * ( a + instancePosition );
+        const QVector3D tB = worldTransform * ( b + instancePosition );
+        const QVector3D tC = worldTransform * ( c + instancePosition );
+
+        QVector3D uvw;
+        float t = 0;
+
+        // We're testing both triangle orientations here and ignoring the culling mode.
+        // We should probably respect the culling mode used for the entity and perform a
+        // single test using the properly oriented triangle.
+        if ( QgsRayCastingUtils::rayTriangleIntersection( r, context.maximumDistance(), tA, tB, tC, uvw, t ) || QgsRayCastingUtils::rayTriangleIntersection( r, context.maximumDistance(), tA, tC, tB, uvw, t ) )
+        {
+          intersectionPt = r.point( t * context.maximumDistance() );
+        }
+        else if ( QgsRayCastingUtils::rayTriangleMinAngle( r, { tA, tB, tC }, minAnglePt ) < context.angleThreshold() )
+        {
+          // intersectionPt = r.projectedPoint( minAnglePt );
+          intersectionPt = minAnglePt;
+        }
+        else
+        {
+          continue;
+        }
+
+        const float distance = r.projectedDistance( intersectionPt );
+
+        // we only want the first intersection of the ray with the mesh (closest to the ray origin)
+        if ( minDistance == -1 || distance < minDistance )
+        {
+          triangleIndex = static_cast<int>( i / 3 );
+          minDistance = distance;
+          minIntersectionPt = intersectionPt;
+          minInstanceIndex = instanceIdx;
+        }
       }
     }
 
     if ( minDistance != -1 )
     {
       intPt = minIntersectionPt;
+      instanceIndex = minInstanceIndex;
       return true;
     }
     else

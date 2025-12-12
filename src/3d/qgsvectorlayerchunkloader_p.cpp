@@ -15,6 +15,8 @@
 
 #include "qgsvectorlayerchunkloader_p.h"
 
+#include <array>
+
 #include "qgs3dsymbolregistry.h"
 #include "qgs3dutils.h"
 #include "qgsabstract3dsymbol.h"
@@ -36,7 +38,6 @@
 #include "qgsvectorlayer.h"
 #include "qgsvectorlayerfeatureiterator.h"
 
-#include <array>
 #include <Qt3DCore/QTransform>
 #include <QtConcurrent>
 
@@ -330,13 +331,14 @@ QList<QgsRayCastHit> QgsVectorLayerChunkedEntity::rayIntersection( const QList<Q
 
         QVector3D nodeIntPoint;
         int triangleIndex = -1;
+        int instanceIndex = -1;
 
         // the node geometry has been translated by chunkOrigin
         // This translation is stored in the QTransform component
         // this needs to be taken into account to get the whole transformation
         const QMatrix4x4 nodeTransformMatrix = node->entity()->findChild<QgsGeoTransform *>()->matrix();
         const QMatrix4x4 fullTransformMatrix = transformMatrix * nodeTransformMatrix;
-        if ( QgsRayCastingUtils::rayMeshIntersection( rend, ray, context, fullTransformMatrix, nodeIntPoint, triangleIndex ) )
+        if ( QgsRayCastingUtils::rayMeshIntersection( rend, ray, context, fullTransformMatrix, nodeIntPoint, triangleIndex, instanceIndex ) )
         {
 #ifdef QGISDEBUG
           hits++;

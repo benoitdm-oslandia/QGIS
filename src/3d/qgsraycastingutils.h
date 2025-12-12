@@ -57,7 +57,7 @@ namespace QgsRayCastingUtils
    * the index of the intersecting triangle.
    * \since QGIS 4.0
    */
-  bool rayMeshIntersection( Qt3DRender::QGeometryRenderer *geometryRenderer, const QgsRay3D &r, const QgsRayCastContext &context, const QMatrix4x4 &worldTransform, QVector3D &intPt, int &triangleIndex );
+  bool rayMeshIntersection( Qt3DRender::QGeometryRenderer *geometryRenderer, const QgsRay3D &r, const QgsRayCastContext &context, const QMatrix4x4 &worldTransform, QVector3D &intPt, int &triangleIndex, int &instanceIndex );
 
 } // namespace QgsRayCastingUtils
 
