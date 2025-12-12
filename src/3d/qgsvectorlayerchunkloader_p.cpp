@@ -39,6 +39,10 @@
 #include "qgsvectorlayerfeatureiterator.h"
 
 #include <Qt3DCore/QTransform>
+#include <Qt3DExtras/QConeGeometry>
+#include <Qt3DExtras/QCuboidGeometry>
+#include <Qt3DExtras/QCylinderGeometry>
+#include <Qt3DExtras/QSphereGeometry>
 #include <QtConcurrent>
 
 #include "moc_qgsvectorlayerchunkloader_p.cpp"
@@ -319,9 +323,34 @@ QList<QgsRayCastHit> QgsVectorLayerChunkedEntity::rayIntersection( const QList<Q
       const QList<Qt3DRender::QGeometryRenderer *> rendLst = node->entity()->findChildren<Qt3DRender::QGeometryRenderer *>();
       for ( const auto &rend : rendLst )
       {
-        auto *geom = rend->geometry();
-        QgsTessellatedPolygonGeometry *polygonGeom = qobject_cast<QgsTessellatedPolygonGeometry *>( geom );
-        if ( !polygonGeom )
+        Qt3DCore::QGeometry *geom = rend->geometry();
+        QVector4D offset;
+
+        std::function<QgsFeatureId( Qt3DCore::QGeometry * geom, int triangleIndex, int instanceIndex, const QMatrix4x4 &fullTransformMatrix, QVector3D( *facePoints )[3], QVector3D &intersectionPt )> triangleIndexToFeatureId;
+
+        if ( qobject_cast<QgsTessellatedPolygonGeometry *>( geom ) )
+        {
+          triangleIndexToFeatureId = []( Qt3DCore::QGeometry *geom, int triangleIndex, int, const QMatrix4x4 &, QVector3D( *facePoints )[3], QVector3D & ) -> QgsFeatureId {
+            QgsTessellatedPolygonGeometry *polygonGeom = qobject_cast<QgsTessellatedPolygonGeometry *>( geom );
+            QgsFeatureId fid = polygonGeom->triangleIndexToFeatureId( triangleIndex, facePoints );
+            return fid;
+          };
+        }
+        else if ( QgsInstancedPointGeometry<Qt3DCore::QGeometry> *instanceGeom = reinterpret_cast<QgsInstancedPointGeometry<Qt3DCore::QGeometry> *>( geom ) )
+        {
+          triangleIndexToFeatureId = []( Qt3DCore::QGeometry *geom, int triangleIndex, int instanceIndex, const QMatrix4x4 &fullTransformMatrix, QVector3D( *facePoints )[3], QVector3D &intersectionPt ) -> QgsFeatureId {
+            QgsInstancedPointGeometry<Qt3DCore::QGeometry> *instanceGeom = reinterpret_cast<QgsInstancedPointGeometry<Qt3DCore::QGeometry> *>( geom );
+            QgsFeatureId fid = instanceGeom->triangleIndexToFeatureId( triangleIndex, instanceIndex, facePoints );
+
+            QVector3D intPt = fullTransformMatrix * ( *facePoints )[0];
+            intersectionPt.setX( intPt.x() );
+            intersectionPt.setY( intPt.y() );
+            intersectionPt.setZ( intPt.z() );
+            return fid;
+          };
+          offset.setZ( instanceGeom->heightOffset() );
+        }
+        else
         {
 #ifdef QGISDEBUG
           ignoredGeometries++;
@@ -336,7 +365,8 @@ QList<QgsRayCastHit> QgsVectorLayerChunkedEntity::rayIntersection( const QList<Q
         // the node geometry has been translated by chunkOrigin
         // This translation is stored in the QTransform component
         // this needs to be taken into account to get the whole transformation
-        const QMatrix4x4 nodeTransformMatrix = node->entity()->findChild<QgsGeoTransform *>()->matrix();
+        QMatrix4x4 nodeTransformMatrix = node->entity()->findChild<QgsGeoTransform *>()->matrix();
+        nodeTransformMatrix.setColumn( 3, nodeTransformMatrix.column( 3 ) + offset );
         const QMatrix4x4 fullTransformMatrix = transformMatrix * nodeTransformMatrix;
         if ( QgsRayCastingUtils::rayMeshIntersection( rend, ray, context, fullTransformMatrix, nodeIntPoint, triangleIndex, instanceIndex ) )
         {
@@ -348,7 +378,7 @@ QList<QgsRayCastHit> QgsVectorLayerChunkedEntity::rayIntersection( const QList<Q
           {
             minDist = dist;
             intersectionPoint = nodeIntPoint;
-            nearestFid = polygonGeom->triangleIndexToFeatureId( triangleIndex, &facePoints );
+            nearestFid = triangleIndexToFeatureId( geom, triangleIndex, instanceIndex, fullTransformMatrix, &facePoints, intersectionPoint );
 
             facePoints[0] = fullTransformMatrix * facePoints[0];
             facePoints[1] = fullTransformMatrix * facePoints[1];

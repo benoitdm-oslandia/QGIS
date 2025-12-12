@@ -19,9 +19,12 @@
 #include "qgis.h"
 #include "qgis_3d.h"
 #include "qgs3dtypes.h"
+#include "qgs3dutils.h"
 #include "qgsabstract3dsymbol.h"
 
 #include <QMatrix4x4>
+#include <QVector3D>
+#include <Qt3DCore/QAttribute>
 
 class QgsAbstractMaterialSettings;
 class QgsMarkerSymbol;
@@ -188,5 +191,49 @@ class _3D_EXPORT QgsPoint3DSymbol : public QgsAbstract3DSymbol SIP_NODEFAULTCTOR
 #endif
 };
 
+#ifndef SIP_RUN
+
+namespace Qt3DCore
+{
+  class QNode;
+}
+
+/**
+ * @brief The QgsInstancedPointGeometry class
+ */
+template<class T> class QgsInstancedPointGeometry : public T
+{
+  public:
+    explicit QgsInstancedPointGeometry( const QHash<QVector3D, QgsFeatureId> &featureMap, float heightOffset, Qt3DCore::QNode *parent = nullptr )
+      : T( parent ), mHeightOffset( heightOffset ), mFeatureMap( featureMap ) {}
+
+    float heightOffset() const { return mHeightOffset; }
+
+    QgsFeatureId triangleIndexToFeatureId( uint, int instanceIndex, QVector3D ( *facePoints )[3] )
+    {
+      Qt3DCore::QGeometry *geom = dynamic_cast<Qt3DCore::QGeometry *>( this );
+      for ( Qt3DCore::QAttribute *attr : geom->attributes() )
+      {
+        if ( attr->name() == Qgs3DUtils::instancePositionAttributeName )
+        {
+          const float *instancePosPtr = reinterpret_cast<const float *>( attr->buffer()->data().constData() );
+
+          for ( int i = 0; i < 3; ++i )
+          {
+            ( *facePoints )[i].setX( instancePosPtr[0 + instanceIndex * 3] );
+            ( *facePoints )[i].setY( instancePosPtr[1 + instanceIndex * 3] );
+            ( *facePoints )[i].setZ( instancePosPtr[2 + instanceIndex * 3] );
+          }
+          return mFeatureMap[( *facePoints )[0]];
+        }
+      }
+      return FID_NULL;
+    }
+
+  private:
+    float mHeightOffset = 0.0f;
+    const QHash<QVector3D, QgsFeatureId> mFeatureMap;
+};
+#endif
 
 #endif // QGSPOINT3DSYMBOL_H
