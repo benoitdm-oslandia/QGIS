@@ -18,8 +18,8 @@
 #include "qgs3daxis.h"
 #include "qgs3dmapexportsettings.h"
 #include "qgs3dmapsettings.h"
-#include "qgs3dsymbolregistry.h"
 #include "qgs3dsceneexporter.h"
+#include "qgs3dsymbolregistry.h"
 #include "qgs3dutils.h"
 #include "qgsaabb.h"
 #include "qgsabstract3dengine.h"
@@ -39,8 +39,8 @@
 #include "qgsframegraph.h"
 #include "qgsgeotransform.h"
 #include "qgsglobechunkedentity.h"
-#include "qgslinematerial_p.h"
 #include "qgsline3dsymbol.h"
+#include "qgslinematerial_p.h"
 #include "qgslogger.h"
 #include "qgsmaplayerelevationproperties.h"
 #include "qgsmaplayertemporalproperties.h"
@@ -1460,7 +1460,7 @@ bool Qgs3DMapScene::highlightEntity( Qt3DCore::QEntity *parent, QgsVectorLayer *
       clonedSymb->setCullingMode( Qgs3DTypes::CullingMode::NoCulling );
       clonedSymb->setEdgesEnabled( true );
       clonedSymb->setEdgeColor( Qt::green );
-      clonedSymb->setEdgeWidth( 1.5f );
+      clonedSymb->setEdgeWidth( 2.0f );
       symbol = clonedSymb;
     }
     else if ( QgsPoint3DSymbol *clonedSymb = dynamic_cast<QgsPoint3DSymbol *>( vectorRenderer->symbol()->clone() ) )
