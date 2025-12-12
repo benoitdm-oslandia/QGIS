@@ -317,7 +317,7 @@ Qt3DRender::QGeometryRenderer *QgsInstancedPoint3DSymbolHandler::renderer( const
   instanceBuffer->setData( ba );
 
   Qt3DQAttribute *instanceDataAttribute = new Qt3DQAttribute;
-  instanceDataAttribute->setName( QStringLiteral( "pos" ) );
+  instanceDataAttribute->setName( Qgs3DUtils::instancePositionAttributeName );
   instanceDataAttribute->setAttributeType( Qt3DQAttribute::VertexAttribute );
   instanceDataAttribute->setVertexBaseType( Qt3DQAttribute::Float );
   instanceDataAttribute->setVertexSize( 3 );

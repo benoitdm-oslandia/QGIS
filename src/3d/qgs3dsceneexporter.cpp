@@ -530,7 +530,7 @@ QVector<Qgs3DExportObject *> Qgs3DSceneExporter::processInstancedPointGeometry( 
     const QVector<float> positionData = getAttributeData<float>( positionAttribute, vertexBytes );
     const QVector<uint> indexData = getIndexData( indexAttribute, indexBytes );
 
-    Qt3DQAttribute *instanceDataAttribute = findAttribute( geometry, QStringLiteral( "pos" ), Qt3DQAttribute::VertexAttribute );
+    Qt3DQAttribute *instanceDataAttribute = findAttribute( geometry, Qgs3DUtils::instancePositionAttributeName, Qt3DQAttribute::VertexAttribute );
     if ( !instanceDataAttribute )
     {
       QgsDebugError( QString( "Cannot export '%1' - geometry has no instanceData attribute!" ).arg( objectNamePrefix ) );

@@ -58,7 +58,6 @@ class QgsRayCastContext;
 class _3D_EXPORT Qgs3DUtils
 {
   public:
-
     /**
      * Captures image of the current 3D scene of a 3D engine. The function waits
      * until the scene is not fully loaded/updated before capturing the image.
@@ -403,6 +402,8 @@ class _3D_EXPORT Qgs3DUtils
      * \since QGIS 3.44
      */
     static std::unique_ptr<Qt3DRender::QCamera> copyCamera( Qt3DRender::QCamera *cam ) SIP_SKIP;
+
+    static constexpr const char *instancePositionAttributeName = "pos";
 };
 
 #endif // QGS3DUTILS_H
