@@ -324,20 +324,26 @@ QList<QgsRayCastHit> QgsVectorLayerChunkedEntity::rayIntersection( const QList<Q
       for ( const auto &rend : rendLst )
       {
         Qt3DCore::QGeometry *geom = rend->geometry();
+        qDebug() << __FUNCTION__ << "#" << __LINE__ << "checking geom: " << geom;
+
         QVector4D offset;
 
         std::function<QgsFeatureId( Qt3DCore::QGeometry * geom, int triangleIndex, int instanceIndex, const QMatrix4x4 &fullTransformMatrix, QVector3D( *facePoints )[3], QVector3D &intersectionPt )> triangleIndexToFeatureId;
 
         if ( qobject_cast<QgsTessellatedPolygonGeometry *>( geom ) )
         {
+          qDebug() << __FUNCTION__ << "#" << __LINE__ << "Geom is QgsTessellatedPolygonGeometry!";
           triangleIndexToFeatureId = []( Qt3DCore::QGeometry *geom, int triangleIndex, int, const QMatrix4x4 &, QVector3D( *facePoints )[3], QVector3D & ) -> QgsFeatureId {
             QgsTessellatedPolygonGeometry *polygonGeom = qobject_cast<QgsTessellatedPolygonGeometry *>( geom );
             QgsFeatureId fid = polygonGeom->triangleIndexToFeatureId( triangleIndex, facePoints );
+            qDebug() << __FUNCTION__ << "#" << __LINE__ << "POLY found triangle: " << triangleIndex << ( *facePoints )[0] << ( *facePoints )[1] << ( *facePoints )[2];
+            qDebug() << __FUNCTION__ << "#" << __LINE__ << "POLY found fid: " << fid;
             return fid;
           };
         }
         else if ( QgsInstancedPointGeometry<Qt3DCore::QGeometry> *instanceGeom = reinterpret_cast<QgsInstancedPointGeometry<Qt3DCore::QGeometry> *>( geom ) )
         {
+          qDebug() << __FUNCTION__ << "#" << __LINE__ << "Geom is QgsInstancedPointGeometry!";
           triangleIndexToFeatureId = []( Qt3DCore::QGeometry *geom, int triangleIndex, int instanceIndex, const QMatrix4x4 &fullTransformMatrix, QVector3D( *facePoints )[3], QVector3D &intersectionPt ) -> QgsFeatureId {
             QgsInstancedPointGeometry<Qt3DCore::QGeometry> *instanceGeom = reinterpret_cast<QgsInstancedPointGeometry<Qt3DCore::QGeometry> *>( geom );
             QgsFeatureId fid = instanceGeom->triangleIndexToFeatureId( triangleIndex, instanceIndex, facePoints );
@@ -346,6 +352,8 @@ QList<QgsRayCastHit> QgsVectorLayerChunkedEntity::rayIntersection( const QList<Q
             intersectionPt.setX( intPt.x() );
             intersectionPt.setY( intPt.y() );
             intersectionPt.setZ( intPt.z() );
+            qDebug() << __FUNCTION__ << "#" << __LINE__ << "POINT found triangle: " << triangleIndex << instanceIndex << ( *facePoints )[0] << ( *facePoints )[1] << ( *facePoints )[2];
+            qDebug() << __FUNCTION__ << "#" << __LINE__ << "POINT found fid: " << fid;
             return fid;
           };
           offset.setZ( instanceGeom->heightOffset() );
@@ -355,6 +363,7 @@ QList<QgsRayCastHit> QgsVectorLayerChunkedEntity::rayIntersection( const QList<Q
 #ifdef QGISDEBUG
           ignoredGeometries++;
 #endif
+          qDebug() << __FUNCTION__ << "#" << __LINE__ << "geom is skipped!";
           continue; // other QGeometry types are not supported for now
         }
 
@@ -384,6 +393,10 @@ QList<QgsRayCastHit> QgsVectorLayerChunkedEntity::rayIntersection( const QList<Q
             facePoints[1] = fullTransformMatrix * facePoints[1];
             facePoints[2] = fullTransformMatrix * facePoints[2];
           }
+        }
+        else
+        {
+          qDebug() << __FUNCTION__ << "#" << __LINE__ << "rayMeshIntersection failed";
         }
       }
     }

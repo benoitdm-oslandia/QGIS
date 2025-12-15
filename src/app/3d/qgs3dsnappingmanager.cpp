@@ -180,7 +180,7 @@ QVector3D Qgs3DSnappingManager::screenToWorld( const QPoint &screenPos, bool *su
     facePoints[0] = qvariant_cast<QVector3D>( bestHit.properties().value( QStringLiteral( "facePoint0" ) ) );
     facePoints[1] = qvariant_cast<QVector3D>( bestHit.properties().value( QStringLiteral( "facePoint1" ) ) );
     facePoints[2] = qvariant_cast<QVector3D>( bestHit.properties().value( QStringLiteral( "facePoint2" ) ) );
-    //qDebug() << "Hit face: " << facePoints[0] << "/" << facePoints[1] << "/" << facePoints[2];
+    qDebug() << __FUNCTION__ << "#" << __LINE__ << "Hit face: " << facePoints[0] << "/" << facePoints[1] << "/" << facePoints[2];
   }
 
   mapCoords = bestHit.mapCoordinates();
@@ -247,6 +247,7 @@ QVector3D Qgs3DSnappingManager::screenToWorld( const QPoint &screenPos, bool *su
   }
 
   *success = true;
+  qDebug() << "Found snap:" << *snapFound << "/ pt:" << outPoint;
 
   return outPoint;
 }

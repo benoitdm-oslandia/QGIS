@@ -851,10 +851,12 @@ std::unique_ptr<QgsPointCloudLayer3DRenderer> Qgs3DUtils::convert2DPointCloudRen
 
 QgsRayCastResult Qgs3DUtils::castRay( Qgs3DMapScene *scene, const QgsRay3D &ray, const QgsRayCastContext &context )
 {
+  qDebug() << __FUNCTION__ << "#" << __LINE__ << "######################";
   QgsRayCastResult results;
   const QList<QgsMapLayer *> keys = scene->layers();
   for ( QgsMapLayer *layer : keys )
   {
+    qDebug() << __FUNCTION__ << "#" << __LINE__ << "checking layer: " << layer->name();
     Qt3DCore::QEntity *entity = scene->layerEntity( layer );
 
     if ( QgsChunkedEntity *chunkedEntity = qobject_cast<QgsChunkedEntity *>( entity ) )
