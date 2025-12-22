@@ -12,6 +12,7 @@ class Qgs3DCreatePrimitiveSphereDialog : public Qgs3DCreatePrimitiveDialog
     void resetData() override;
 
     int paramNumber() const override { return 1; };
+    ConstrainedAxis constrainedAxisForParam( int idx ) override;
     void setParam( int idx, double value ) override;
     double getParam( int idx ) const override;
 

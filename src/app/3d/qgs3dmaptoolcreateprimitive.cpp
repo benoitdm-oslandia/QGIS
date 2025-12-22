@@ -317,19 +317,60 @@ void Qgs3DMapToolCreatePrimitive::mouseMoveEvent( QMouseEvent *event )
   }
   else if ( mNbMouseClick < mDialog->paramNumber() )
   {
-    mRubberBand->moveLastPoint( rbPoint );
-
-    QgsPoint prevPointMap = mPointOnMap[mNbMouseClick - 1];
-    double length = prevPointMap.distance3D( pointMap );
-
+    QgsPoint rbPoint( pointMap );
+    QgsPoint prevPointMap = mPointOnMap.last();
     if ( mNbMouseClick == 1 )
     {
       double angle = -1.0 * QgsGeometryUtilsBase::lineAngle( pointMap.x(), pointMap.y(), prevPointMap.x(), prevPointMap.y() );
       angle *= 180.0 / M_PI;
-      qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "prim size:" << length << "/ rotation: " << angle;
+      qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "prim rotation: " << angle;
 
       mDialog->setRotation( mDialog->rotX(), mDialog->rotY(), ( angle < 0.0 ? 360.0 + angle : angle ) );
     }
+
+    double length;
+    Qgs3DCreatePrimitiveDialog::ConstrainedAxis constraint = Qgs3DCreatePrimitiveDialog::NONE;
+    if ( ( event->modifiers() & Qt::Modifier::CTRL ) == 0 )
+      constraint = Qgs3DCreatePrimitiveDialog::NONE;
+    else
+      constraint = mDialog->constrainedAxisForParam( mNbMouseClick - 1 );
+
+    switch ( constraint )
+    {
+      case Qgs3DCreatePrimitiveDialog::NONE:
+        length = prevPointMap.distance3D( pointMap );
+        break;
+      case Qgs3DCreatePrimitiveDialog::X:
+        length = std::abs( prevPointMap.x() - pointMap.x() );
+        rbPoint.setY( prevPointMap.y() );
+        rbPoint.setZ( prevPointMap.z() );
+        break;
+      case Qgs3DCreatePrimitiveDialog::Y:
+        length = std::abs( prevPointMap.y() - pointMap.y() );
+        rbPoint.setX( prevPointMap.x() );
+        rbPoint.setZ( prevPointMap.z() );
+        break;
+      case Qgs3DCreatePrimitiveDialog::Z:
+        length = std::abs( prevPointMap.z() - pointMap.z() );
+        rbPoint.setX( prevPointMap.x() );
+        rbPoint.setY( prevPointMap.y() );
+        break;
+      case Qgs3DCreatePrimitiveDialog::XY:
+        length = std::sqrt( std::pow( prevPointMap.x() - pointMap.x(), 2 ) + std::pow( prevPointMap.y() - pointMap.y(), 2 ) );
+        rbPoint.setZ( prevPointMap.z() );
+        break;
+      case Qgs3DCreatePrimitiveDialog::XZ:
+        length = std::sqrt( std::pow( prevPointMap.x() - pointMap.x(), 2 ) + std::pow( prevPointMap.z() - pointMap.z(), 2 ) );
+        rbPoint.setY( prevPointMap.y() );
+        break;
+      case Qgs3DCreatePrimitiveDialog::YZ:
+        length = std::sqrt( std::pow( prevPointMap.z() - pointMap.z(), 2 ) + std::pow( prevPointMap.y() - pointMap.y(), 2 ) );
+        rbPoint.setX( prevPointMap.x() );
+        break;
+    }
+
+    rbPoint.setZ( rbPoint.z() / mCanvas->mapSettings()->terrainSettings()->verticalScale() );
+    mRubberBand->moveLastPoint( rbPoint );
 
     mDialog->setParam( mNbMouseClick - 1, length );
 

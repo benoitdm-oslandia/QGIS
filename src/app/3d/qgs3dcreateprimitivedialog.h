@@ -14,6 +14,20 @@ class Qgs3DCreatePrimitiveDialog : public QDialog, protected Ui::CreatePrimitive
   public:
     Qgs3DCreatePrimitiveDialog( const QString &type, Qt::WindowFlags f = ( Qt::WindowFlags() | Qt::Tool ) );
 
+    /**
+     * Mouse move constraint
+     */
+    enum ConstrainedAxis
+    {
+      NONE, //!< No constraint
+      X,    //!< Only on X axis
+      Y,    //!< Only on Y axis
+      Z,    //!< Only on Z axis
+      XY,   //!< Only on XY plane
+      XZ,   //!< Only on XZ plane
+      YZ    //!< Only on YZ plane
+    };
+
     void setTranslation( const QgsPoint &point );
     void setRotation( double rx, double ry, double rz );
     void setScale( const QgsPoint &point );
@@ -31,6 +45,13 @@ class Qgs3DCreatePrimitiveDialog : public QDialog, protected Ui::CreatePrimitive
     double scaleZ() const { return spinSZ->value(); }
 
     virtual int paramNumber() const = 0;
+
+    /**
+     * \param idx parameter number
+     * \return move constraint for the specified parameter
+     */
+    virtual ConstrainedAxis constrainedAxisForParam( int idx ) = 0;
+
     virtual void setParam( int idx, double value ) = 0;
     virtual double getParam( int idx ) const = 0;
     virtual void resetData();

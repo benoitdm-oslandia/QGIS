@@ -109,3 +109,17 @@ double Qgs3DCreatePrimitiveTorusDialog::getParam( int idx ) const
   }
   return std::numeric_limits<double>::quiet_NaN();
 }
+
+Qgs3DCreatePrimitiveDialog::ConstrainedAxis Qgs3DCreatePrimitiveTorusDialog::constrainedAxisForParam( int idx )
+{
+  if ( idx == 0 )
+  {
+    return Qgs3DCreatePrimitiveDialog::X;
+  }
+  if ( idx == 1 )
+  {
+    return Qgs3DCreatePrimitiveDialog::Y;
+  }
+
+  return Qgs3DCreatePrimitiveDialog::NONE;
+}

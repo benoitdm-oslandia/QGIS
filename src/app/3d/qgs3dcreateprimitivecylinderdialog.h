@@ -16,6 +16,7 @@ class Qgs3DCreatePrimitiveCylinderDialog : public Qgs3DCreatePrimitiveDialog
     void setSlices( int size );
 
     int paramNumber() const override { return 2; };
+    ConstrainedAxis constrainedAxisForParam( int idx ) override;
     void setParam( int idx, double value ) override;
     double getParam( int idx ) const override;
 
