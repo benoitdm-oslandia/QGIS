@@ -64,6 +64,7 @@ class QgsProfilePoint;
 class Qgs3DEditingToolBar;
 
 class Qgs3DPointCloudEditingToolBar;
+class Qgs3DPrimitiveEditingToolBar;
 
 //! Helper validator for classification classes
 class ClassValidator : public QValidator
