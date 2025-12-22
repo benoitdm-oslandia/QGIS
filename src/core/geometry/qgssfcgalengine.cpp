@@ -1019,10 +1019,71 @@ std::unique_ptr<QgsSfcgalGeometry> QgsSfcgalEngine::toSfcgalGeometry( sfcgal::sh
 
 sfcgal::shared_prim QgsSfcgalEngine::createCube( double size, QString *errorMsg )
 {
-  sfcgal::primitive *result = sfcgal_primitive_create( SFCGAL_TYPE_CUBE );
+  return createBox( size, size, size, errorMsg );
+}
+
+sfcgal::shared_prim QgsSfcgalEngine::createBox( double sizeX, double sizeY, double sizeZ, QString *errorMsg )
+{
+  sfcgal::primitive *result = sfcgal_primitive_create( SFCGAL_TYPE_BOX );
   CHECK_SUCCESS( errorMsg, nullptr );
 
-  sfcgal_primitive_set_parameter_double( result, "size", size );
+  sfcgal_primitive_set_parameter_double( result, "x_extent", sizeX );
+  sfcgal_primitive_set_parameter_double( result, "y_extent", sizeY );
+  sfcgal_primitive_set_parameter_double( result, "z_extent", sizeZ );
+  CHECK_SUCCESS( errorMsg, nullptr );
+
+  return sfcgal::make_shared_prim( result );
+}
+
+sfcgal::shared_prim QgsSfcgalEngine::createSphere( double radius, unsigned int rings, unsigned int slices, QString *errorMsg )
+{
+  sfcgal::primitive *result = sfcgal_primitive_create( SFCGAL_TYPE_SPHERE );
+  CHECK_SUCCESS( errorMsg, nullptr );
+
+  sfcgal_primitive_set_parameter_double( result, "radius", radius );
+  sfcgal_primitive_set_parameter_int( result, "num_vertical", rings );
+  sfcgal_primitive_set_parameter_int( result, "num_horizontal", slices );
+  CHECK_SUCCESS( errorMsg, nullptr );
+
+  return sfcgal::make_shared_prim( result );
+}
+
+sfcgal::shared_prim QgsSfcgalEngine::createCylinder( double radius, double height, unsigned int radial, QString *errorMsg )
+{
+  sfcgal::primitive *result = sfcgal_primitive_create( SFCGAL_TYPE_CYLINDER );
+  CHECK_SUCCESS( errorMsg, nullptr );
+
+  sfcgal_primitive_set_parameter_double( result, "radius", radius );
+  sfcgal_primitive_set_parameter_double( result, "height", height );
+  sfcgal_primitive_set_parameter_int( result, "num_radial", radial );
+  CHECK_SUCCESS( errorMsg, nullptr );
+
+  return sfcgal::make_shared_prim( result );
+}
+
+sfcgal::shared_prim QgsSfcgalEngine::createCone( double bottomRadius, double height, double topRadius, unsigned int radial, QString *errorMsg )
+{
+  sfcgal::primitive *result = sfcgal_primitive_create( SFCGAL_TYPE_CONE );
+  CHECK_SUCCESS( errorMsg, nullptr );
+
+  sfcgal_primitive_set_parameter_double( result, "bottom_radius", bottomRadius );
+  sfcgal_primitive_set_parameter_double( result, "height", height );
+  sfcgal_primitive_set_parameter_double( result, "top_radius", topRadius );
+  sfcgal_primitive_set_parameter_int( result, "num_radial", radial );
+  CHECK_SUCCESS( errorMsg, nullptr );
+
+  return sfcgal::make_shared_prim( result );
+}
+
+sfcgal::shared_prim QgsSfcgalEngine::createTorus( double mainRadius, double tubeRadius, unsigned int mainRadial, unsigned int tubeRadial, QString *errorMsg )
+{
+  sfcgal::primitive *result = sfcgal_primitive_create( SFCGAL_TYPE_TORUS );
+  CHECK_SUCCESS( errorMsg, nullptr );
+
+  sfcgal_primitive_set_parameter_double( result, "main_radius", mainRadius );
+  sfcgal_primitive_set_parameter_double( result, "tube_radius", tubeRadius );
+  sfcgal_primitive_set_parameter_int( result, "main_num_radial", mainRadial );
+  sfcgal_primitive_set_parameter_int( result, "tube_num_radial", tubeRadial );
   CHECK_SUCCESS( errorMsg, nullptr );
 
   return sfcgal::make_shared_prim( result );

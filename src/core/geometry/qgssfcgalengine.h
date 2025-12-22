@@ -701,6 +701,57 @@ class CORE_EXPORT QgsSfcgalEngine
     static sfcgal::shared_prim createCube( double size, QString *errorMsg = nullptr );
 
     /**
+     * Create a box primitive
+     * \param sizeX the box width
+     * \param sizeY the box depth
+     * \param sizeZ the box height
+     * \param errorMsg Error message returned by SFGCAL
+     */
+    static sfcgal::shared_prim createBox( double sizeX, double sizeY, double sizeZ, QString *errorMsg = nullptr );
+
+    /**
+     * Create a sphere primitive
+     * \param radius primitive radius
+     * \param rings number of rings
+     * \param slices number of slices
+     * \throws QgsSfcgalException if an error was encountered during the operation
+     * \throws QgsNotSupportedException on QGIS builds based on SFCGAL < 2.3.
+     */
+    static sfcgal::shared_prim createSphere( double radius, unsigned int rings, unsigned int slices, QString *errorMsg = nullptr );
+
+    /**
+     * Create a sphere primitive
+     * \param radius primitive radius
+     * \param height primitive height
+     * \param radial number of radial segments
+     * \throws QgsSfcgalException if an error was encountered during the operation
+     * \throws QgsNotSupportedException on QGIS builds based on SFCGAL < 2.3.
+     */
+    static sfcgal::shared_prim createCylinder( double radius, double height, unsigned int radial, QString *errorMsg = nullptr );
+
+    /**
+     * Create a cone primitive
+     * \param bottomRadius primitive bottom radius
+     * \param height primitive height
+     * \param topRadius primitive top radius
+     * \param radial number of radial segments
+     * \throws QgsSfcgalException if an error was encountered during the operation
+     * \throws QgsNotSupportedException on QGIS builds based on SFCGAL < 2.3.
+     */
+    static sfcgal::shared_prim createCone( double bottomRadius, double height, double topRadius, unsigned int radial, QString *errorMsg = nullptr );
+
+    /**
+     * Create a torus primitive
+     * \param mainRadius primitive main radius
+     * \param tubeRadius primitive tube radius
+     * \param mainRadial number of main radial segments
+     * \param tubeRadial number of tube radial segments
+     * \throws QgsSfcgalException if an error was encountered during the operation
+     * \throws QgsNotSupportedException on QGIS builds based on SFCGAL < 2.3.
+     */
+    static sfcgal::shared_prim createTorus( double mainRadius, double tubeRadius, unsigned int mainRadial, unsigned int tubeRadial, QString *errorMsg = nullptr );
+
+    /**
      * Clones \a prim.
      *
      * \param prim primitive to perform the operation

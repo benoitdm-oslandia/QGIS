@@ -634,6 +634,58 @@ class CORE_EXPORT QgsSfcgalGeometry
     static std::unique_ptr<QgsSfcgalGeometry> createCube( double size ) SIP_THROW( QgsSfcgalException );
 
     /**
+     * Create a box primitive
+     * \param sizeX the box width
+     * \param sizeY the box depth
+     * \param sizeZ the box height
+     * \throws QgsSfcgalException if an error was encountered during the operation
+     * \throws QgsNotSupportedException on QGIS builds based on SFCGAL < 2.3.
+     */
+    static std::unique_ptr<QgsSfcgalGeometry> createBox( double sizeX, double sizeY, double sizeZ ) SIP_THROW( QgsSfcgalException );
+
+    /**
+     * Create a sphere primitive
+     * \param radius primitive radius
+     * \param rings number of rings
+     * \param slices number of slices
+     * \throws QgsSfcgalException if an error was encountered during the operation
+     * \throws QgsNotSupportedException on QGIS builds based on SFCGAL < 2.3.
+     */
+    static std::unique_ptr<QgsSfcgalGeometry> createSphere( double radius, unsigned int rings, unsigned int slices ) SIP_THROW( QgsSfcgalException );
+
+    /**
+     * Create a sphere primitive
+     * \param radius primitive radius
+     * \param height primitive height
+     * \param radial number of radial segments
+     * \throws QgsSfcgalException if an error was encountered during the operation
+     * \throws QgsNotSupportedException on QGIS builds based on SFCGAL < 2.3.
+     */
+    static std::unique_ptr<QgsSfcgalGeometry> createCylinder( double radius, double height, unsigned int radial ) SIP_THROW( QgsSfcgalException );
+
+    /**
+     * Create a cone primitive
+     * \param bottomRadius primitive bottom radius
+     * \param height primitive height
+     * \param topRadius primitive top radius
+     * \param radial number of radial segments
+     * \throws QgsSfcgalException if an error was encountered during the operation
+     * \throws QgsNotSupportedException on QGIS builds based on SFCGAL < 2.3.
+     */
+    static std::unique_ptr<QgsSfcgalGeometry> createCone( double bottomRadius, double height, double topRadius, unsigned int radial ) SIP_THROW( QgsSfcgalException );
+
+    /**
+     * Create a torus primitive
+     * \param mainRadius primitive main radius
+     * \param tubeRadius primitive tube radius
+     * \param mainRadial number of main radial segments
+     * \param tubeRadial number of tube radial segments
+     * \throws QgsSfcgalException if an error was encountered during the operation
+     * \throws QgsNotSupportedException on QGIS builds based on SFCGAL < 2.3.
+     */
+    static std::unique_ptr<QgsSfcgalGeometry> createTorus( double mainRadius, double tubeRadius, unsigned int mainRadial, unsigned int tubeRadial ) SIP_THROW( QgsSfcgalException );
+
+    /**
      * Returns the list of available parameter description for this primitive.
      *
      * Parameter description is a pair of string: name and type. Type can be one of int, double, QgsPoint, QgsVector3D
