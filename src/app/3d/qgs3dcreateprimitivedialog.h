@@ -44,6 +44,12 @@ class Qgs3DCreatePrimitiveDialog : public QDialog, protected Ui::CreatePrimitive
     double scaleY() const { return spinSY->value(); }
     double scaleZ() const { return spinSZ->value(); }
 
+    /// Focus on create button
+    void focusCreateButton();
+    /// Release focus on create button
+    void unfocusCreateButton();
+
+    /// \return the number of paramter the user will have to set
     virtual int paramNumber() const = 0;
 
     /**
@@ -58,6 +64,8 @@ class Qgs3DCreatePrimitiveDialog : public QDialog, protected Ui::CreatePrimitive
 
   signals:
     void valueChanged();
+    /// Emited when create button is clicked
+    void createClicked( bool );
 
   private:
     QString mType;

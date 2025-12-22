@@ -19,6 +19,8 @@ Qgs3DCreatePrimitiveDialog::Qgs3DCreatePrimitiveDialog( const QString &type, Qt:
   connect( spinSX, &QgsDoubleSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
   connect( spinSY, &QgsDoubleSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
   connect( spinSZ, &QgsDoubleSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
+
+  connect( createButton, &QPushButton::clicked, this, &Qgs3DCreatePrimitiveDialog::createClicked );
 }
 
 void Qgs3DCreatePrimitiveDialog::setTranslation( const QgsPoint &point )
@@ -46,4 +48,15 @@ void Qgs3DCreatePrimitiveDialog::resetData()
 {
   setRotation( 0.0, 0.0, 0.0 );
   setTranslation( { 0.0, 0.0, 0.0 } );
+}
+
+void Qgs3DCreatePrimitiveDialog::unfocusCreateButton()
+{
+  createButton->clearFocus();
+  transformationWidget->setFocus( Qt::OtherFocusReason );
+}
+
+void Qgs3DCreatePrimitiveDialog::focusCreateButton()
+{
+  createButton->setFocus( Qt::OtherFocusReason );
 }

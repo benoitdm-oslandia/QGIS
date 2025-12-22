@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>429</width>
+    <width>504</width>
     <height>296</height>
    </rect>
   </property>
@@ -26,18 +26,7 @@
      <property name="title">
       <string>Main</string>
      </property>
-     <layout class="QFormLayout" name="paramFormLayout">
-      <item row="0" column="0">
-       <widget class="QLabel" name="label_2">
-        <property name="text">
-         <string>Name</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QLineEdit" name="lineEdit"/>
-      </item>
-     </layout>
+     <layout class="QFormLayout" name="paramFormLayout"/>
     </widget>
    </item>
    <item>
@@ -49,10 +38,10 @@
       <item row="2" column="1">
        <widget class="QgsDoubleSpinBox" name="spinSX">
         <property name="minimum">
-         <double>-99999.899999999994179</double>
+         <double>-99999999.900000005960464</double>
         </property>
         <property name="maximum">
-         <double>99999.899999999994179</double>
+         <double>99999999.900000005960464</double>
         </property>
         <property name="value">
          <double>1.000000000000000</double>
@@ -62,20 +51,20 @@
       <item row="1" column="3">
        <widget class="QgsDoubleSpinBox" name="spinTZ">
         <property name="minimum">
-         <double>-99999.899999999994179</double>
+         <double>-99999999.900000005960464</double>
         </property>
         <property name="maximum">
-         <double>99999.899999999994179</double>
+         <double>99999999.900000005960464</double>
         </property>
        </widget>
       </item>
       <item row="1" column="1">
        <widget class="QgsDoubleSpinBox" name="spinTX">
         <property name="minimum">
-         <double>-99999.899999999994179</double>
+         <double>-99999999.900000005960464</double>
         </property>
         <property name="maximum">
-         <double>99999.899999999994179</double>
+         <double>99999999.900000005960464</double>
         </property>
        </widget>
       </item>
@@ -92,10 +81,10 @@
       <item row="1" column="2">
        <widget class="QgsDoubleSpinBox" name="spinTY">
         <property name="minimum">
-         <double>-99999.899999999994179</double>
+         <double>-99999999.900000005960464</double>
         </property>
         <property name="maximum">
-         <double>99999.899999999994179</double>
+         <double>99999999.900000005960464</double>
         </property>
        </widget>
       </item>
@@ -112,10 +101,10 @@
       <item row="2" column="2">
        <widget class="QgsDoubleSpinBox" name="spinSY">
         <property name="minimum">
-         <double>-99999.899999999994179</double>
+         <double>-99999999.900000005960464</double>
         </property>
         <property name="maximum">
-         <double>99999.899999999994179</double>
+         <double>99999999.900000005960464</double>
         </property>
         <property name="value">
          <double>1.000000000000000</double>
@@ -162,10 +151,10 @@
       <item row="2" column="3">
        <widget class="QgsDoubleSpinBox" name="spinSZ">
         <property name="minimum">
-         <double>-99999.899999999994179</double>
+         <double>-99999999.900000005960464</double>
         </property>
         <property name="maximum">
-         <double>99999.899999999994179</double>
+         <double>99999999.900000005960464</double>
         </property>
         <property name="value">
          <double>1.000000000000000</double>
@@ -198,6 +187,17 @@
       </item>
      </layout>
     </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QPushButton" name="createButton">
+       <property name="text">
+        <string>Create</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>
