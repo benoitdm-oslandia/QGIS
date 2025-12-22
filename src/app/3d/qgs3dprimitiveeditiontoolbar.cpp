@@ -78,30 +78,30 @@ QList<QAction *> Qgs3DPrimitiveEditionToolBar::groupActions() const
 
 void Qgs3DPrimitiveEditionToolBar::createCube()
 {
-  createPrimitive( qobject_cast<QAction *>( sender() ), "cube" );
+  createPrimitive( qobject_cast<QAction *>( sender() ), Qgs3DMapToolCreatePrimitive::Cube );
 }
 
 void Qgs3DPrimitiveEditionToolBar::createSphere()
 {
-  createPrimitive( qobject_cast<QAction *>( sender() ), "sphere" );
+  createPrimitive( qobject_cast<QAction *>( sender() ), Qgs3DMapToolCreatePrimitive::Sphere );
 }
 
 void Qgs3DPrimitiveEditionToolBar::createTorus()
 {
-  createPrimitive( qobject_cast<QAction *>( sender() ), "torus" );
+  createPrimitive( qobject_cast<QAction *>( sender() ), Qgs3DMapToolCreatePrimitive::Torus );
 }
 
 void Qgs3DPrimitiveEditionToolBar::createCylinder()
 {
-  createPrimitive( qobject_cast<QAction *>( sender() ), "cylinder" );
+  createPrimitive( qobject_cast<QAction *>( sender() ), Qgs3DMapToolCreatePrimitive::Cylinder );
 }
 
 void Qgs3DPrimitiveEditionToolBar::createCone()
 {
-  createPrimitive( qobject_cast<QAction *>( sender() ), "cone" );
+  createPrimitive( qobject_cast<QAction *>( sender() ), Qgs3DMapToolCreatePrimitive::Cone );
 }
 
-void Qgs3DPrimitiveEditionToolBar::createPrimitive( const QAction *action, const QString &primitiveName )
+void Qgs3DPrimitiveEditionToolBar::createPrimitive( const QAction *action, Qgs3DMapToolCreatePrimitive::PrimitiveType type )
 {
   if ( !action )
     return;
@@ -109,7 +109,7 @@ void Qgs3DPrimitiveEditionToolBar::createPrimitive( const QAction *action, const
   if ( mCreatePrimitiveMapTool != nullptr )
     mCreatePrimitiveMapTool->deleteLater();
 
-  mCreatePrimitiveMapTool = new Qgs3DMapToolCreatePrimitive( mParentWidget->mapCanvas3D(), primitiveName );
+  mCreatePrimitiveMapTool = new Qgs3DMapToolCreatePrimitive( mParentWidget->mapCanvas3D(), type );
   mParentWidget->mapCanvas3D()->setMapTool( mCreatePrimitiveMapTool );
   mCreatePrimitiveAction->setIcon( action->icon() );
 }

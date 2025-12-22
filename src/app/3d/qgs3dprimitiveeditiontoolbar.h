@@ -19,8 +19,6 @@
 #include "qgs3deditiontoolbar.h"
 #include "qgs3dmaptoolcreateprimitive.h"
 
-class Qgs3DMapToolCreatePrimitive;
-
 /**
  * Allow creation of 3D primitive on polyhedral layers
  *
@@ -48,7 +46,7 @@ class Qgs3DPrimitiveEditionToolBar : public Qgs3DEditionToolBar
     void createTorus();
     void createCylinder();
     void createCone();
-    void createPrimitive( const QAction *action, const QString &primitiveName );
+    void createPrimitive( const QAction *action, Qgs3DMapToolCreatePrimitive::PrimitiveType type );
 
   private:
     QAction *mCreatePrimitiveAction = nullptr;
