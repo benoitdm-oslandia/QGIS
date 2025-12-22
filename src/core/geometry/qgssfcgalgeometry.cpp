@@ -1079,21 +1079,31 @@ void QgsSfcgalGeometry::setPrimitiveTranslate( const QgsVector3D &translation )
 
 void QgsSfcgalGeometry::setPrimitiveScale( const QgsVector3D &scaleFactor, const QgsPoint &center )
 {
-  QVector3D qCenter( center.x(), center.y(), center.z() );
-  QVector3D prevTrans = mPrimTransform.column( 3 ).toVector3D();
-  mPrimTransform.translate( prevTrans - qCenter );
+  QVector3D qCenter;
+  if ( center.isEmpty() )
+    qCenter = QVector3D( 0.0, 0.0, 0.0 );
+  else
+    qCenter = QVector3D( center.x(), center.y(), center.z() );
+
+  QVector3D prevTrans = mPrimTransform.column( 3 ).toVector3D() - qCenter;
+  mPrimTransform.translate( -prevTrans );
   mPrimTransform.scale( scaleFactor.toVector3D() );
-  mPrimTransform.translate( prevTrans + qCenter );
+  mPrimTransform.translate( prevTrans );
 }
 
 void QgsSfcgalGeometry::setPrimitiveRotation( double angle, const QgsVector3D &axisVector, const QgsPoint &center )
 {
-  QVector3D qCenter( center.x(), center.y(), center.z() );
-  QVector3D prevTrans = mPrimTransform.column( 3 ).toVector3D();
-  mPrimTransform.translate( prevTrans - qCenter );
+  QVector3D qCenter;
+  if ( center.isEmpty() )
+    qCenter = QVector3D( 0.0, 0.0, 0.0 );
+  else
+    qCenter = QVector3D( center.x(), center.y(), center.z() );
+
+  QVector3D prevTrans = mPrimTransform.column( 3 ).toVector3D() - qCenter;
+  mPrimTransform.translate( -prevTrans );
   // TODO: need to merge previous rotation values with the new ones
   mPrimTransform.rotate( QQuaternion::fromAxisAndAngle( axisVector.toVector3D(), angle ) );
-  mPrimTransform.translate( prevTrans + qCenter );
+  mPrimTransform.translate( prevTrans );
 }
 
 #endif
