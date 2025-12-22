@@ -20,16 +20,48 @@
 
 class QAction;
 
+/**
+ * Base class to create 3D edition toolbar.
+ *
+ * Inherited classes:
+ *
+ * - will be sub widget of the main 3D edtion toolbar Qgs3DMapCanvasWidget::mEditingToolBar
+ * - will be visible only when the QGIS active layer is compatible (see accept() function)
+ *
+ * \since QGIS 3.44
+ */
 class Qgs3DEditionToolBar : public QToolBar
 {
     Q_OBJECT
 
   public:
+    /**
+     * Default constructor
+     * \param title toolbar title
+     * \param parent parent widget
+     */
     Qgs3DEditionToolBar( const QString &title, Qgs3DMapCanvasWidget *parent );
 
+    /**
+     * \param layer current active layer
+     * \return true if this toolbar is usable with the \a layer
+     */
     virtual bool accept( QgsMapLayer *layer ) const = 0;
+
+    /**
+     * Called when the current active layer changes and is accepted
+     * \param layer current active layer
+     */
     virtual void activate( QgsMapLayer *layer ) = 0;
+
+    /**
+     * Called when the current active layer changes and is no more accepted
+     */
     virtual void deactivate() = 0;
+
+    /**
+     * \return the list of actions produced by the toolbar
+     */
     virtual QList<QAction *> groupActions() const = 0;
 
   protected:
