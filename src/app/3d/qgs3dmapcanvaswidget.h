@@ -58,6 +58,8 @@ class QgsSettingsEntryDouble;
 class QgsSettingsEntryBool;
 class QgsGeometry;
 
+class Qgs3DPointCloudEditionToolBar;
+
 //! Helper validator for classification classes
 class ClassValidator : public QValidator
 {
@@ -120,11 +122,6 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     void cameraControl();
     void identify();
     void measureLine();
-    void changePointCloudAttributeByPaintbrush();
-    void changePointCloudAttributeByPolygon();
-    void changePointCloudAttributeByAboveLine();
-    void changePointCloudAttributeByBelowLine();
-    void changePointCloudAttributePointFilter();
     void exportScene();
     void toggleNavigationWidget( bool visibility );
     void toggleEditingToolbar( bool visibility );
@@ -151,8 +148,6 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     void onExtentChanged();
     void onGpuMemoryLimitReached();
 
-    void onPointCloudChangeAttributeSettingsChanged();
-
     void onCrossSectionToolFinished();
 
   private:
@@ -160,6 +155,8 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     void setClippingTolerance( double tolerance );
     void lockCrossSectionTolerance( bool enabled );
     void updateClippingRubberBand();
+
+    void updateEditionToolBar();
 
     QString mCanvasName;
     Qgs3DMapCanvas *mCanvas = nullptr;
@@ -172,7 +169,6 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     QTimer *mLabelNavSpeedHideTimeout = nullptr;
     Qgs3DMapToolIdentify *mMapToolIdentify = nullptr;
     Qgs3DMapToolMeasureLine *mMapToolMeasureLine = nullptr;
-    Qgs3DMapToolPointCloudChangeAttribute *mMapToolChangeAttribute = nullptr;
     QgsGeometry mCrossSectionLine;
     QObjectUniquePtr<QgsRubberBand> mCrossSectionRubberBand;
     std::unique_ptr<QgsMapToolExtent> mMapToolExtent;
@@ -183,7 +179,6 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     QMenu *mCameraMenu = nullptr;
     QMenu *mCrossSectionMenu = nullptr;
     QMenu *mEffectsMenu = nullptr;
-    QMenu *mEditingToolsMenu = nullptr;
     QList<QAction *> mMapThemeMenuPresetActions;
     QAction *mActionEnableShadows = nullptr;
     QAction *mActionEnableEyeDome = nullptr;
@@ -201,14 +196,14 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     QAction *mActionSetSceneExtent = nullptr;
     QAction *mActionSetClippingPlanes = nullptr;
     QAction *mActionDisableClippingPlanes = nullptr;
-    QAction *mActionToggleEditing = nullptr;
     QAction *mActionUndo = nullptr;
+    QMetaObject::Connection mUndoConnection;
     QAction *mActionRedo = nullptr;
-    QAction *mEditingToolsAction = nullptr;
+    QMetaObject::Connection mRedoConnection;
+    Qgs3DPointCloudEditionToolBar *mPointCloudEditingToolbar = nullptr;
     QAction *mActionNudgeLeft = nullptr;
     QAction *mActionNudgeRight = nullptr;
     QAction *mActionDynamicClipping = nullptr;
-    QToolBar *mPointCloudEditingToolbar = nullptr;
     QgsDockableWidgetHelper *mDockableWidgetHelper = nullptr;
     QObjectUniquePtr<QgsRubberBand> mViewFrustumHighlight;
     QObjectUniquePtr<QgsRubberBand> mViewExtentHighlight;
@@ -216,6 +211,7 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     QgsMessageBar *mMessageBar = nullptr;
     bool mGpuMemoryLimitReachedReported = false;
 
+    QgsMapLayer *mLayer = nullptr;
     //! Container QWidget that encapsulates 3D QWindow
     QWidget *mContainer = nullptr;
     //! On-Screen Navigation widget.
@@ -224,13 +220,6 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     Qgs3DDebugWidget *mDebugWidget = nullptr;
 
     QToolBar *mEditingToolBar = nullptr;
-    QComboBox *mCboChangeAttribute = nullptr;
-    QComboBox *mCboChangeAttributeValue = nullptr;
-    ClassValidator *mClassValidator = nullptr;
-    QgsDoubleSpinBox *mSpinChangeAttributeValue = nullptr;
-    QAction *mCboChangeAttributeValueAction = nullptr;
-    QAction *mSpinChangeAttributeValueAction = nullptr;
-    QString mChangeAttributePointFilter;
 
     Qgs3DMapClippingToleranceWidgetSettingsAction *mClippingToleranceAction = nullptr;
 
