@@ -4,54 +4,57 @@ Qgs3DCreatePrimitiveTorusDialog::Qgs3DCreatePrimitiveTorusDialog( Qt::WindowFlag
   : Qgs3DCreatePrimitiveDialog( "torus", f )
 {
   // radius
-  mSpinRadius = new QDoubleSpinBox( mMainGroupBox );
-  mSpinRadius->setObjectName( "mSpinRadius" );
-  mSpinRadius->setMaximum( 99999999.989999994635582 );
-  paramFormLayout->setWidget( 1, QFormLayout::FieldRole, mSpinRadius );
+  mSpinMainRadius = new QDoubleSpinBox( mMainGroupBox );
+  mSpinMainRadius->setObjectName( "mSpinMainRadius" );
+  mSpinMainRadius->setMinimum( 0.0001 );
+  mSpinMainRadius->setMaximum( 99999999.989999994635582 );
+  paramFormLayout->setWidget( 1, QFormLayout::FieldRole, mSpinMainRadius );
 
-  QLabel *labelRadius = new QLabel( mMainGroupBox );
-  labelRadius->setObjectName( "labelRadius" );
-  labelRadius->setText( tr( "Radius" ) );
-  paramFormLayout->setWidget( 1, QFormLayout::LabelRole, labelRadius );
+  QLabel *labelMainRadius = new QLabel( mMainGroupBox );
+  labelMainRadius->setObjectName( "labelMainRadius" );
+  labelMainRadius->setText( tr( "Main radius" ) );
+  paramFormLayout->setWidget( 1, QFormLayout::LabelRole, labelMainRadius );
 
   // minorradius
-  mSpinMinorRadius = new QDoubleSpinBox( mMainGroupBox );
-  mSpinMinorRadius->setObjectName( "mSpinMinorRadius" );
-  mSpinMinorRadius->setMaximum( 99999999.989999994635582 );
-  paramFormLayout->setWidget( 2, QFormLayout::FieldRole, mSpinMinorRadius );
+  mSpinTubeRadius = new QDoubleSpinBox( mMainGroupBox );
+  mSpinTubeRadius->setObjectName( "mSpinMinorRadius" );
+  mSpinTubeRadius->setMinimum( 0.0001 );
+  mSpinTubeRadius->setMaximum( 99999999.989999994635582 );
+  paramFormLayout->setWidget( 2, QFormLayout::FieldRole, mSpinTubeRadius );
 
-  QLabel *labelMinorRadius = new QLabel( mMainGroupBox );
-  labelMinorRadius->setObjectName( "labelMinorRadius" );
-  labelMinorRadius->setText( tr( "Minor radius" ) );
-  paramFormLayout->setWidget( 2, QFormLayout::LabelRole, labelMinorRadius );
+  QLabel *labelTubeRadius = new QLabel( mMainGroupBox );
+  labelTubeRadius->setObjectName( "labelTubeRadius" );
+  labelTubeRadius->setText( tr( "Tube radius" ) );
+  paramFormLayout->setWidget( 2, QFormLayout::LabelRole, labelTubeRadius );
 
   // segment 1
-  mSpinRings = new QSpinBox( mMainGroupBox );
-  mSpinRings->setObjectName( "mSpinRings" );
-  mSpinRings->setMaximum( 64 );
-  paramFormLayout->setWidget( 3, QFormLayout::FieldRole, mSpinRings );
+  mSpinMainRadial = new QSpinBox( mMainGroupBox );
+  mSpinMainRadial->setObjectName( "mSpinMainRadial" );
+  mSpinMainRadial->setMinimum( 3 );
+  mSpinMainRadial->setMaximum( 64 );
+  paramFormLayout->setWidget( 3, QFormLayout::FieldRole, mSpinMainRadial );
 
-  QLabel *labelRings = new QLabel( mMainGroupBox );
-  labelRings->setObjectName( "labelRings" );
-  labelRings->setText( tr( "Segment 1" ) );
-  paramFormLayout->setWidget( 3, QFormLayout::LabelRole, labelRings );
+  QLabel *labelMainRadial = new QLabel( mMainGroupBox );
+  labelMainRadial->setObjectName( "labelMainRadial" );
+  labelMainRadial->setText( tr( "Main radial" ) );
+  paramFormLayout->setWidget( 3, QFormLayout::LabelRole, labelMainRadial );
 
   // segment 2
-  mSpinSlices = new QSpinBox( mMainGroupBox );
-  mSpinSlices->setObjectName( "mSpinSlices" );
-  mSpinSlices->setMaximum( 64 );
-  paramFormLayout->setWidget( 4, QFormLayout::FieldRole, mSpinSlices );
+  mSpinTubeRadial = new QSpinBox( mMainGroupBox );
+  mSpinTubeRadial->setObjectName( "mSpinTubeRadial" );
+  mSpinTubeRadial->setMinimum( 3 );
+  mSpinTubeRadial->setMaximum( 64 );
+  paramFormLayout->setWidget( 4, QFormLayout::FieldRole, mSpinTubeRadial );
 
-  QLabel *labelSlices = new QLabel( mMainGroupBox );
-  labelSlices->setObjectName( "labelSlices" );
-  labelSlices->setText( tr( "Segment 2" ) );
-  paramFormLayout->setWidget( 4, QFormLayout::LabelRole, labelSlices );
+  QLabel *labelTubeRadial = new QLabel( mMainGroupBox );
+  labelTubeRadial->setObjectName( "labelTubeRadial" );
+  labelTubeRadial->setText( tr( "Tube radial" ) );
+  paramFormLayout->setWidget( 4, QFormLayout::LabelRole, labelTubeRadial );
 
-  connect( mSpinRadius, &QgsDoubleSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
-  connect( mSpinMinorRadius, &QgsDoubleSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
-  connect( mSpinRings, &QSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
-  connect( mSpinSlices, &QSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
-
+  connect( mSpinMainRadius, &QgsDoubleSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
+  connect( mSpinTubeRadius, &QgsDoubleSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
+  connect( mSpinMainRadial, &QSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
+  connect( mSpinTubeRadial, &QSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
 
   resetData();
 }
@@ -59,41 +62,49 @@ Qgs3DCreatePrimitiveTorusDialog::Qgs3DCreatePrimitiveTorusDialog( Qt::WindowFlag
 void Qgs3DCreatePrimitiveTorusDialog::resetData()
 {
   Qgs3DCreatePrimitiveDialog::resetData();
-  setRadius( 1.0 );
-  setMinorRadius( 1.0 );
-  setRings( 4 );
-  setSlices( 4 );
+  setMainRadius( 1.0 );
+  setTubeRadius( 1.0 );
+  setMainRadial( 4 );
+  setTubeRadial( 4 );
 }
 
-void Qgs3DCreatePrimitiveTorusDialog::setRadius( double size )
+void Qgs3DCreatePrimitiveTorusDialog::setMainRadius( double size )
 {
-  whileBlocking( mSpinRadius )->setValue( size );
+  whileBlocking( mSpinMainRadius )->setValue( size );
 }
 
-void Qgs3DCreatePrimitiveTorusDialog::setMinorRadius( double size )
+void Qgs3DCreatePrimitiveTorusDialog::setTubeRadius( double size )
 {
-  whileBlocking( mSpinMinorRadius )->setValue( size );
+  whileBlocking( mSpinTubeRadius )->setValue( size );
 }
 
-void Qgs3DCreatePrimitiveTorusDialog::setRings( int size )
+void Qgs3DCreatePrimitiveTorusDialog::setMainRadial( int size )
 {
-  whileBlocking( mSpinRings )->setValue( size );
+  whileBlocking( mSpinMainRadial )->setValue( size );
 }
 
-void Qgs3DCreatePrimitiveTorusDialog::setSlices( int size )
+void Qgs3DCreatePrimitiveTorusDialog::setTubeRadial( int size )
 {
-  whileBlocking( mSpinSlices )->setValue( size );
+  whileBlocking( mSpinTubeRadial )->setValue( size );
 }
 
 void Qgs3DCreatePrimitiveTorusDialog::setParam( int idx, double value )
 {
   if ( idx == 0 )
   {
-    setRadius( value );
+    setMainRadius( value );
   }
   else if ( idx == 1 )
   {
-    setMinorRadius( value );
+    setTubeRadius( value );
+  }
+  else if ( idx == 2 )
+  {
+    setMainRadial( value );
+  }
+  else if ( idx == 3 )
+  {
+    setTubeRadial( value );
   }
 }
 
@@ -101,12 +112,21 @@ double Qgs3DCreatePrimitiveTorusDialog::getParam( int idx ) const
 {
   if ( idx == 0 )
   {
-    return mSpinRadius->value();
+    return mSpinMainRadius->value();
   }
   if ( idx == 1 )
   {
-    return mSpinMinorRadius->value();
+    return mSpinTubeRadius->value();
   }
+  if ( idx == 2 )
+  {
+    return mSpinMainRadial->value();
+  }
+  if ( idx == 3 )
+  {
+    return mSpinTubeRadial->value();
+  }
+
   return std::numeric_limits<double>::quiet_NaN();
 }
 

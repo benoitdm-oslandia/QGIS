@@ -9,6 +9,7 @@ Qgs3DCreatePrimitiveCylinderDialog::Qgs3DCreatePrimitiveCylinderDialog( Qt::Wind
   ++wdgIdx;
   mSpinRadius = new QDoubleSpinBox( mMainGroupBox );
   mSpinRadius->setObjectName( "mSpinRadius" );
+  mSpinRadius->setMinimum( 0.0001 );
   mSpinRadius->setMaximum( 99999999.989999994635582 );
   paramFormLayout->setWidget( wdgIdx, QFormLayout::FieldRole, mSpinRadius );
 
@@ -21,6 +22,7 @@ Qgs3DCreatePrimitiveCylinderDialog::Qgs3DCreatePrimitiveCylinderDialog( Qt::Wind
   ++wdgIdx;
   mSpinLength = new QDoubleSpinBox( mMainGroupBox );
   mSpinLength->setObjectName( "mSpinLength" );
+  mSpinLength->setMinimum( 0.0001 );
   mSpinLength->setMaximum( 99999999.989999994635582 );
   paramFormLayout->setWidget( wdgIdx, QFormLayout::FieldRole, mSpinLength );
 
@@ -31,32 +33,20 @@ Qgs3DCreatePrimitiveCylinderDialog::Qgs3DCreatePrimitiveCylinderDialog( Qt::Wind
 
   // segment 1
   ++wdgIdx;
-  mSpinRings = new QSpinBox( mMainGroupBox );
-  mSpinRings->setObjectName( "mSpinRings" );
-  mSpinRings->setMaximum( 64 );
-  paramFormLayout->setWidget( wdgIdx, QFormLayout::FieldRole, mSpinRings );
+  mSpinRadial = new QSpinBox( mMainGroupBox );
+  mSpinRadial->setObjectName( "mSpinRadial" );
+  mSpinRadial->setMinimum( 3 );
+  mSpinRadial->setMaximum( 64 );
+  paramFormLayout->setWidget( wdgIdx, QFormLayout::FieldRole, mSpinRadial );
 
-  QLabel *labelRings = new QLabel( mMainGroupBox );
-  labelRings->setObjectName( "labelRings" );
-  labelRings->setText( tr( "Segment 1" ) );
-  paramFormLayout->setWidget( wdgIdx, QFormLayout::LabelRole, labelRings );
-
-  // segment 2
-  ++wdgIdx;
-  mSpinSlices = new QSpinBox( mMainGroupBox );
-  mSpinSlices->setObjectName( "mSpinSlices" );
-  mSpinSlices->setMaximum( 64 );
-  paramFormLayout->setWidget( wdgIdx, QFormLayout::FieldRole, mSpinSlices );
-
-  QLabel *labelSlices = new QLabel( mMainGroupBox );
-  labelSlices->setObjectName( "labelSlices" );
-  labelSlices->setText( tr( "Segment 2" ) );
-  paramFormLayout->setWidget( wdgIdx, QFormLayout::LabelRole, labelSlices );
+  QLabel *labelRadial = new QLabel( mMainGroupBox );
+  labelRadial->setObjectName( "labelRadial" );
+  labelRadial->setText( tr( "Radial" ) );
+  paramFormLayout->setWidget( wdgIdx, QFormLayout::LabelRole, labelRadial );
 
   connect( mSpinRadius, &QgsDoubleSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
   connect( mSpinLength, &QgsDoubleSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
-  connect( mSpinRings, &QSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
-  connect( mSpinSlices, &QSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
+  connect( mSpinRadial, &QSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
 
   resetData();
 }
@@ -66,8 +56,7 @@ void Qgs3DCreatePrimitiveCylinderDialog::resetData()
   Qgs3DCreatePrimitiveDialog::resetData();
   setRadius( 1.0 );
   setLength( 1.0 );
-  setRings( 4 );
-  setSlices( 4 );
+  setRadial( 4 );
 }
 
 void Qgs3DCreatePrimitiveCylinderDialog::setRadius( double size )
@@ -80,14 +69,9 @@ void Qgs3DCreatePrimitiveCylinderDialog::setLength( double size )
   whileBlocking( mSpinLength )->setValue( size );
 }
 
-void Qgs3DCreatePrimitiveCylinderDialog::setRings( int size )
+void Qgs3DCreatePrimitiveCylinderDialog::setRadial( int size )
 {
-  whileBlocking( mSpinRings )->setValue( size );
-}
-
-void Qgs3DCreatePrimitiveCylinderDialog::setSlices( int size )
-{
-  whileBlocking( mSpinSlices )->setValue( size );
+  whileBlocking( mSpinRadial )->setValue( size );
 }
 
 void Qgs3DCreatePrimitiveCylinderDialog::setParam( int idx, double value )
@@ -99,6 +83,10 @@ void Qgs3DCreatePrimitiveCylinderDialog::setParam( int idx, double value )
   else if ( idx == 1 )
   {
     setLength( value );
+  }
+  else if ( idx == 2 )
+  {
+    setRadial( value );
   }
 }
 
@@ -112,7 +100,10 @@ double Qgs3DCreatePrimitiveCylinderDialog::getParam( int idx ) const
   {
     return mSpinLength->value();
   }
-
+  if ( idx == 2 )
+  {
+    return mSpinRadial->value();
+  }
   return std::numeric_limits<double>::quiet_NaN();
 }
 

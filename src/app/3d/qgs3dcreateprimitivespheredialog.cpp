@@ -6,6 +6,7 @@ Qgs3DCreatePrimitiveSphereDialog::Qgs3DCreatePrimitiveSphereDialog( Qt::WindowFl
   // radius
   mSpinRadius = new QDoubleSpinBox( mMainGroupBox );
   mSpinRadius->setObjectName( "mSpinRadius" );
+  mSpinRadius->setMinimum( 0.0001 );
   mSpinRadius->setMaximum( 99999999.989999994635582 );
   paramFormLayout->setWidget( 1, QFormLayout::FieldRole, mSpinRadius );
 
@@ -17,23 +18,25 @@ Qgs3DCreatePrimitiveSphereDialog::Qgs3DCreatePrimitiveSphereDialog( Qt::WindowFl
   // segment 1
   mSpinRings = new QSpinBox( mMainGroupBox );
   mSpinRings->setObjectName( "mSpinRings" );
+  mSpinRings->setMinimum( 3 );
   mSpinRings->setMaximum( 64 );
   paramFormLayout->setWidget( 2, QFormLayout::FieldRole, mSpinRings );
 
   QLabel *labelRings = new QLabel( mMainGroupBox );
   labelRings->setObjectName( "labelRings" );
-  labelRings->setText( tr( "Segment 1" ) );
+  labelRings->setText( tr( "Ring" ) );
   paramFormLayout->setWidget( 2, QFormLayout::LabelRole, labelRings );
 
   // segment 2
   mSpinSlices = new QSpinBox( mMainGroupBox );
   mSpinSlices->setObjectName( "mSpinSlices" );
+  mSpinSlices->setMinimum( 3 );
   mSpinSlices->setMaximum( 64 );
   paramFormLayout->setWidget( 3, QFormLayout::FieldRole, mSpinSlices );
 
   QLabel *labelSlices = new QLabel( mMainGroupBox );
   labelSlices->setObjectName( "labelSlices" );
-  labelSlices->setText( tr( "Segment 2" ) );
+  labelSlices->setText( tr( "Slice" ) );
   paramFormLayout->setWidget( 3, QFormLayout::LabelRole, labelSlices );
 
   connect( mSpinRadius, &QgsDoubleSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
@@ -72,6 +75,14 @@ void Qgs3DCreatePrimitiveSphereDialog::setParam( int idx, double value )
   {
     setRadius( value );
   }
+  else if ( idx == 1 )
+  {
+    setRings( value );
+  }
+  else if ( idx == 2 )
+  {
+    setSlices( value );
+  }
 }
 
 double Qgs3DCreatePrimitiveSphereDialog::getParam( int idx ) const
@@ -80,6 +91,15 @@ double Qgs3DCreatePrimitiveSphereDialog::getParam( int idx ) const
   {
     return mSpinRadius->value();
   }
+  if ( idx == 1 )
+  {
+    return mSpinRings->value();
+  }
+  if ( idx == 2 )
+  {
+    return mSpinSlices->value();
+  }
+
   return std::numeric_limits<double>::quiet_NaN();
 }
 

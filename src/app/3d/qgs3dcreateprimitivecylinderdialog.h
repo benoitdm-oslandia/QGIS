@@ -12,7 +12,7 @@ class Qgs3DCreatePrimitiveCylinderDialog : public Qgs3DCreatePrimitiveDialog
     void resetData() override;
     void setRadius( double size );
     void setLength( double size );
-    void setRings( int size );
+    void setRadial( int size );
     void setSlices( int size );
 
     int paramNumber() const override { return 2; };
@@ -23,7 +23,7 @@ class Qgs3DCreatePrimitiveCylinderDialog : public Qgs3DCreatePrimitiveDialog
   private:
     QDoubleSpinBox *mSpinRadius;
     QDoubleSpinBox *mSpinLength;
-    QSpinBox *mSpinRings;
+    QSpinBox *mSpinRadial;
     QSpinBox *mSpinSlices;
 };
 
