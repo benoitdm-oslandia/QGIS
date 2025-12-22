@@ -369,6 +369,7 @@ if (WITH_3D)
     3d/qgs3dnavigationwidget.cpp
     3d/qgs3doptions.cpp
     3d/qgs3dpointcloudeditiontoolbar.cpp
+    3d/qgs3dprimitiveeditiontoolbar.cpp
     3d/qgsannotationlayer3drendererwidget.cpp
     3d/qgsgoochmaterialwidget.cpp
     3d/qgslightswidget.cpp
@@ -399,6 +400,8 @@ if (WITH_3D)
     3d/qgs3dviewsmanagerdialog.cpp
     3d/qgs3ddebugwidget.cpp
     3d/qgsmaptoolclippingplanes.cpp
+    3d/qgs3dcreatecubedialog.cpp
+    3d/qgs3dmaptoolcreatecube.cpp
   )
 endif()
 

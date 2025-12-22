@@ -28,6 +28,7 @@
 #include "qgs3dmaptoolmeasureline.h"
 #include "qgs3dnavigationwidget.h"
 #include "qgs3dpointcloudeditiontoolbar.h"
+#include "qgs3dprimitiveeditiontoolbar.h"
 #include "qgs3dutils.h"
 #include "qgsannotationlayer.h"
 #include "qgsapplication.h"
@@ -107,6 +108,7 @@ Qgs3DMapCanvasWidget::Qgs3DMapCanvasWidget( const QString &name, bool isDocked )
 
   mPointCloudEditingToolbar = new Qgs3DPointCloudEditionToolBar( this );
   mEditingToolBar->addWidget( mPointCloudEditingToolbar );
+  mEditingToolBar->addWidget( new Qgs3DPrimitiveEditionToolBar( this ) );
 
   QAction *actionEditingToolbar = toolBar->addAction( QIcon( QgsApplication::iconPath( "mActionToggleEditing.svg" ) ), tr( "Show Editing Toolbar" ) );
   actionEditingToolbar->setCheckable( true );

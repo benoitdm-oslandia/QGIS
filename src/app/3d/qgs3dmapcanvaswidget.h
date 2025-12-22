@@ -59,6 +59,7 @@ class QgsSettingsEntryBool;
 class QgsGeometry;
 
 class Qgs3DPointCloudEditionToolBar;
+class Qgs3DPrimitiveEditionToolBar;
 
 //! Helper validator for classification classes
 class ClassValidator : public QValidator
