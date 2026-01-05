@@ -83,7 +83,7 @@ Qgs3DMapToolCreatePrimitive::~Qgs3DMapToolCreatePrimitive() = default;
 
 void Qgs3DMapToolCreatePrimitive::activate()
 {
-  qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString();
+  qDebug() << u"%1 #%2:"_s.arg( __FUNCTION__ ).arg( __LINE__ ).toStdString();
   restart();
 
   // Show dialog
@@ -100,7 +100,7 @@ void Qgs3DMapToolCreatePrimitive::deactivate()
 
 void Qgs3DMapToolCreatePrimitive::finish()
 {
-  qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString();
+  qDebug() << u"%1 #%2:"_s.arg( __FUNCTION__ ).arg( __LINE__ ).toStdString();
   mCanvas->setCursor( cursor() );
   mDialog->unfocusCreateButton();
 
@@ -121,14 +121,14 @@ QCursor Qgs3DMapToolCreatePrimitive::cursor() const
 
 void Qgs3DMapToolCreatePrimitive::restart()
 {
-  qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString();
+  qDebug() << u"%1 #%2:"_s.arg( __FUNCTION__ ).arg( __LINE__ ).toStdString();
   mDone = false;
 
   mRubberBand.reset( new QgsRubberBand3D( *mCanvas->mapSettings(), mCanvas->engine(), mCanvas->engine()->frameGraph()->rubberBandsRootEntity() ) );
   const QgsSettings settings;
-  const int myRed = settings.value( QStringLiteral( "qgis/default_measure_color_red" ), 222 ).toInt();
-  const int myGreen = settings.value( QStringLiteral( "qgis/default_measure_color_green" ), 155 ).toInt();
-  const int myBlue = settings.value( QStringLiteral( "qgis/default_measure_color_blue" ), 67 ).toInt();
+  const int myRed = settings.value( u"qgis/default_measure_color_red"_s, 222 ).toInt();
+  const int myGreen = settings.value( u"qgis/default_measure_color_green"_s, 155 ).toInt();
+  const int myBlue = settings.value( u"qgis/default_measure_color_blue"_s, 67 ).toInt();
   mRubberBand->setWidth( 3 );
   mRubberBand->setColor( QColor( myRed, myGreen, myBlue ) );
 }
@@ -310,10 +310,10 @@ void Qgs3DMapToolCreatePrimitive::updatePrimitive()
 
 void Qgs3DMapToolCreatePrimitive::handleClick( const QPoint &screenPos )
 {
-  qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString();
+  qDebug() << u"%1 #%2:"_s.arg( __FUNCTION__ ).arg( __LINE__ ).toStdString();
   if ( mNbMouseClick == 0 )
   {
-    qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "First click";
+    qDebug() << u"%1 #%2:"_s.arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "First click";
     mMouseClickPos = screenPos;
 
     mPointOnMap << screenToMap( screenPos );
@@ -377,7 +377,7 @@ void Qgs3DMapToolCreatePrimitive::mouseMoveEvent( QMouseEvent *event )
       double angle = -1.0 * QgsGeometryUtilsBase::lineAngle( pointMap.x(), pointMap.y(), prevPointMap.x(), prevPointMap.y() );
       angle *= 180.0 / M_PI;
       angle += 90.0; // TODO WHY??
-      qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "prim rotation: " << angle;
+      qDebug() << u"%1 #%2:"_s.arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "prim rotation: " << angle;
 
       mDialog->setRotation( mDialog->rotX(), mDialog->rotY(), ( angle < 0.0 ? 360.0 + angle : angle ) );
     }
@@ -426,7 +426,7 @@ void Qgs3DMapToolCreatePrimitive::mouseMoveEvent( QMouseEvent *event )
     rbPoint.setZ( rbPoint.z() / mCanvas->mapSettings()->terrainSettings()->verticalScale() );
     mRubberBand->moveLastPoint( rbPoint );
 
-    qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "setting param" << mNbMouseClick - 1 << "to value: " << length;
+    qDebug() << u"%1 #%2:"_s.arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "setting param" << mNbMouseClick - 1 << "to value: " << length;
     mDialog->setParam( mNbMouseClick - 1, length );
 
     updatePrimitive();
@@ -520,7 +520,7 @@ void Qgs3DMapToolCreatePrimitive::createPrimitive( bool enabledAttributeValuesDl
     QgsExpressionContext context = vl->createExpressionContext();
     QgsFeature feat;
     feat.setGeometry( geom->asQgisGeometry() );
-    qDebug() << QStringLiteral( "%1 #%2:" ).arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "Will save geom:" << feat.geometry().get()->asWkt( 1 );
+    qDebug() << u"%1 #%2:"_s.arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "Will save geom:" << feat.geometry().get()->asWkt( 1 );
 
     QgsFeature newFeature = QgsAttributeForm::createFeature( vl, feat.geometry(), QgsAttributeMap(), context );
     if ( enabledAttributeValuesDlg )
@@ -538,9 +538,9 @@ void Qgs3DMapToolCreatePrimitive::createPrimitive( bool enabledAttributeValuesDl
         dialog->setWindowFlag( Qt::WindowStaysOnTopHint );
 #endif
 
-      dialog->setObjectName( QStringLiteral( "featureactiondlg:%1:%2" ).arg( vl->id() ).arg( newFeature.id() ) );
+      dialog->setObjectName( u"featureactiondlg:%1:%2"_s.arg( vl->id() ).arg( newFeature.id() ) );
 
-      const QList<QgsAction> actions = vl->actions()->actions( QStringLiteral( "Feature" ) );
+      const QList<QgsAction> actions = vl->actions()->actions( u"Feature"_s );
       if ( !actions.isEmpty() )
       {
         dialog->setContextMenuPolicy( Qt::ActionsContextMenu );
