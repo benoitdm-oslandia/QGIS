@@ -42,7 +42,7 @@ namespace Qt3DRender
 /**
  * 3D maptool used to create 3D primitives from the 3D canvas
  */
-class Qgs3DMapToolCreatePrimitive : public Qgs3DMapTool
+class _3D_EXPORT Qgs3DMapToolCreatePrimitive : public Qgs3DMapTool
 {
     Q_OBJECT
 
@@ -54,14 +54,14 @@ class Qgs3DMapToolCreatePrimitive : public Qgs3DMapTool
       Sphere,   //!< Sphere
       Cone,     //!< Cone
       Cube,     //!< Cube
-      Box,      //!< Cube
+      Box,      //!< Box
       Torus,    //!< Torus
     };
 
     /**
      * Default constructor
-     * @param canvas 3D canvas parent
-     * @param type primitive type to create
+     * \param canvas 3D canvas parent
+     * \param type primitive type to create
      */
     Qgs3DMapToolCreatePrimitive( Qgs3DMapCanvas *canvas, PrimitiveType type );
     ~Qgs3DMapToolCreatePrimitive() override;
@@ -76,14 +76,17 @@ class Qgs3DMapToolCreatePrimitive : public Qgs3DMapTool
     //! Ends maptool
     void finish();
 
-  private slots:
-    void handleClick( const QPoint &screenPos );
+  protected slots:
+    void handleClick( QMouseEvent *event );
     void mousePressEvent( QMouseEvent *event ) override;
     void mouseReleaseEvent( QMouseEvent *event ) override;
     void mouseMoveEvent( QMouseEvent *event ) override;
     void keyReleaseEvent( QKeyEvent *event ) override;
 
-  private:
+  protected:
+    bool mShowAttributeValuesDlg = true;
+    bool mShowPrimitiveDialog = true;
+
     PrimitiveType mType;
     //! Dialog
     std::unique_ptr<Qgs3DCreatePrimitiveDialog> mDialog;
@@ -102,12 +105,32 @@ class Qgs3DMapToolCreatePrimitive : public Qgs3DMapTool
 
     std::unique_ptr<Qt3DCore::QEntity> mPrimitiveLineEntity = nullptr;
 
-    QgsPoint screenToMap( const QPoint &screenPos ) const;
+    /**
+     * update temp primitive according to last parameter values
+     */
     void updatePrimitive();
-    void createPrimitive( bool enabledAttributeValuesDlg = true );
+
+    /**
+     * add a new feature to the current layer with the primitive created from the last parameter values
+     */
+    void createPrimitive();
+
+    /**
+     *
+     * \param pointMap map coordinate point (not screen, not world)
+     * \param stateKey key modifier
+     * \return computed length from previous point
+     */
+    double constraintMapPoint( QgsPoint &pointMap, const Qt::KeyboardModifiers &stateKey );
+
+    /**
+     * \param screenPos screen position
+     * \return raycasted map point from screen position
+     */
+    QgsPoint screenToMap( const QPoint &screenPos ) const;
 };
 
-///@cond PRIVATE
+///\cond PRIVATE
 
 #include <Qt3DRender/QGeometryRenderer>
 #include <Qt3DCore/QAttribute>
@@ -183,7 +206,7 @@ namespace QgsPrivate
       Qt3DCore::QBuffer *mVertexBuffer = nullptr;
   };
 
-  /// @endcond
+  /// \endcond
 
 } //namespace QgsPrivate
 
