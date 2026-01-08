@@ -64,6 +64,7 @@ set(TESTS
   testqgsgpsintegration.cpp
   testqgslabelpropertydialog.cpp
   testqgsmergeattributesdialog.cpp
+  testqgs3dmaptoolcreateprimitive.cpp
 )
 
 if (HAVE_GEOREFERENCER)
