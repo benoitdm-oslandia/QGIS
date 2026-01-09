@@ -313,46 +313,21 @@ void Qgs3DMapToolCreatePrimitive::updatePrimitive()
 void Qgs3DMapToolCreatePrimitive::handleClick( QMouseEvent *event )
 {
   qDebug() << u"%1 #%2:"_s.arg( __FUNCTION__ ).arg( __LINE__ ).toStdString();
-  if ( mCurrentFieldIdx == 0 )
+  if ( mCurrentFieldIdx < 0 )
   {
     qDebug() << u"%1 #%2:"_s.arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "First click";
     mMouseClickPos = event->pos();
 
+    mPointOnMap.clear();
     mPointOnMap << screenToMap( event->pos() );
     mDialog->setTranslation( mPointOnMap.last() );
-    updatePrimitive();
-
-    QgsPoint rbPoint( mPointOnMap.last() );
-    rbPoint.setZ( rbPoint.z() / mCanvas->mapSettings()->terrainSettings()->verticalScale() );
-    mRubberBand->addPoint( rbPoint );
-    mRubberBand->addPoint( rbPoint );
-
-    ++mCurrentFieldIdx;
   }
-  else if ( mCurrentFieldIdx <= mDialog->creationParamNumber() )
+  else if ( mCurrentFieldIdx < mDialog->creationParamNumber() )
   {
     QgsPoint pointMap = screenToMap( event->pos() );
     double length = constraintMapPoint( pointMap, event->modifiers() );
-    mDialog->setParam( mCurrentFieldIdx - 1, length );
-
+    mDialog->setParam( mCurrentFieldIdx, length );
     mPointOnMap << pointMap;
-
-    QgsPoint rbPoint( pointMap );
-    rbPoint.setZ( rbPoint.z() / mCanvas->mapSettings()->terrainSettings()->verticalScale() );
-    mRubberBand->addPoint( rbPoint );
-
-    ++mCurrentFieldIdx;
-    if ( mCurrentFieldIdx > mDialog->creationParamNumber() )
-    {
-      mCanvas->setCursor( Qt::WaitCursor );
-      mDialog->hide();
-      if ( mShowPrimitiveDialog )
-      {
-        mDialog->show();
-        //mDialog->restorePosition();
-        mDialog->focusCreateButton();
-      }
-    }
   }
 }
 
@@ -368,7 +343,7 @@ double Qgs3DMapToolCreatePrimitive::constraintMapPoint( QgsPoint &pointMap, cons
   if ( ( stateKey & Qt::Modifier::CTRL ) == 0 )
     constraint = Qgs3DCreatePrimitiveDialog::NONE;
   else
-    constraint = mDialog->constrainedAxisForParam( mCurrentFieldIdx - 1 );
+    constraint = mDialog->constrainedAxisForParam( mCurrentFieldIdx );
 
   switch ( constraint )
   {
@@ -404,7 +379,7 @@ double Qgs3DMapToolCreatePrimitive::constraintMapPoint( QgsPoint &pointMap, cons
       break;
   }
 
-  qDebug() << u"%1 #%2:"_s.arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "setting param" << mCurrentFieldIdx - 1 << "to value: " << length;
+  qDebug() << u"%1 #%2:"_s.arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "setting param" << mCurrentFieldIdx << "to value: " << length;
   return length;
 }
 
@@ -422,13 +397,13 @@ void Qgs3DMapToolCreatePrimitive::mouseMoveEvent( QMouseEvent *event )
 
   QgsPoint pointMap = screenToMap( event->pos() );
 
-  if ( mCurrentFieldIdx == 0 )
+  if ( mCurrentFieldIdx < 0 )
   {
     mDialog->setTranslation( pointMap );
   }
-  else if ( mCurrentFieldIdx <= mDialog->creationParamNumber() )
+  else if ( mCurrentFieldIdx < mDialog->creationParamNumber() )
   {
-    if ( mCurrentFieldIdx == 1 && mType == Cube )
+    if ( mCurrentFieldIdx == 0 && mType == Cube )
     {
       QgsPoint prevPointMap = mPointOnMap.last();
       double angle = -1.0 * QgsGeometryUtilsBase::lineAngle( pointMap.x(), pointMap.y(), prevPointMap.x(), prevPointMap.y() );
@@ -440,7 +415,7 @@ void Qgs3DMapToolCreatePrimitive::mouseMoveEvent( QMouseEvent *event )
     }
 
     double length = constraintMapPoint( pointMap, event->modifiers() );
-    mDialog->setParam( mCurrentFieldIdx - 1, length );
+    mDialog->setParam( mCurrentFieldIdx, length );
 
     QgsPoint rbPoint = pointMap;
     rbPoint.setZ( rbPoint.z() / mCanvas->mapSettings()->terrainSettings()->verticalScale() );
@@ -458,29 +433,34 @@ void Qgs3DMapToolCreatePrimitive::mouseReleaseEvent( QMouseEvent *event )
     {
       restart();
     }
-
+    // if ( mCurrentFieldIdx < 3 )
+    // {
+    //   mCurrentFieldIdx = 2; // if we left click with the mouse the 3 translation fields are set
+    // }
     handleClick( event );
+
+    handleNextParameter();
   }
   else if ( event->button() == Qt::RightButton )
   {
-    if ( mCurrentFieldIdx > 0 )
-    {
-      mCanvas->setCursor( cursor() );
-      --mCurrentFieldIdx;
-      mRubberBand->removeLastPoint();
-      mPointOnMap.removeLast();
+    // if ( mCurrentFieldIdx <= 3 )
+    // {
+    //   mCurrentFieldIdx = 1; // if we right click with the mouse the 3 translation fields are canceled
+    // }
+    handlePreviousParameter();
+  }
 
-      if ( mCurrentFieldIdx == 0 )
-      {
-        // Finish measurement
-        finish();
-      }
-    }
+  if ( mShowPrimitiveDialog && !mDone )
+  {
+    mDialog->show();
+    qDebug() << u"%1 #%2:"_s.arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "focus on param:" << mCurrentFieldIdx;
+    mDialog->focusOnParam( mCurrentFieldIdx );
   }
 }
 
 void Qgs3DMapToolCreatePrimitive::keyReleaseEvent( QKeyEvent *event )
 {
+  qDebug() << u"%1 #%2:"_s.arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "key:" << event;
   if ( event->key() == Qt::Key_Escape )
   {
     finish();
@@ -489,7 +469,88 @@ void Qgs3DMapToolCreatePrimitive::keyReleaseEvent( QKeyEvent *event )
   {
     createPrimitive();
   }
+  else if ( event->key() == Qt::Key_Tab || event->key() == Qt::Key_Backtab )
+  {
+    // if ( ( event->key() == Qt::Key_Tab && event->modifiers() & Qt::ShiftModifier )
+    //      || ( event->key() == Qt::Key_Backtab && event->modifiers() ^ Qt::ShiftModifier ) )
+    // {
+    //   handlePreviousParameter();
+    // }
+    // else
+    // {
+    //   if ( mCurrentFieldIdx < 0 )
+    //   {
+    //     mPointOnMap.clear();
+    //     // create fake point
+    //     mPointOnMap << QgsPoint( mDialog->transX(), mDialog->transY(), mDialog->transZ() );
+    //   }
+    //   else
+    //   {
+    //     // create fake point
+    //     mPointOnMap << QgsPoint( mPointOnMap.last().x() + mDialog->getParam( mCurrentFieldIdx ), mPointOnMap.last().y(), mPointOnMap.last().z() );
+    //   }
+    //   handleNextParameter();
+    // }
+
+    if ( mShowPrimitiveDialog && !mDone )
+    {
+      mDialog->show();
+      qDebug() << u"%1 #%2:"_s.arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "focus on param:" << mCurrentFieldIdx;
+      mDialog->focusOnParam( mCurrentFieldIdx );
+    }
+  }
 }
+
+void Qgs3DMapToolCreatePrimitive::handleNextParameter()
+{
+  updatePrimitive();
+
+  if ( mCurrentFieldIdx < 0 )
+  {
+    QgsPoint rbPoint( mPointOnMap.last() );
+    rbPoint.setZ( rbPoint.z() / mCanvas->mapSettings()->terrainSettings()->verticalScale() );
+    mRubberBand->addPoint( rbPoint );
+    mRubberBand->addPoint( rbPoint );
+  }
+  else if ( mCurrentFieldIdx < mDialog->creationParamNumber() )
+  {
+    QgsPoint rbPoint( mPointOnMap.last() );
+    rbPoint.setZ( rbPoint.z() / mCanvas->mapSettings()->terrainSettings()->verticalScale() );
+    mRubberBand->addPoint( rbPoint );
+  }
+
+  ++mCurrentFieldIdx;
+
+  if ( mCurrentFieldIdx == mDialog->creationParamNumber() )
+  {
+    mCanvas->setCursor( Qt::WaitCursor );
+    mDialog->hide();
+    if ( mShowPrimitiveDialog )
+    {
+      mDialog->show();
+      mDialog->focusCreateButton();
+    }
+  }
+}
+
+void Qgs3DMapToolCreatePrimitive::handlePreviousParameter()
+{
+  // TODO should focus on the right field
+  if ( mCurrentFieldIdx >= 0 )
+  {
+    mCanvas->setCursor( cursor() );
+    --mCurrentFieldIdx;
+    mRubberBand->removeLastPoint();
+    mPointOnMap.removeLast();
+
+    if ( mCurrentFieldIdx < 0 )
+    {
+      // Cancel
+      finish();
+    }
+  }
+}
+
 
 void Qgs3DMapToolCreatePrimitive::createPrimitive()
 {
