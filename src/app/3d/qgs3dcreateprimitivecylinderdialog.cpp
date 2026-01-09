@@ -74,39 +74,6 @@ void Qgs3DCreatePrimitiveCylinderDialog::setRadial( int size )
   whileBlocking( mSpinRadial )->setValue( size );
 }
 
-void Qgs3DCreatePrimitiveCylinderDialog::setParam( int idx, double value )
-{
-  if ( idx == 0 )
-  {
-    setRadius( value );
-  }
-  else if ( idx == 1 )
-  {
-    setLength( value );
-  }
-  else if ( idx == 2 )
-  {
-    setRadial( value );
-  }
-}
-
-double Qgs3DCreatePrimitiveCylinderDialog::getParam( int idx ) const
-{
-  if ( idx == 0 )
-  {
-    return mSpinRadius->value();
-  }
-  if ( idx == 1 )
-  {
-    return mSpinLength->value();
-  }
-  if ( idx == 2 )
-  {
-    return mSpinRadial->value();
-  }
-  return std::numeric_limits<double>::quiet_NaN();
-}
-
 Qgs3DCreatePrimitiveDialog::ConstrainedAxis Qgs3DCreatePrimitiveCylinderDialog::constrainedAxisForParam( int idx )
 {
   if ( idx == 0 )
@@ -119,4 +86,21 @@ Qgs3DCreatePrimitiveDialog::ConstrainedAxis Qgs3DCreatePrimitiveCylinderDialog::
   }
 
   return Qgs3DCreatePrimitiveDialog::NONE;
+}
+
+QAbstractSpinBox *Qgs3DCreatePrimitiveCylinderDialog::getSpinBox( int idx )
+{
+  if ( idx == 0 )
+  {
+    return mSpinRadius;
+  }
+  if ( idx == 1 )
+  {
+    return mSpinLength;
+  }
+  if ( idx == 2 )
+  {
+    return mSpinRadial;
+  }
+  return nullptr;
 }

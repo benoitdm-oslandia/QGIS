@@ -14,10 +14,12 @@ class Qgs3DCreatePrimitiveCubeDialog : public Qgs3DCreatePrimitiveDialog
     void setSizeY( double size );
     void setSizeZ( double size );
 
-    int paramNumber() const override { return 3; };
+    int paramNumber() const override { return 4; };
+    int creationParamNumber() const override { return 3; };
     ConstrainedAxis constrainedAxisForParam( int idx ) override;
-    void setParam( int idx, double value ) override;
-    double getParam( int idx ) const override;
+
+  protected:
+    QAbstractSpinBox *getSpinBox( int idx ) override;
 
   private:
     QDoubleSpinBox *mSpinSizeX;

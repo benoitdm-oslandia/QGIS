@@ -1,6 +1,5 @@
 #include "qgs3dcreateprimitivedialog.h"
 
-
 Qgs3DCreatePrimitiveDialog::Qgs3DCreatePrimitiveDialog( const QString &type, Qt::WindowFlags f )
   : QDialog( nullptr, f ), mType( type )
 {
@@ -53,10 +52,60 @@ void Qgs3DCreatePrimitiveDialog::resetData()
 void Qgs3DCreatePrimitiveDialog::unfocusCreateButton()
 {
   createButton->clearFocus();
-  transformationWidget->setFocus( Qt::OtherFocusReason );
+  transformationWidget->setFocus( Qt::TabFocusReason );
 }
 
 void Qgs3DCreatePrimitiveDialog::focusCreateButton()
 {
-  createButton->setFocus( Qt::OtherFocusReason );
+  createButton->setFocus( Qt::TabFocusReason );
+}
+
+
+void Qgs3DCreatePrimitiveDialog::setParam( int idx, double value )
+{
+  QAbstractSpinBox *spin = getSpinBox( idx );
+  if ( spin != nullptr )
+  {
+    if ( auto qSpin = dynamic_cast<QSpinBox *>( spin ) )
+    {
+      whileBlocking( qSpin )->setValue( value );
+    }
+    else if ( auto qSpin = dynamic_cast<QDoubleSpinBox *>( spin ) )
+    {
+      whileBlocking( qSpin )->setValue( value );
+    }
+  }
+}
+
+double Qgs3DCreatePrimitiveDialog::getParam( int idx ) const
+{
+  const QAbstractSpinBox *spin = const_cast<Qgs3DCreatePrimitiveDialog *>( this )->getSpinBox( idx );
+  if ( spin != nullptr )
+  {
+    if ( auto qSpin = dynamic_cast<const QSpinBox *>( spin ) )
+    {
+      return qSpin->value();
+    }
+    if ( auto qSpin = dynamic_cast<const QDoubleSpinBox *>( spin ) )
+    {
+      return qSpin->value();
+    }
+  }
+
+  return std::numeric_limits<double>::quiet_NaN();
+}
+
+void Qgs3DCreatePrimitiveDialog::focusOnParam( int idx )
+{
+  for ( int i = 0; i < paramNumber(); ++i )
+  {
+    QAbstractSpinBox *spin = getSpinBox( i );
+    if ( spin != nullptr )
+    {
+      if ( i == idx )
+        spin->setFocus( Qt::TabFocusReason );
+      else
+        spin->clearFocus();
+    }
+  }
 }

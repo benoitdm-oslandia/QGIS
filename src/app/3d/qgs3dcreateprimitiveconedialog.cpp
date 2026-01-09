@@ -89,48 +89,6 @@ void Qgs3DCreatePrimitiveConeDialog::setRadial( int size )
   whileBlocking( mSpinRadial )->setValue( size );
 }
 
-void Qgs3DCreatePrimitiveConeDialog::setParam( int idx, double value )
-{
-  if ( idx == 0 )
-  {
-    setBottomRadius( value );
-  }
-  else if ( idx == 1 )
-  {
-    setLength( value );
-  }
-  else if ( idx == 2 )
-  {
-    setTopRadius( value );
-  }
-  else if ( idx == 3 )
-  {
-    setRadial( value );
-  }
-}
-
-double Qgs3DCreatePrimitiveConeDialog::getParam( int idx ) const
-{
-  if ( idx == 0 )
-  {
-    return mSpinBottomRadius->value();
-  }
-  if ( idx == 1 )
-  {
-    return mSpinLength->value();
-  }
-  if ( idx == 2 )
-  {
-    return mSpinTopRadius->value();
-  }
-  if ( idx == 3 )
-  {
-    return mSpinRadial->value();
-  }
-
-  return std::numeric_limits<double>::quiet_NaN();
-}
-
 Qgs3DCreatePrimitiveDialog::ConstrainedAxis Qgs3DCreatePrimitiveConeDialog::constrainedAxisForParam( int idx )
 {
   if ( idx == 0 )
@@ -147,4 +105,26 @@ Qgs3DCreatePrimitiveDialog::ConstrainedAxis Qgs3DCreatePrimitiveConeDialog::cons
   }
 
   return Qgs3DCreatePrimitiveDialog::NONE;
+}
+
+QAbstractSpinBox *Qgs3DCreatePrimitiveConeDialog::getSpinBox( int idx )
+{
+  if ( idx == 0 )
+  {
+    return mSpinBottomRadius;
+  }
+  if ( idx == 1 )
+  {
+    return mSpinLength;
+  }
+  if ( idx == 2 )
+  {
+    return mSpinTopRadius;
+  }
+  if ( idx == 3 )
+  {
+    return mSpinRadial;
+  }
+
+  return nullptr;
 }

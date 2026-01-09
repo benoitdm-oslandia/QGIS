@@ -63,40 +63,6 @@ void Qgs3DCreatePrimitiveCubeDialog::setSizeZ( double size )
   whileBlocking( mSpinSizeZ )->setValue( size );
 }
 
-void Qgs3DCreatePrimitiveCubeDialog::setParam( int idx, double value )
-{
-  if ( idx == 0 )
-  {
-    setSizeX( value );
-  }
-  else if ( idx == 1 )
-  {
-    setSizeY( value );
-  }
-  else if ( idx == 2 )
-  {
-    setSizeZ( value );
-  }
-}
-
-double Qgs3DCreatePrimitiveCubeDialog::getParam( int idx ) const
-{
-  if ( idx == 0 )
-  {
-    return mSpinSizeX->value();
-  }
-  if ( idx == 1 )
-  {
-    return mSpinSizeY->value();
-  }
-  if ( idx == 2 )
-  {
-    return mSpinSizeZ->value();
-  }
-
-  return std::numeric_limits<double>::quiet_NaN();
-}
-
 Qgs3DCreatePrimitiveDialog::ConstrainedAxis Qgs3DCreatePrimitiveCubeDialog::constrainedAxisForParam( int idx )
 {
   if ( idx == 0 )
@@ -113,4 +79,22 @@ Qgs3DCreatePrimitiveDialog::ConstrainedAxis Qgs3DCreatePrimitiveCubeDialog::cons
   }
 
   return Qgs3DCreatePrimitiveDialog::NONE;
+}
+
+QAbstractSpinBox *Qgs3DCreatePrimitiveCubeDialog::getSpinBox( int idx )
+{
+  if ( idx == 0 )
+  {
+    return mSpinSizeX;
+  }
+  if ( idx == 1 )
+  {
+    return mSpinSizeY;
+  }
+  if ( idx == 2 )
+  {
+    return mSpinSizeZ;
+  }
+
+  return nullptr;
 }

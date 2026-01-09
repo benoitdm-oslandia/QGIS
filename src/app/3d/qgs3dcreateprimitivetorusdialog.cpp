@@ -88,48 +88,6 @@ void Qgs3DCreatePrimitiveTorusDialog::setTubeRadial( int size )
   whileBlocking( mSpinTubeRadial )->setValue( size );
 }
 
-void Qgs3DCreatePrimitiveTorusDialog::setParam( int idx, double value )
-{
-  if ( idx == 0 )
-  {
-    setMainRadius( value );
-  }
-  else if ( idx == 1 )
-  {
-    setTubeRadius( value );
-  }
-  else if ( idx == 2 )
-  {
-    setMainRadial( value );
-  }
-  else if ( idx == 3 )
-  {
-    setTubeRadial( value );
-  }
-}
-
-double Qgs3DCreatePrimitiveTorusDialog::getParam( int idx ) const
-{
-  if ( idx == 0 )
-  {
-    return mSpinMainRadius->value();
-  }
-  if ( idx == 1 )
-  {
-    return mSpinTubeRadius->value();
-  }
-  if ( idx == 2 )
-  {
-    return mSpinMainRadial->value();
-  }
-  if ( idx == 3 )
-  {
-    return mSpinTubeRadial->value();
-  }
-
-  return std::numeric_limits<double>::quiet_NaN();
-}
-
 Qgs3DCreatePrimitiveDialog::ConstrainedAxis Qgs3DCreatePrimitiveTorusDialog::constrainedAxisForParam( int idx )
 {
   if ( idx == 0 )
@@ -142,4 +100,25 @@ Qgs3DCreatePrimitiveDialog::ConstrainedAxis Qgs3DCreatePrimitiveTorusDialog::con
   }
 
   return Qgs3DCreatePrimitiveDialog::NONE;
+}
+
+QAbstractSpinBox *Qgs3DCreatePrimitiveTorusDialog::getSpinBox( int idx )
+{
+  if ( idx == 0 )
+  {
+    return mSpinMainRadius;
+  }
+  if ( idx == 1 )
+  {
+    return mSpinTubeRadius;
+  }
+  if ( idx == 2 )
+  {
+    return mSpinMainRadial;
+  }
+  if ( idx == 3 )
+  {
+    return mSpinTubeRadial;
+  }
+  return nullptr;
 }

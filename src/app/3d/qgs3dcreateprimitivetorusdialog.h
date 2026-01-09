@@ -15,10 +15,12 @@ class Qgs3DCreatePrimitiveTorusDialog : public Qgs3DCreatePrimitiveDialog
     void setMainRadial( int size );
     void setTubeRadial( int size );
 
-    int paramNumber() const override { return 2; };
+    int paramNumber() const override { return 4; };
+    int creationParamNumber() const override { return 2; };
     ConstrainedAxis constrainedAxisForParam( int idx ) override;
-    void setParam( int idx, double value ) override;
-    double getParam( int idx ) const override;
+
+  protected:
+    QAbstractSpinBox *getSpinBox( int idx ) override;
 
   private:
     QDoubleSpinBox *mSpinMainRadius;

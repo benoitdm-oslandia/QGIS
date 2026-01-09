@@ -85,8 +85,11 @@ class Qgs3DCreatePrimitiveDialog : public QDialog, protected Ui::CreatePrimitive
     /// Release focus on create button
     void unfocusCreateButton();
 
-    /// \return the number of parameter the user will have to set
+    /// \return the total number of parameter
     virtual int paramNumber() const = 0;
+
+    /// \return the number of parameter the user will have to set
+    virtual int creationParamNumber() const = 0;
 
     /**
      * \param idx parameter number
@@ -99,13 +102,19 @@ class Qgs3DCreatePrimitiveDialog : public QDialog, protected Ui::CreatePrimitive
      * \param idx parameter number
      * \param value new value
      */
-    virtual void setParam( int idx, double value ) = 0;
+    virtual void setParam( int idx, double value );
 
     /**
      * \param idx parameter number
      * \return value for specified parameter
      */
-    virtual double getParam( int idx ) const = 0;
+    virtual double getParam( int idx ) const;
+
+    /**
+     * Bring focus on specific parameter
+     * \param idx parameter number
+     */
+    virtual void focusOnParam( int idx );
 
     /// Reset dialog values
     virtual void resetData();
@@ -115,6 +124,13 @@ class Qgs3DCreatePrimitiveDialog : public QDialog, protected Ui::CreatePrimitive
     void valueChanged();
     /// Emitted when create button is clicked
     void createClicked( bool );
+
+  protected:
+    /**
+     * \param idx parameter number
+     * \return value for specified parameter
+     */
+    virtual QAbstractSpinBox *getSpinBox( int idx ) = 0;
 
   private:
     /// Primitive type name

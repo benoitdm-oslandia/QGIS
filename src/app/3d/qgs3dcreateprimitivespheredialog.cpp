@@ -69,40 +69,6 @@ void Qgs3DCreatePrimitiveSphereDialog::setSlices( int size )
   whileBlocking( mSpinSlices )->setValue( size );
 }
 
-void Qgs3DCreatePrimitiveSphereDialog::setParam( int idx, double value )
-{
-  if ( idx == 0 )
-  {
-    setRadius( value );
-  }
-  else if ( idx == 1 )
-  {
-    setRings( value );
-  }
-  else if ( idx == 2 )
-  {
-    setSlices( value );
-  }
-}
-
-double Qgs3DCreatePrimitiveSphereDialog::getParam( int idx ) const
-{
-  if ( idx == 0 )
-  {
-    return mSpinRadius->value();
-  }
-  if ( idx == 1 )
-  {
-    return mSpinRings->value();
-  }
-  if ( idx == 2 )
-  {
-    return mSpinSlices->value();
-  }
-
-  return std::numeric_limits<double>::quiet_NaN();
-}
-
 Qgs3DCreatePrimitiveDialog::ConstrainedAxis Qgs3DCreatePrimitiveSphereDialog::constrainedAxisForParam( int idx )
 {
   if ( idx == 0 )
@@ -111,4 +77,22 @@ Qgs3DCreatePrimitiveDialog::ConstrainedAxis Qgs3DCreatePrimitiveSphereDialog::co
   }
 
   return Qgs3DCreatePrimitiveDialog::NONE;
+}
+
+QAbstractSpinBox *Qgs3DCreatePrimitiveSphereDialog::getSpinBox( int idx )
+{
+  if ( idx == 0 )
+  {
+    return mSpinRadius;
+  }
+  if ( idx == 1 )
+  {
+    return mSpinRings;
+  }
+  if ( idx == 2 )
+  {
+    return mSpinSlices;
+  }
+
+  return nullptr;
 }
