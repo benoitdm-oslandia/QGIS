@@ -13,8 +13,6 @@
  *                                                                         *
  ***************************************************************************/
 
-#include <testqgs3dmaptoolutils.h>
-
 #include "qgisapp.h"
 #include "qgs3d.h"
 #include "qgs3dmapcanvas.h"
@@ -37,6 +35,7 @@
 #include "qgsvectorlayer.h"
 #include "qgsvectorlayer3drenderer.h"
 #include "qgswindow3dengine.h"
+#include "testqgs3dmaptoolutils.h"
 
 class Qgs3DMapToolCreatePrimitiveForTest : public Qgs3DMapToolCreatePrimitive
 {
