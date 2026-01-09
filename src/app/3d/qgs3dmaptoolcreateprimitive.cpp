@@ -108,7 +108,7 @@ void Qgs3DMapToolCreatePrimitive::finish()
 
   mPrimitiveLineEntity.reset();
 
-  mNbMouseClick = 0;
+  mCurrentFieldIdx = -1;
   mPointOnMap.clear();
   mDialog->resetData();
   mMouseClickPos = QPoint();
@@ -313,7 +313,7 @@ void Qgs3DMapToolCreatePrimitive::updatePrimitive()
 void Qgs3DMapToolCreatePrimitive::handleClick( QMouseEvent *event )
 {
   qDebug() << u"%1 #%2:"_s.arg( __FUNCTION__ ).arg( __LINE__ ).toStdString();
-  if ( mNbMouseClick == 0 )
+  if ( mCurrentFieldIdx == 0 )
   {
     qDebug() << u"%1 #%2:"_s.arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "First click";
     mMouseClickPos = event->pos();
@@ -327,13 +327,13 @@ void Qgs3DMapToolCreatePrimitive::handleClick( QMouseEvent *event )
     mRubberBand->addPoint( rbPoint );
     mRubberBand->addPoint( rbPoint );
 
-    ++mNbMouseClick;
+    ++mCurrentFieldIdx;
   }
-  else if ( mNbMouseClick <= mDialog->creationParamNumber() )
+  else if ( mCurrentFieldIdx <= mDialog->creationParamNumber() )
   {
     QgsPoint pointMap = screenToMap( event->pos() );
     double length = constraintMapPoint( pointMap, event->modifiers() );
-    mDialog->setParam( mNbMouseClick - 1, length );
+    mDialog->setParam( mCurrentFieldIdx - 1, length );
 
     mPointOnMap << pointMap;
 
@@ -341,8 +341,8 @@ void Qgs3DMapToolCreatePrimitive::handleClick( QMouseEvent *event )
     rbPoint.setZ( rbPoint.z() / mCanvas->mapSettings()->terrainSettings()->verticalScale() );
     mRubberBand->addPoint( rbPoint );
 
-    ++mNbMouseClick;
-    if ( mNbMouseClick > mDialog->creationParamNumber() )
+    ++mCurrentFieldIdx;
+    if ( mCurrentFieldIdx > mDialog->creationParamNumber() )
     {
       mCanvas->setCursor( Qt::WaitCursor );
       mDialog->hide();
@@ -368,7 +368,7 @@ double Qgs3DMapToolCreatePrimitive::constraintMapPoint( QgsPoint &pointMap, cons
   if ( ( stateKey & Qt::Modifier::CTRL ) == 0 )
     constraint = Qgs3DCreatePrimitiveDialog::NONE;
   else
-    constraint = mDialog->constrainedAxisForParam( mNbMouseClick - 1 );
+    constraint = mDialog->constrainedAxisForParam( mCurrentFieldIdx - 1 );
 
   switch ( constraint )
   {
@@ -404,7 +404,7 @@ double Qgs3DMapToolCreatePrimitive::constraintMapPoint( QgsPoint &pointMap, cons
       break;
   }
 
-  qDebug() << u"%1 #%2:"_s.arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "setting param" << mNbMouseClick - 1 << "to value: " << length;
+  qDebug() << u"%1 #%2:"_s.arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "setting param" << mCurrentFieldIdx - 1 << "to value: " << length;
   return length;
 }
 
@@ -422,13 +422,13 @@ void Qgs3DMapToolCreatePrimitive::mouseMoveEvent( QMouseEvent *event )
 
   QgsPoint pointMap = screenToMap( event->pos() );
 
-  if ( mNbMouseClick == 0 )
+  if ( mCurrentFieldIdx == 0 )
   {
     mDialog->setTranslation( pointMap );
   }
-  else if ( mNbMouseClick <= mDialog->creationParamNumber() )
+  else if ( mCurrentFieldIdx <= mDialog->creationParamNumber() )
   {
-    if ( mNbMouseClick == 1 && mType == Cube )
+    if ( mCurrentFieldIdx == 1 && mType == Cube )
     {
       QgsPoint prevPointMap = mPointOnMap.last();
       double angle = -1.0 * QgsGeometryUtilsBase::lineAngle( pointMap.x(), pointMap.y(), prevPointMap.x(), prevPointMap.y() );
@@ -440,7 +440,7 @@ void Qgs3DMapToolCreatePrimitive::mouseMoveEvent( QMouseEvent *event )
     }
 
     double length = constraintMapPoint( pointMap, event->modifiers() );
-    mDialog->setParam( mNbMouseClick - 1, length );
+    mDialog->setParam( mCurrentFieldIdx - 1, length );
 
     QgsPoint rbPoint = pointMap;
     rbPoint.setZ( rbPoint.z() / mCanvas->mapSettings()->terrainSettings()->verticalScale() );
@@ -463,14 +463,14 @@ void Qgs3DMapToolCreatePrimitive::mouseReleaseEvent( QMouseEvent *event )
   }
   else if ( event->button() == Qt::RightButton )
   {
-    if ( mNbMouseClick > 0 )
+    if ( mCurrentFieldIdx > 0 )
     {
       mCanvas->setCursor( cursor() );
-      --mNbMouseClick;
+      --mCurrentFieldIdx;
       mRubberBand->removeLastPoint();
       mPointOnMap.removeLast();
 
-      if ( mNbMouseClick == 0 )
+      if ( mCurrentFieldIdx == 0 )
       {
         // Finish measurement
         finish();

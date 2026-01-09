@@ -101,7 +101,7 @@ class _3D_EXPORT Qgs3DMapToolCreatePrimitive : public Qgs3DMapTool
     bool mMouseHasMoved = false;
     QPoint mMouseClickPos;
     QVector<QgsPoint> mPointOnMap;
-    int mNbMouseClick = 0;
+    int mCurrentFieldIdx = 0;
 
     std::unique_ptr<Qt3DCore::QEntity> mPrimitiveLineEntity = nullptr;
 
