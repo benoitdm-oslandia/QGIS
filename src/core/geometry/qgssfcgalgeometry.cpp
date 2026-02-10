@@ -897,7 +897,7 @@ std::unique_ptr<QgsSfcgalGeometry> QgsSfcgalGeometry::createCube( double size )
 
 std::unique_ptr<QgsSfcgalGeometry> QgsSfcgalGeometry::createBox( double sizeX, double sizeY, double sizeZ )
 {
-#if SFCGAL_VERSION >= SFCGAL_MAKE_VERSION( 2, 3, 0 )
+#if SFCGAL_VERSION_NUM >= SFCGAL_MAKE_VERSION( 2, 3, 0 )
   QString errorMsg;
   sfcgal::errorHandler()->clearText( &errorMsg );
   sfcgal::shared_prim result = QgsSfcgalEngine::createBox( sizeX, sizeY, sizeZ, &errorMsg );
@@ -914,7 +914,7 @@ std::unique_ptr<QgsSfcgalGeometry> QgsSfcgalGeometry::createBox( double sizeX, d
 
 std::unique_ptr<QgsSfcgalGeometry> QgsSfcgalGeometry::createSphere( double radius, unsigned int rings, unsigned int slices )
 {
-#if SFCGAL_VERSION >= SFCGAL_MAKE_VERSION( 2, 3, 0 )
+#if SFCGAL_VERSION_NUM >= SFCGAL_MAKE_VERSION( 2, 3, 0 )
   QString errorMsg;
   sfcgal::errorHandler()->clearText( &errorMsg );
   sfcgal::shared_prim result = QgsSfcgalEngine::createSphere( radius, rings, slices, &errorMsg );
@@ -931,7 +931,7 @@ std::unique_ptr<QgsSfcgalGeometry> QgsSfcgalGeometry::createSphere( double radiu
 
 std::unique_ptr<QgsSfcgalGeometry> QgsSfcgalGeometry::createTorus( double mainRadius, double tubeRadius, unsigned int mainRadial, unsigned int tubeRadial )
 {
-#if SFCGAL_VERSION >= SFCGAL_MAKE_VERSION( 2, 3, 0 )
+#if SFCGAL_VERSION_NUM >= SFCGAL_MAKE_VERSION( 2, 3, 0 )
   QString errorMsg;
   sfcgal::errorHandler()->clearText( &errorMsg );
   sfcgal::shared_prim result = QgsSfcgalEngine::createTorus( mainRadius, tubeRadius, mainRadial, tubeRadial, &errorMsg );
@@ -948,7 +948,7 @@ std::unique_ptr<QgsSfcgalGeometry> QgsSfcgalGeometry::createTorus( double mainRa
 
 std::unique_ptr<QgsSfcgalGeometry> QgsSfcgalGeometry::createCylinder( double radius, double height, unsigned int radial )
 {
-#if SFCGAL_VERSION >= SFCGAL_MAKE_VERSION( 2, 3, 0 )
+#if SFCGAL_VERSION_NUM >= SFCGAL_MAKE_VERSION( 2, 3, 0 )
   QString errorMsg;
   sfcgal::errorHandler()->clearText( &errorMsg );
   sfcgal::shared_prim result = QgsSfcgalEngine::createCylinder( radius, height, radial, &errorMsg );
@@ -965,7 +965,7 @@ std::unique_ptr<QgsSfcgalGeometry> QgsSfcgalGeometry::createCylinder( double rad
 
 std::unique_ptr<QgsSfcgalGeometry> QgsSfcgalGeometry::createCone( double bottomRadius, double height, double topRadius, unsigned int radial )
 {
-#if SFCGAL_VERSION >= SFCGAL_MAKE_VERSION( 2, 3, 0 )
+#if SFCGAL_VERSION_NUM >= SFCGAL_MAKE_VERSION( 2, 3, 0 )
   QString errorMsg;
   sfcgal::errorHandler()->clearText( &errorMsg );
   sfcgal::shared_prim result = QgsSfcgalEngine::createCone( bottomRadius, height, topRadius, radial, &errorMsg );
