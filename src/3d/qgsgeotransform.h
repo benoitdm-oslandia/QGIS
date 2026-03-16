@@ -30,10 +30,12 @@
 
 #include "qgsvector3d.h"
 
+#include <QString>
 #include <Qt3DCore/QTransform>
 
 #define SIP_NO_FILE
 
+using namespace Qt::StringLiterals;
 /**
  * Specialized kind of QTransform that:
  *
@@ -51,6 +53,10 @@ class QgsGeoTransform : public Qt3DCore::QTransform
 
     //! Sets 3D scene's origin in map coordinates and updates the underlying QTransform
     void setOrigin( const QgsVector3D &origin );
+
+    QString toString() const { return u"QgsGeoTransform trans:%1, origin:%2"_s
+                                 .arg( mTranslation.toString() )
+                                 .arg( mOrigin.toString() ); }
 
   private:
     QgsVector3D mTranslation;
