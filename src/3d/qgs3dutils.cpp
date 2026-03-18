@@ -527,7 +527,7 @@ void Qgs3DUtils::extractPointPositions(
   const QgsFeature &f, const Qgs3DRenderContext &context, const QgsVector3D &chunkOrigin, Qgis::AltitudeClamping altClamp, QVector<QVector3D> &positions, const QgsVector3D &translation
 )
 {
-  int qualSum = 0;
+  //  int qualSum = 0;
 
   const QgsAbstractGeometry *g = f.geometry().constGet();
   for ( auto it = g->vertices_begin(); it != g->vertices_end(); ++it )
@@ -545,7 +545,7 @@ void Qgs3DUtils::extractPointPositions(
       {
         int qual;
         demCache->heightMapCache()->heightAndQualityAt( pt.x(), pt.y(), terrainZ, qual );
-        qualSum += qual;
+        //        qualSum += qual;
       }
       else
         terrainZ = context.terrainGenerator()->heightAt( pt.x(), pt.y(), context );
@@ -573,6 +573,7 @@ void Qgs3DUtils::extractPointPositions(
     // clang-format on
     QgsDebugMsgLevel( u"%1 %2 %3"_s.arg( positions.last().x() ).arg( positions.last().y() ).arg( positions.last().z() ), 2 );
   }
+  // qDebug() << "Qgs3DUtils::extractPointPositions n,pos,q:" << positions.count() << positions.front() << qualSum / positions.count();
 }
 
 /**
