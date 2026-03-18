@@ -553,7 +553,7 @@ void Qgs3DUtils::extractPointPositions( const QgsFeature &f, const Qgs3DRenderCo
     positions.append( QVector3D(
       static_cast<float>( pt.x() - chunkOrigin.x() ),
       static_cast<float>( pt.y() - chunkOrigin.y() ),
-      h
+      h - chunkOrigin.z()
     ) );
     // clang-format on
     QgsDebugMsgLevel( u"%1 %2 %3"_s.arg( positions.last().x() ).arg( positions.last().y() ).arg( positions.last().z() ), 2 );
