@@ -649,10 +649,9 @@ void Qgs3DMapScene::createTerrainDeferred()
     terrainOrGlobe = mTerrain;
 
     // when terrain generator is DEM, we watch for new hi-res tile are downloaded in order to correct the elevation of entities
-    if ( mMap.terrainGenerator()->type() == QgsTerrainGenerator::Dem )
+    if ( const QgsTerrainGeneratorWithCache *demGen = dynamic_cast<const QgsTerrainGeneratorWithCache *>( mMap.terrainGenerator() ) )
     {
-      const QgsDemTerrainGenerator *demGen = dynamic_cast<const QgsDemTerrainGenerator *>( mMap.terrainGenerator() );
-      connect( demGen, &QgsDemTerrainGenerator::maxResTileReceived, this, &Qgs3DMapScene::onNewDemTileReceived );
+      connect( demGen->heightMapCache(), &QgsDemHeightMapCache::maxResTileReceived, this, &Qgs3DMapScene::onNewDemTileReceived );
     }
   }
 
@@ -804,7 +803,11 @@ void Qgs3DMapScene::addSceneEntity( Qgs3DMapSceneEntity *sceneNewEntity )
   connect( sceneNewEntity, &Qgs3DMapSceneEntity::pendingJobsCountChanged, this, &Qgs3DMapScene::totalPendingJobsCountChanged );
 
   qDebug() << "=========== Qgs3DMapScene addSceneEntity will update scene";
-  onCameraChanged(); // needed for chunked entities
+  // needed for chunked entities
+  updateScene( true );
+  updateCameraNearFarPlanes();
+
+  // onCameraChanged(); // needed for chunked entities
 }
 
 void Qgs3DMapScene::removeSceneEntity( Qgs3DMapSceneEntity *sceneEntity )

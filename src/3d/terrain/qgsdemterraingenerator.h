@@ -18,6 +18,7 @@
 
 #include "qgis_3d.h"
 #include "qgscoordinatetransformcontext.h"
+#include "qgsdemheightmapcache_p.h"
 #include "qgsrasterlayer.h"
 #include "qgsterraingenerator.h"
 
@@ -34,7 +35,7 @@ class QgsDemTerrainTileLoader;
  * \note Not available in Python bindings
  *
  */
-class _3D_EXPORT QgsDemTerrainGenerator : public QgsTerrainGenerator
+class _3D_EXPORT QgsDemTerrainGenerator : public QgsTerrainGenerator, public QgsTerrainGeneratorWithCache
 {
     Q_OBJECT
 
@@ -44,8 +45,8 @@ class _3D_EXPORT QgsDemTerrainGenerator : public QgsTerrainGenerator
      */
     static QgsTerrainGenerator *create() SIP_FACTORY;
 
-    QgsDemTerrainGenerator() = default;
-    ~QgsDemTerrainGenerator() override;
+    QgsDemTerrainGenerator();
+    virtual ~QgsDemTerrainGenerator() override;
 
     //! Sets raster layer with elevation model to be used for terrain generation
     void setLayer( QgsRasterLayer *layer );
@@ -70,29 +71,29 @@ class _3D_EXPORT QgsDemTerrainGenerator : public QgsTerrainGenerator
     float skirtHeight() const { return mSkirtHeight; }
 
     //! Returns height map generator object - takes care of extraction of elevations from the layer)
-    QgsDemHeightMapGenerator *heightMapGenerator() { return mHeightMapGenerator; }
+    QgsDemHeightMapGenerator *heightMapGenerator() { return mHeightMapGenerator.get(); }
 
     QgsTerrainGenerator *clone() const override SIP_FACTORY;
     Type type() const override;
     QgsRectangle rootChunkExtent() const override;
     void setExtent( const QgsRectangle &extent ) override;
+
     float heightAt( double x, double y, const Qgs3DRenderContext &context ) const override;
 
     QgsChunkLoader *createChunkLoader( QgsChunkNode *node ) const override SIP_FACTORY;
 
     QgsTerrainGenerator::Capabilities capabilities() const override;
 
-  signals:
-    //! emitted when an hi-res DEM tile has been received
-    void maxResTileReceived( const QgsChunkNodeId &tileId, const QgsRectangle &extent );
+    void rootChunkHeightRange( float &hMin, float &hMax ) const override;
 
-  private slots:
-    void onHeightMapReceived( int jobId, const QgsChunkNodeId &tileId, const QgsRectangle &extent, const QByteArray &heightMap );
+    virtual int qualityAt( double x, double y, const Qgs3DRenderContext &context ) const override;
+    virtual QgsDemHeightMapCache *heightMapCache() const override { return mCache.get(); }
 
   private:
     void updateGenerator();
 
-    QgsDemHeightMapGenerator *mHeightMapGenerator = nullptr;
+    std::unique_ptr<QgsDemHeightMapGenerator> mHeightMapGenerator;
+    std::unique_ptr<QgsDemHeightMapCache> mCache;
 
     QgsCoordinateReferenceSystem mCrs;
 
@@ -106,10 +107,6 @@ class _3D_EXPORT QgsDemTerrainGenerator : public QgsTerrainGenerator
     float mSkirtHeight = 10.f;
     //! root node used to search best height map data according to x/y
     mutable QgsChunkNode *mRootNode = nullptr;
-    //! map used as height map data cache
-    mutable QMap<QString, QByteArray> mLoaderMap;
-    //! protect cache and mRootNode for concurrent updates
-    mutable QMutex mRootNodeMutex;
 };
 
 
