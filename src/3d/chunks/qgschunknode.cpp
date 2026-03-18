@@ -28,7 +28,9 @@ QgsChunkNode::QgsChunkNode( const QgsChunkNodeId &nodeId, const QgsBox3D &box3D,
   , mError( error )
   , mNodeId( nodeId )
   , mParent( parent )
-{}
+{
+  qDebug() << "QgsChunkNode::QgsChunkNode tile:" << tileId().text() << "z min/max:" << box3D.zMinimum() << box3D.zMaximum();
+}
 
 QgsChunkNode::~QgsChunkNode()
 {
@@ -244,6 +246,7 @@ void QgsChunkNode::replaceEntity( Qt3DCore::QEntity *newEntity )
 
 void QgsChunkNode::setExactBox3D( const QgsBox3D &box3D )
 {
+  qDebug() << "QgsChunkNode::setExactBox3D tile:" << tileId().text() << "z min/max:" << box3D.zMinimum() << box3D.zMaximum();
   mBox3D = box3D;
 
   // TODO: propagate better estimate to children?

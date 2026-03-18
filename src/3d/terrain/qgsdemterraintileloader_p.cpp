@@ -111,6 +111,14 @@ Qt3DCore::QEntity *QgsDemTerrainTileLoader::createEntity( Qt3DCore::QEntity *par
   QgsRectangle extent = map->terrainGenerator()->tilingScheme().tileToExtent( nodeId );
   double side = extent.width();
 
+  qDebug()
+    << "QgsDemTerrainTileLoader::createEntity for TERRAIN"
+    << "/ tile:"
+    << mNode->tileId().text()
+    << "/ z min/max:"
+    << zMin * map->terrainSettings()->verticalScale()
+    << zMax * map->terrainSettings()->verticalScale();
+
   QgsTerrainTileEntity *entity = new QgsTerrainTileEntity( nodeId );
 
   // create geometry renderer

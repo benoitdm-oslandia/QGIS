@@ -99,6 +99,8 @@ bool QgsInstancedPoint3DSymbolHandler::prepare( const Qgs3DRenderContext &contex
 
   mChunkOrigin = chunkExtent.center();
   mChunkExtent = chunkExtent;
+  //  outNormal.positions.clear();
+  //  outSelected.positions.clear();
 
   return true;
 }
@@ -110,6 +112,7 @@ void QgsInstancedPoint3DSymbolHandler::processFeature( const QgsFeature &feature
   if ( feature.geometry().isNull() )
     return;
 
+  qDebug() << "QgsInstancedPoint3DSymbolHandler::processFeature id:" << feature.id() << feature.geometry().constGet()->vertexCount();
   Qgs3DUtils::extractPointPositions( feature, context, mChunkOrigin, mSymbol->altitudeClamping(), out.positions );
   mFeatureCount++;
 }
@@ -209,6 +212,8 @@ void QgsInstancedPoint3DSymbolHandler::makeEntity( Qt3DCore::QEntity *parent, co
   // add transform (our geometry has coordinates relative to mChunkOrigin)
   QgsGeoTransform *tr = new QgsGeoTransform;
   tr->setGeoTranslation( mChunkOrigin );
+  qDebug() << "QgsInstancedPoint3DSymbolHandler::makeEntity chunkExtent min/max:" << mChunkExtent.zMinimum() << mChunkExtent.zMaximum();
+  qDebug() << "QgsInstancedPoint3DSymbolHandler::makeEntity chunkOrig:" << mChunkOrigin.toString() << "/ tr:" << tr->toString();
 
   // build the entity
   Qt3DCore::QEntity *entity = new Qt3DCore::QEntity;
@@ -302,6 +307,8 @@ Qt3DRender::QGeometryRenderer *QgsInstancedPoint3DSymbolHandler::renderer( const
   QByteArray ba;
   ba.resize( byteCount );
   memcpy( ba.data(), positions.constData(), byteCount );
+
+  qDebug() << "QgsInstancedPoint3DSymbolHandler::renderer n,pos:" << count << positions.front();
 
   Qt3DCore::QBuffer *instanceBuffer = new Qt3DCore::QBuffer();
   instanceBuffer->setData( ba );
@@ -471,6 +478,7 @@ void QgsModelPoint3DSymbolHandler::processFeature( const QgsFeature &feature, co
   if ( feature.geometry().isNull() )
     return;
 
+  qDebug() << "QgsModelPoint3DSymbolHandler::processFeature id:" << feature.id() << feature.geometry().constGet()->vertexCount();
   Qgs3DUtils::extractPointPositions( feature, context, mChunkOrigin, mSymbol->altitudeClamping(), out.positions );
   mFeatureCount++;
 }

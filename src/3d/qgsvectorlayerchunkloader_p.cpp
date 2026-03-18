@@ -157,6 +157,7 @@ void QgsVectorLayerChunkLoader::cancel()
 
 Qt3DCore::QEntity *QgsVectorLayerChunkLoader::createEntity( Qt3DCore::QEntity *parent )
 {
+  qDebug() << "QgsVectorLayerChunkLoader::createEntity for" << mLayerName << "/ tile:" << mNode->tileId().text();
   if ( mHandler->featureCount() == 0 )
   {
     // an empty node, so we return no entity. This tags the node as having no data and effectively removes it.
@@ -174,10 +175,32 @@ Qt3DCore::QEntity *QgsVectorLayerChunkLoader::createEntity( Qt3DCore::QEntity *p
   if ( mHandler->zMinimum() != std::numeric_limits<float>::max() && mHandler->zMaximum() != std::numeric_limits<float>::lowest() )
   {
     QgsBox3D box = mNode->box3D();
+    QgsBox3D oldBox = box;
     box.setZMinimum( mHandler->zMinimum() );
     box.setZMaximum( mHandler->zMaximum() );
     mNode->setExactBox3D( box );
     mNode->updateParentBoundingBoxesRecursively();
+
+    // QgsVector3D oldCenter = oldBox.center();
+    // QVector3D elevationFix( 0, 0, oldCenter.z() - box.center().z() );
+    // for ( auto child : entity->findChildren<Qt3DCore::QEntity *>() )
+    // {
+    //   if ( !child->componentsOfType<QgsGeoTransform>().empty() )
+    //   {
+    //     qDebug() << "QgsVectorLayerChunkLoader::createEntity for" << mLayerName
+    //              << "/ tile:" << mNode->tileId().text()
+    //              << "/ apply fix:" << elevationFix;
+    //     QgsGeoTransform *tr = new QgsGeoTransform;
+    //     tr->setGeoTranslation( elevationFix );
+    //     child->addComponent( tr );
+    //   }
+
+    //   // for ( auto tr : child->componentsOfType<QgsGeoTransform>() )
+    //   // {
+    //   //   tr->setTranslation( tr->translation() + elevationFix );
+    //   // }
+    //   // update transalation
+    // }
   }
 
   return entity;
@@ -209,6 +232,7 @@ QgsVectorLayerChunkLoaderFactory::QgsVectorLayerChunkLoaderFactory( const Qgs3DR
   // add small padding to avoid clipping of point features located at the edge of the bounding box
   rootBox3D.grow( 1.0 );
 
+  qDebug() << "QgsVectorLayerChunkLoaderFactory::QgsVectorLayerChunkLoaderFactory new " << vl->name() << " with z min/max:" << rootBox3D.zMinimum() << rootBox3D.zMaximum();
   const float rootError = static_cast<float>( std::max<double>( rootBox3D.width(), rootBox3D.height() ) * QgsVectorLayer3DTilingSettings::tileGeometryErrorRatio() );
   setupQuadtree( rootBox3D, rootError );
 }
@@ -265,6 +289,8 @@ void QgsVectorLayerChunkedEntity::updateNodes( const QList<QgsChunkNode *> &node
   QgsChunkedEntity::updateNodes( nodes, mUpdateJobFactory.get() );
 
   setNeedsUpdate( true );
+  QString name = dynamic_cast<QgsVectorLayerChunkLoaderFactory *>( chunkLoaderFactory() )->mLayer->name();
+  qDebug() << "QgsVectorLayerChunkedEntity::updateNodes" << name << "trans:" << mTransform->translation();
 }
 
 

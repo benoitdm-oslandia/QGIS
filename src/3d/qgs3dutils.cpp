@@ -558,6 +558,7 @@ void Qgs3DUtils::extractPointPositions( const QgsFeature &f, const Qgs3DRenderCo
     // clang-format on
     QgsDebugMsgLevel( u"%1 %2 %3"_s.arg( positions.last().x() ).arg( positions.last().y() ).arg( positions.last().z() ), 2 );
   }
+  // qDebug() << "Qgs3DUtils::extractPointPositions n,pos,q:" << positions.count() << positions.front() << qualSum / positions.count();
 }
 
 /**

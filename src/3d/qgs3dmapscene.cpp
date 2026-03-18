@@ -423,12 +423,17 @@ bool Qgs3DMapScene::updateScene( bool forceUpdate )
   }
   sceneContext.viewProjectionMatrix = projMatrix * camera->viewMatrix();
 
-
   bool anyUpdated = false;
   for ( Qgs3DMapSceneEntity *entity : std::as_const( mSceneEntities ) )
   {
     if ( forceUpdate || ( entity->isEnabled() && entity->needsUpdate() ) )
     {
+      // if ( entity == mTerrain )
+      //   qDebug() << "=========== Qgs3DMapScene updating terrain! force:" << forceUpdate << "/ need:" << entity->needsUpdate();
+      // else
+      // {
+      //   qDebug() << "=========== Qgs3DMapScene updating OTHER! force:" << forceUpdate << "/ need:" << entity->needsUpdate();
+      // }
       anyUpdated = true;
       entity->handleSceneUpdate( sceneContext );
       if ( entity->hasReachedGpuMemoryLimit() )
@@ -798,6 +803,7 @@ void Qgs3DMapScene::addSceneEntity( Qgs3DMapSceneEntity *sceneNewEntity )
 
   connect( sceneNewEntity, &Qgs3DMapSceneEntity::pendingJobsCountChanged, this, &Qgs3DMapScene::totalPendingJobsCountChanged );
 
+  qDebug() << "=========== Qgs3DMapScene addSceneEntity will update scene";
   onCameraChanged(); // needed for chunked entities
 }
 
@@ -805,6 +811,8 @@ void Qgs3DMapScene::removeSceneEntity( Qgs3DMapSceneEntity *sceneEntity )
 {
   Q_ASSERT( sceneEntity );
 
+  if ( sceneEntity == mTerrain )
+    qDebug() << "=========== Qgs3DMapScene removing terrain!";
   mSceneEntities.removeOne( sceneEntity );
 
   sceneEntity->deleteLater();
@@ -1432,6 +1440,7 @@ void Qgs3DMapScene::onNewDemTileReceived( const QgsChunkNodeId &tileId, const Qg
 {
   Q_UNUSED( tileId );
 
+  qDebug() << "onNewDemTileReceived reload tile" << tileId.text() << extent.toString();
   // search for vector layer
   for ( auto it = mLayerEntities.constBegin(); it != mLayerEntities.constEnd(); ++it )
   {
@@ -1476,15 +1485,28 @@ void Qgs3DMapScene::onNewDemTileReceived( const QgsChunkNodeId &tileId, const Qg
       if ( QgsChunkedEntity *c = qobject_cast<QgsChunkedEntity *>( rootEntity ) )
       {
         QList<QgsChunkNode *> nodesToReload;
+        QStringList allNodeStr;
+        QStringList nodeStr;
         const QList<QgsChunkNode *> activeNodes = c->activeNodes();
 
         // search within all active chunknodes of current entity
         for ( QgsChunkNode *n : activeNodes )
+        {
+          allNodeStr << n->tileId().text() + " " + n->box3D().toRectangle().toString();
+
           if ( n->box3D().toRectangle().intersects( extent ) && ( n->state() == QgsChunkNode::Loaded ) )
+          {
+            nodeStr << n->tileId().text();
             nodesToReload << n;
+          }
+        }
 
         // tag all intersecting nodes to reload
         if ( !nodesToReload.isEmpty() )
+        {
+          qDebug() << "onNewDemTileReceived will reload layer" << layer->name() << nodeStr.join( ", "_L1 );
+          qDebug() << "onNewDemTileReceived all nodes" << allNodeStr.join( " / "_L1 );
+
           switch ( layerType )
           {
             case Qgis::LayerType::Vector:
@@ -1498,6 +1520,7 @@ void Qgs3DMapScene::onNewDemTileReceived( const QgsChunkNodeId &tileId, const Qg
               qWarning() << "onNewDemTileReceived: unmanaged QgsChunkedEntity";
               break;
           }
+        }
       }
     }
   }
