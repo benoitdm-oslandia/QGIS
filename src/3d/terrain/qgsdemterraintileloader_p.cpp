@@ -173,7 +173,8 @@ QgsDemHeightMapGenerator::QgsDemHeightMapGenerator( QgsRasterLayer *dtm, const Q
 
 QgsDemHeightMapGenerator::~QgsDemHeightMapGenerator()
 {
-  delete mClonedProvider;
+  if ( mClonedProvider )
+    delete mClonedProvider;
 }
 
 
