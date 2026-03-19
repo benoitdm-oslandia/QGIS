@@ -78,8 +78,6 @@ class QgsTerrainEntity : public QgsChunkedEntity
     void onTerrainElevationOffsetChanged();
 
   private:
-    void connectToLayersRepaintRequest();
-
     QgsTerrainTextureGenerator *mTextureGenerator = nullptr;
     Qt3DCore::QTransform *mTerrainTransform = nullptr;
 
@@ -96,6 +94,8 @@ class TerrainMapUpdateJob : public QgsChunkQueueJob
     Q_OBJECT
   public:
     TerrainMapUpdateJob( QgsTerrainTextureGenerator *textureGenerator, QgsChunkNode *mNode );
+
+    virtual ~TerrainMapUpdateJob() override;
 
     void start() override;
 

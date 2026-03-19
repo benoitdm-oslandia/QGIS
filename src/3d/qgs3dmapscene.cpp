@@ -115,8 +115,8 @@ Qgs3DMapScene::Qgs3DMapScene( Qgs3DMapSettings &map, QgsAbstract3DEngine *engine
   mMaxClipPlanes = Qgs3DUtils::openGlMaxClipPlanes( mEngine->surface() );
 
   // Camera
-  float aspectRatio = ( float ) viewportRect.width() / viewportRect.height();
-  mEngine->camera()->lens()->setPerspectiveProjection( mMap.fieldOfView(), aspectRatio, 10.f, 10000.0f );
+  double aspectRatio = static_cast<double>( viewportRect.width() ) / static_cast<double>( viewportRect.height() );
+  mEngine->camera()->lens()->setPerspectiveProjection( mMap.fieldOfView(), static_cast<float>( aspectRatio ), 10.f, 10000.0f );
 
   mFrameAction = new Qt3DLogic::QFrameAction();
   connect( mFrameAction, &Qt3DLogic::QFrameAction::triggered, this, &Qgs3DMapScene::onFrameTriggered );
@@ -302,9 +302,9 @@ QVector<QgsPointXY> Qgs3DMapScene::viewFrustum2DExtent() const
     else
     {
       // If the projected point is on the front of the camera we choose the closest between it and farthest point in the front
-      t = std::min<float>( t, camera->farPlane() );
+      t = std::min<double>( t, static_cast<double>( camera->farPlane() ) );
     }
-    QVector3D planePoint = ray.origin() + t * dir;
+    QVector3D planePoint = ray.origin() + static_cast<float>( t ) * dir;
     QgsVector3D pMap = mMap.worldToMapCoordinates( planePoint );
     extent.push_back( QgsPointXY( pMap.x(), pMap.y() ) );
   }
@@ -1409,7 +1409,7 @@ void Qgs3DMapScene::onOriginChanged()
     QgsVector3D originShift = mMap.origin() - oldOrigin;
     for ( QVector4D plane : std::as_const( mClipPlanesEquations ) )
     {
-      plane.setW( originShift.x() * plane.x() + originShift.y() * plane.y() + originShift.z() * plane.z() + plane.w() );
+      plane.setW( static_cast<float>( originShift.x() * plane.x() + originShift.y() * plane.y() + originShift.z() * plane.z() + plane.w() ) );
       newPlanes.append( plane );
     }
     enableClipping( newPlanes );
@@ -1472,7 +1472,7 @@ void Qgs3DMapScene::enableClipping( const QList<QVector4D> &clipPlaneEquations )
   mClipPlanesEquations = clipPlaneEquations.mid( 0, mMaxClipPlanes );
 
   // enable the clip planes on the framegraph
-  mEngine->frameGraph()->addClipPlanes( clipPlaneEquations.size() );
+  mEngine->frameGraph()->addClipPlanes( static_cast<int>( clipPlaneEquations.size() ) );
 
   // Enable the clip planes for the material of each entity.
   handleClippingOnAllEntities();

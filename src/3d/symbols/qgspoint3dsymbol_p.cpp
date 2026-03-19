@@ -187,6 +187,9 @@ void QgsInstancedPoint3DSymbolHandler::finalize( Qt3DCore::QEntity *parent, cons
 
   mZMin += symbolOffset;
   mZMax += symbolOffset;
+
+  mZMin += static_cast<float>( mChunkOrigin.z() );
+  mZMax += static_cast<float>( mChunkOrigin.z() );
 }
 
 void QgsInstancedPoint3DSymbolHandler::makeEntity( Qt3DCore::QEntity *parent, const Qgs3DRenderContext &context, PointData &out, bool selected )
@@ -484,6 +487,9 @@ void QgsModelPoint3DSymbolHandler::finalize( Qt3DCore::QEntity *parent, const Qg
   const float symbolHeight = mSymbol->transform().data()[14];
   mZMin += symbolHeight;
   mZMax += symbolHeight;
+
+  mZMin += static_cast<float>( mChunkOrigin.z() );
+  mZMax += static_cast<float>( mChunkOrigin.z() );
 }
 
 void QgsModelPoint3DSymbolHandler::makeEntity( Qt3DCore::QEntity *parent, const Qgs3DRenderContext &context, PointData &out, bool selected )
@@ -667,6 +673,9 @@ void QgsPoint3DBillboardSymbolHandler::finalize( Qt3DCore::QEntity *parent, cons
   const float billboardHeight = mSymbol->billboardHeight();
   mZMin += billboardHeight;
   mZMax += billboardHeight;
+
+  mZMin += static_cast<float>( mChunkOrigin.z() );
+  mZMax += static_cast<float>( mChunkOrigin.z() );
 }
 
 void QgsPoint3DBillboardSymbolHandler::makeEntity( Qt3DCore::QEntity *parent, const Qgs3DRenderContext &context, PointData &out, bool selected )

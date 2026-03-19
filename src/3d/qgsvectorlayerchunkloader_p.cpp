@@ -140,10 +140,13 @@ void QgsVectorLayerChunkLoader::start()
 
 QgsVectorLayerChunkLoader::~QgsVectorLayerChunkLoader()
 {
-  if ( mFutureWatcher && !mFutureWatcher->isFinished() )
+  if ( mFutureWatcher )
   {
     disconnect( mFutureWatcher, &QFutureWatcher<void>::finished, this, &QgsChunkQueueJob::finished );
-    mFutureWatcher->waitForFinished();
+    mCanceled = true;
+    mFutureWatcher->cancel();
+    if ( !mFutureWatcher->isFinished() )
+      mFutureWatcher->waitForFinished();
   }
 }
 
@@ -199,7 +202,10 @@ QgsVectorLayerChunkLoaderFactory::QgsVectorLayerChunkLoaderFactory( const Qgs3DR
     return;
   }
 
-  QgsBox3D rootBox3D( context.extent(), zMin, zMax );
+  QgsRectangle extent = context.extent();
+  if ( context.extent().contains( vl->extent() ) )
+    extent = vl->extent();
+  QgsBox3D rootBox3D( extent, zMin, zMax );
   // add small padding to avoid clipping of point features located at the edge of the bounding box
   rootBox3D.grow( 1.0 );
 
@@ -243,6 +249,8 @@ QgsVectorLayerChunkedEntity::QgsVectorLayerChunkedEntity(
 
   connect( map, &Qgs3DMapSettings::terrainSettingsChanged, this, &QgsVectorLayerChunkedEntity::onTerrainElevationOffsetChanged );
 
+  mUpdateJobFactory.reset( new QgsChunkUpdaterFactory( mChunkLoaderFactory ) );
+
   setShowBoundingBoxes( tilingSettings.showBoundingBoxes() );
 }
 
@@ -251,6 +259,14 @@ QgsVectorLayerChunkedEntity::~QgsVectorLayerChunkedEntity()
   // cancel / wait for jobs
   cancelActiveJobs();
 }
+
+void QgsVectorLayerChunkedEntity::updateNodes( const QList<QgsChunkNode *> &nodes )
+{
+  QgsChunkedEntity::updateNodes( nodes, mUpdateJobFactory.get() );
+
+  setNeedsUpdate( true );
+}
+
 
 // if the AltitudeClamping is `Absolute`, do not apply the offset
 bool QgsVectorLayerChunkedEntity::applyTerrainOffset() const
