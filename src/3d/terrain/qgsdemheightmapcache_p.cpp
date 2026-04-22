@@ -78,7 +78,6 @@ void QgsDemHeightMapCache::onHeightMapReceived( int, const QgsChunkNode *node, c
       if ( nodeId.d >= mEmitLevel )
       {
         // emit only when tile is at the deepest level to update entity elevation with the hi-res tiles
-        qDebug() << "onHeightMapReceived emitting new tile:" << nodeId.text();
         emit maxResTileReceived( nodeId, node->box3D().toRectangle() );
       }
     }
@@ -97,7 +96,6 @@ void QgsDemHeightMapCache::cleanup( const QgsChunkNode *currentNode ) const
     for ( int i = 0; deleteParentData && i < parent->childCount(); ++i )
     {
       // if QgsChunkNode state is Loading, this means that the texture has been retrieved
-      // C VRAI CA ???
       if ( children[i]->state() != QgsChunkNode::Loading && children[i]->state() != QgsChunkNode::Loaded )
       {
         deleteParentData = false;
@@ -107,12 +105,6 @@ void QgsDemHeightMapCache::cleanup( const QgsChunkNode *currentNode ) const
     if ( deleteParentData )
     {
       QMutexLocker locker( &mRootNodeMutex );
-      qDebug() << "cleanupHeightMapCache removing tile:" << parent->tileId().text();
-      QgsChunkNode *const *children = parent->children();
-      for ( int i = 0; i < parent->childCount(); ++i )
-      {
-        qDebug() << "cleanupHeightMapCache        parentof:" << children[i]->tileId().text();
-      }
       // do not really remove the node: make it empty to keep a trace of its existence
       mLoaderMap[parent->tileId().text()] = QByteArray();
     }
@@ -164,12 +156,9 @@ void QgsDemHeightMapCache::heightAndQualityAt( double x, double y, float &height
 
       const float *data = ( const float * ) heightMapData;
       height = data[cellX + cellY * mResolution];
-      qDebug() << "heightAndQualityAt CACHED for x,y:" << x << y << "/ best tile:" << bestTile.text() << "/ h,q:" << height << quality;
       if ( !std::isnan( height ) ) // keep good value or continue to fetch coarse one
         return;
     }
-    else
-      qDebug() << "heightAndQualityAt not in CACHED for x,y:" << x << y << "/ best tile:" << bestTile.text();
   }
 
   // if we have no rootNode or if we were not able to find better height map data, we fallback to coarse DEM data
@@ -177,12 +166,10 @@ void QgsDemHeightMapCache::heightAndQualityAt( double x, double y, float &height
   {
     quality = 0;
     height = mHeightMapGenerator->heightAt( x, y );
-    qDebug() << "heightAndQualityAt coarse for x,y: " << x << y << "/ h,q:" << height << quality;
   }
   else
   {
     quality = -1;
     height = std::numeric_limits<float>::quiet_NaN();
-    qDebug() << "heightAndQualityAt FAILED for x,y: " << x << y << "/ h,q:" << height << quality;
   }
 }

@@ -172,12 +172,7 @@ double QgsRasterDemTerrainProvider::heightAt( double x, double y ) const
   }
 
   if ( ok )
-  {
-    res = res * mScale + mOffset;
-    qDebug() << "QgsRasterDemTerrainProvider heightAt:" << x << y << res;
-    return res;
-  }
-  qDebug() << "QgsRasterDemTerrainProvider failed heightAt:" << x << y;
+    return res * mScale + mOffset;
 
   return std::numeric_limits<double>::quiet_NaN();
 }

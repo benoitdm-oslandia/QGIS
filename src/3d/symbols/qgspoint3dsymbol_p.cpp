@@ -103,8 +103,6 @@ bool QgsInstancedPoint3DSymbolHandler::prepare( const Qgs3DRenderContext &contex
 {
   mChunkOrigin = chunkExtent.center();
   mChunkExtent = chunkExtent;
-  //  outNormal.positions.clear();
-  //  outSelected.positions.clear();
 
   QSet<QString> attrs = mSymbol->dataDefinedProperties().referencedFields( context.expressionContext() );
   attributeNames.unite( attrs );
@@ -301,8 +299,6 @@ void QgsInstancedPoint3DSymbolHandler::makeEntity( Qt3DCore::QEntity *parent, co
   // add transform (our geometry has coordinates relative to mChunkOrigin)
   QgsGeoTransform *tr = new QgsGeoTransform;
   tr->setGeoTranslation( mChunkOrigin );
-  qDebug() << "QgsInstancedPoint3DSymbolHandler::makeEntity chunkExtent min/max:" << mChunkExtent.zMinimum() << mChunkExtent.zMaximum();
-  qDebug() << "QgsInstancedPoint3DSymbolHandler::makeEntity chunkOrig:" << mChunkOrigin.toString() << "/ tr:" << tr->toString();
 
   // build the entity
   Qt3DCore::QEntity *entity = new Qt3DCore::QEntity;
@@ -375,8 +371,6 @@ Qt3DRender::QGeometryRenderer *QgsInstancedPoint3DSymbolHandler::renderer(
   QByteArray ba;
   ba.resize( byteCount );
   memcpy( ba.data(), positions.constData(), byteCount );
-
-  qDebug() << "QgsInstancedPoint3DSymbolHandler::renderer n,pos:" << count << positions.front();
 
   Qt3DCore::QBuffer *instanceBuffer = new Qt3DCore::QBuffer();
   instanceBuffer->setData( ba );
