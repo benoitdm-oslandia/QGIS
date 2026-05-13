@@ -45,7 +45,7 @@ class Qgs3DPrimitiveEditingToolBar : public Qgs3DEditingToolBar
     QgsMapLayer *activeLayer() const { return mActiveLayer; }
 
   private slots:
-    void createCube();
+    void createBox();
     void createSphere();
     void createTorus();
     void createCylinder();

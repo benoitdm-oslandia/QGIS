@@ -62,10 +62,10 @@ Qgs3DCreatePrimitiveTorusDialog::Qgs3DCreatePrimitiveTorusDialog( Qt::WindowFlag
 void Qgs3DCreatePrimitiveTorusDialog::resetData()
 {
   Qgs3DCreatePrimitiveDialog::resetData();
-  setMainRadius( 1.0 );
+  setMainRadius( 2.0 );
   setTubeRadius( 1.0 );
-  setMainRadial( 4 );
-  setTubeRadial( 4 );
+  setMainRadial( 24 );
+  setTubeRadial( 24 );
 }
 
 void Qgs3DCreatePrimitiveTorusDialog::setMainRadius( double size )

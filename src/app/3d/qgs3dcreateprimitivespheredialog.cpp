@@ -16,32 +16,19 @@ Qgs3DCreatePrimitiveSphereDialog::Qgs3DCreatePrimitiveSphereDialog( Qt::WindowFl
   paramFormLayout->setWidget( 1, QFormLayout::LabelRole, labelRadius );
 
   // segment 1
-  mSpinRings = new QSpinBox( mMainGroupBox );
-  mSpinRings->setObjectName( "mSpinRings" );
-  mSpinRings->setMinimum( 3 );
-  mSpinRings->setMaximum( 64 );
-  paramFormLayout->setWidget( 2, QFormLayout::FieldRole, mSpinRings );
+  mSpinSubdivisions = new QSpinBox( mMainGroupBox );
+  mSpinSubdivisions->setObjectName( "mSpinSubdivisions" );
+  mSpinSubdivisions->setMinimum( 1 );
+  mSpinSubdivisions->setMaximum( 6 );
+  paramFormLayout->setWidget( 2, QFormLayout::FieldRole, mSpinSubdivisions );
 
-  QLabel *labelRings = new QLabel( mMainGroupBox );
-  labelRings->setObjectName( "labelRings" );
-  labelRings->setText( tr( "Ring" ) );
-  paramFormLayout->setWidget( 2, QFormLayout::LabelRole, labelRings );
-
-  // segment 2
-  mSpinSlices = new QSpinBox( mMainGroupBox );
-  mSpinSlices->setObjectName( "mSpinSlices" );
-  mSpinSlices->setMinimum( 3 );
-  mSpinSlices->setMaximum( 64 );
-  paramFormLayout->setWidget( 3, QFormLayout::FieldRole, mSpinSlices );
-
-  QLabel *labelSlices = new QLabel( mMainGroupBox );
-  labelSlices->setObjectName( "labelSlices" );
-  labelSlices->setText( tr( "Slice" ) );
-  paramFormLayout->setWidget( 3, QFormLayout::LabelRole, labelSlices );
+  QLabel *labelSubdivisions = new QLabel( mMainGroupBox );
+  labelSubdivisions->setObjectName( "labelSubdivisions" );
+  labelSubdivisions->setText( tr( "Subdivisions" ) );
+  paramFormLayout->setWidget( 2, QFormLayout::LabelRole, labelSubdivisions );
 
   connect( mSpinRadius, &QgsDoubleSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
-  connect( mSpinRings, &QSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
-  connect( mSpinSlices, &QSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
+  connect( mSpinSubdivisions, &QSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
 
   resetData();
 }
@@ -50,8 +37,7 @@ void Qgs3DCreatePrimitiveSphereDialog::resetData()
 {
   Qgs3DCreatePrimitiveDialog::resetData();
   setRadius( 1.0 );
-  setRings( 4 );
-  setSlices( 4 );
+  setSubdivisions( 2 );
 }
 
 void Qgs3DCreatePrimitiveSphereDialog::setRadius( double size )
@@ -59,14 +45,9 @@ void Qgs3DCreatePrimitiveSphereDialog::setRadius( double size )
   whileBlocking( mSpinRadius )->setValue( size );
 }
 
-void Qgs3DCreatePrimitiveSphereDialog::setRings( int size )
+void Qgs3DCreatePrimitiveSphereDialog::setSubdivisions( unsigned int subdivisions )
 {
-  whileBlocking( mSpinRings )->setValue( size );
-}
-
-void Qgs3DCreatePrimitiveSphereDialog::setSlices( int size )
-{
-  whileBlocking( mSpinSlices )->setValue( size );
+  whileBlocking( mSpinSubdivisions )->setValue( static_cast<int>( subdivisions ) );
 }
 
 Qgs3DCreatePrimitiveDialog::ConstrainedAxis Qgs3DCreatePrimitiveSphereDialog::constrainedAxisForParam( int idx )
@@ -87,11 +68,7 @@ QAbstractSpinBox *Qgs3DCreatePrimitiveSphereDialog::getSpinBox( int idx )
   }
   if ( idx == 1 )
   {
-    return mSpinRings;
-  }
-  if ( idx == 2 )
-  {
-    return mSpinSlices;
+    return mSpinSubdivisions;
   }
 
   return nullptr;

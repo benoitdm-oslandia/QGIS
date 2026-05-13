@@ -11,7 +11,7 @@ class Qgs3DCreatePrimitiveConeDialog : public Qgs3DCreatePrimitiveDialog
 
     void resetData() override;
     void setBottomRadius( double size );
-    void setLength( double size );
+    void setHeight( double size );
     void setTopRadius( double size );
     void setRadial( int size );
 
@@ -24,7 +24,7 @@ class Qgs3DCreatePrimitiveConeDialog : public Qgs3DCreatePrimitiveDialog
 
   private:
     QDoubleSpinBox *mSpinBottomRadius;
-    QDoubleSpinBox *mSpinLength;
+    QDoubleSpinBox *mSpinHeight;
     QDoubleSpinBox *mSpinTopRadius;
     QSpinBox *mSpinRadial;
 };

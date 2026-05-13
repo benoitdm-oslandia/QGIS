@@ -11,21 +11,19 @@ class Qgs3DCreatePrimitiveSphereDialog : public Qgs3DCreatePrimitiveDialog
 
     void resetData() override;
 
-    int paramNumber() const override { return 1; };
-    int creationParamNumber() const override { return 3; };
+    int paramNumber() const override { return 2; };
+    int creationParamNumber() const override { return 1; };
     ConstrainedAxis constrainedAxisForParam( int idx ) override;
 
     void setRadius( double size );
-    void setRings( int size );
-    void setSlices( int size );
+    void setSubdivisions( unsigned int subdivisions );
 
   protected:
     QAbstractSpinBox *getSpinBox( int idx ) override;
 
   private:
     QDoubleSpinBox *mSpinRadius;
-    QSpinBox *mSpinRings;
-    QSpinBox *mSpinSlices;
+    QSpinBox *mSpinSubdivisions;
 };
 
 #endif // QGS3DCREATEPRIMITIVESPHEREDIALOG_H

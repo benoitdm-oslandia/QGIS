@@ -18,18 +18,18 @@ Qgs3DCreatePrimitiveCylinderDialog::Qgs3DCreatePrimitiveCylinderDialog( Qt::Wind
   labelRadius->setText( tr( "Radius" ) );
   paramFormLayout->setWidget( wdgIdx, QFormLayout::LabelRole, labelRadius );
 
-  // length
+  // height
   ++wdgIdx;
-  mSpinLength = new QDoubleSpinBox( mMainGroupBox );
-  mSpinLength->setObjectName( "mSpinLength" );
-  mSpinLength->setMinimum( 0.0001 );
-  mSpinLength->setMaximum( 99999999.989999994635582 );
-  paramFormLayout->setWidget( wdgIdx, QFormLayout::FieldRole, mSpinLength );
+  mSpinHeight = new QDoubleSpinBox( mMainGroupBox );
+  mSpinHeight->setObjectName( "mSpinHeight" );
+  mSpinHeight->setMinimum( 0.0001 );
+  mSpinHeight->setMaximum( 99999999.989999994635582 );
+  paramFormLayout->setWidget( wdgIdx, QFormLayout::FieldRole, mSpinHeight );
 
-  QLabel *labelLength = new QLabel( mMainGroupBox );
-  labelLength->setObjectName( "labelLength" );
-  labelLength->setText( tr( "Length" ) );
-  paramFormLayout->setWidget( wdgIdx, QFormLayout::LabelRole, labelLength );
+  QLabel *labelHeight = new QLabel( mMainGroupBox );
+  labelHeight->setObjectName( "labelHeight" );
+  labelHeight->setText( tr( "Height" ) );
+  paramFormLayout->setWidget( wdgIdx, QFormLayout::LabelRole, labelHeight );
 
   // segment 1
   ++wdgIdx;
@@ -45,7 +45,7 @@ Qgs3DCreatePrimitiveCylinderDialog::Qgs3DCreatePrimitiveCylinderDialog( Qt::Wind
   paramFormLayout->setWidget( wdgIdx, QFormLayout::LabelRole, labelRadial );
 
   connect( mSpinRadius, &QgsDoubleSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
-  connect( mSpinLength, &QgsDoubleSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
+  connect( mSpinHeight, &QgsDoubleSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
   connect( mSpinRadial, &QSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
 
   resetData();
@@ -55,8 +55,8 @@ void Qgs3DCreatePrimitiveCylinderDialog::resetData()
 {
   Qgs3DCreatePrimitiveDialog::resetData();
   setRadius( 1.0 );
-  setLength( 1.0 );
-  setRadial( 4 );
+  setHeight( 1.0 );
+  setRadial( 12 );
 }
 
 void Qgs3DCreatePrimitiveCylinderDialog::setRadius( double size )
@@ -64,9 +64,9 @@ void Qgs3DCreatePrimitiveCylinderDialog::setRadius( double size )
   whileBlocking( mSpinRadius )->setValue( size );
 }
 
-void Qgs3DCreatePrimitiveCylinderDialog::setLength( double size )
+void Qgs3DCreatePrimitiveCylinderDialog::setHeight( double size )
 {
-  whileBlocking( mSpinLength )->setValue( size );
+  whileBlocking( mSpinHeight )->setValue( size );
 }
 
 void Qgs3DCreatePrimitiveCylinderDialog::setRadial( int size )
@@ -96,7 +96,7 @@ QAbstractSpinBox *Qgs3DCreatePrimitiveCylinderDialog::getSpinBox( int idx )
   }
   if ( idx == 1 )
   {
-    return mSpinLength;
+    return mSpinHeight;
   }
   if ( idx == 2 )
   {

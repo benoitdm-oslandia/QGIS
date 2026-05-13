@@ -42,7 +42,7 @@ Qgs3DPrimitiveEditingToolBar::Qgs3DPrimitiveEditingToolBar( Qgs3DMapCanvasWidget
   QToolButton *createPrimitiveButton = qobject_cast<QToolButton *>( widgetForAction( mCreatePrimitiveAction ) );
   createPrimitiveButton->setPopupMode( QToolButton::ToolButtonPopupMode::InstantPopup );
 
-  mActions << createPrimitiveMenu->addAction( QIcon( QgsApplication::iconPath( u"mIcon3DAddCube.svg"_s ) ), tr( "Create a cube" ), this, &Qgs3DPrimitiveEditingToolBar::createCube );
+  mActions << createPrimitiveMenu->addAction( QIcon( QgsApplication::iconPath( u"mIcon3DAddBox.svg"_s ) ), tr( "Create a box" ), this, &Qgs3DPrimitiveEditingToolBar::createBox );
   mActions << createPrimitiveMenu->addAction( QIcon( QgsApplication::iconPath( u"mIcon3DAddSphere.svg"_s ) ), tr( "Create a sphere" ), this, &Qgs3DPrimitiveEditingToolBar::createSphere );
   mActions << createPrimitiveMenu->addAction( QIcon( QgsApplication::iconPath( u"mIcon3DAddTorus.svg"_s ) ), tr( "Create a torus" ), this, &Qgs3DPrimitiveEditingToolBar::createTorus );
   mActions << createPrimitiveMenu->addAction( QIcon( QgsApplication::iconPath( u"mIcon3DAddCylinder.svg"_s ) ), tr( "Create a cylinder" ), this, &Qgs3DPrimitiveEditingToolBar::createCylinder );
@@ -89,9 +89,9 @@ QList<QAction *> Qgs3DPrimitiveEditingToolBar::groupActions() const
   return mActions;
 }
 
-void Qgs3DPrimitiveEditingToolBar::createCube()
+void Qgs3DPrimitiveEditingToolBar::createBox()
 {
-  createPrimitive( qobject_cast<QAction *>( sender() ), Qgs3DMapToolCreatePrimitive::Cube );
+  createPrimitive( qobject_cast<QAction *>( sender() ), Qgs3DMapToolCreatePrimitive::Box );
 }
 
 void Qgs3DPrimitiveEditingToolBar::createSphere()

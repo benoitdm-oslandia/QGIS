@@ -1,13 +1,13 @@
-#ifndef QGS3DCREATEPRIMITIVECUBEDIALOG_H
-#define QGS3DCREATEPRIMITIVECUBEDIALOG_H
+#ifndef QGS3DCREATEPRIMITIVEBOXDIALOG_H
+#define QGS3DCREATEPRIMITIVEBOXDIALOG_H
 
 #include "qgs3dcreateprimitivedialog.h"
 
-class Qgs3DCreatePrimitiveCubeDialog : public Qgs3DCreatePrimitiveDialog
+class Qgs3DCreatePrimitiveBoxDialog : public Qgs3DCreatePrimitiveDialog
 {
     Q_OBJECT
   public:
-    Qgs3DCreatePrimitiveCubeDialog( Qt::WindowFlags f = ( Qt::WindowFlags() | Qt::Tool ) );
+    Qgs3DCreatePrimitiveBoxDialog( Qt::WindowFlags f = ( Qt::WindowFlags() | Qt::Tool ) );
 
     void resetData() override;
     void setSizeX( double size );
@@ -27,4 +27,4 @@ class Qgs3DCreatePrimitiveCubeDialog : public Qgs3DCreatePrimitiveDialog
     QDoubleSpinBox *mSpinSizeZ;
 };
 
-#endif // QGS3DCREATEPRIMITIVECUBEDIALOG_H
+#endif // QGS3DCREATEPRIMITIVEBOXDIALOG_H

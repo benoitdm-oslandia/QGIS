@@ -15,8 +15,8 @@
 
 #include "qgs3dmaptoolcreateprimitive.h"
 
+#include "qgs3dcreateprimitiveboxdialog.h"
 #include "qgs3dcreateprimitiveconedialog.h"
-#include "qgs3dcreateprimitivecubedialog.h"
 #include "qgs3dcreateprimitivecylinderdialog.h"
 #include "qgs3dcreateprimitivedialog.h"
 #include "qgs3dcreateprimitivespheredialog.h"
@@ -61,7 +61,7 @@ Qgs3DMapToolCreatePrimitive::Qgs3DMapToolCreatePrimitive( Qgs3DMapCanvas *canvas
   {
     case Cube:
     case Box:
-      mDialog.reset( new Qgs3DCreatePrimitiveCubeDialog() );
+      mDialog.reset( new Qgs3DCreatePrimitiveBoxDialog() );
       break;
     case Sphere:
       mDialog.reset( new Qgs3DCreatePrimitiveSphereDialog() );
@@ -204,8 +204,8 @@ void Qgs3DMapToolCreatePrimitive::updatePrimitive()
       {
         Qt3DExtras::QSphereMesh *mesh = new Qt3DExtras::QSphereMesh();
         mesh->setRadius( 0.5 );
-        mesh->setRings( 6 );
-        mesh->setSlices( 6 );
+        mesh->setRings( 24 );
+        mesh->setSlices( 24 );
         mPrimitiveLineEntity->addComponent( mesh );
         mCurrentMesh = mesh;
         break;
@@ -227,8 +227,8 @@ void Qgs3DMapToolCreatePrimitive::updatePrimitive()
         Qt3DExtras::QTorusMesh *mesh = new Qt3DExtras::QTorusMesh();
         mesh->setRadius( 0.5 );
         mesh->setMinorRadius( 0.5 );
-        mesh->setRings( 6 );
-        mesh->setSlices( 6 );
+        mesh->setRings( 24 );
+        mesh->setSlices( 24 );
         mPrimitiveLineEntity->addComponent( mesh );
         mCurrentMesh = mesh;
         break;
@@ -277,8 +277,8 @@ void Qgs3DMapToolCreatePrimitive::updatePrimitive()
       {
         Qt3DExtras::QSphereMesh *mesh = dynamic_cast<Qt3DExtras::QSphereMesh *>( mCurrentMesh );
         mesh->setRadius( mDialog->getParam( 0 ) );
-        mesh->setRings( std::min( 6, static_cast<int>( mDialog->getParam( 1 ) ) ) );
-        mesh->setSlices( std::min( 6, static_cast<int>( mDialog->getParam( 2 ) ) ) );
+        mesh->setRings( std::min( 24, 4 * static_cast<int>( mDialog->getParam( 1 ) ) ) );
+        mesh->setSlices( std::min( 24, 4 * static_cast<int>( mDialog->getParam( 1 ) ) ) );
         break;
       }
       case Cylinder:
@@ -286,7 +286,7 @@ void Qgs3DMapToolCreatePrimitive::updatePrimitive()
         Qt3DExtras::QCylinderMesh *mesh = dynamic_cast<Qt3DExtras::QCylinderMesh *>( mCurrentMesh );
         mesh->setRadius( mDialog->getParam( 0 ) );
         mesh->setLength( mDialog->getParam( 1 ) );
-        mesh->setSlices( std::min( 6, static_cast<int>( mDialog->getParam( 2 ) ) ) );
+        mesh->setSlices( std::min( 24, static_cast<int>( mDialog->getParam( 2 ) ) ) );
         rX = 90;
         tZ = 0.5 * mDialog->getParam( 1 );
         break;
@@ -296,8 +296,8 @@ void Qgs3DMapToolCreatePrimitive::updatePrimitive()
         Qt3DExtras::QTorusMesh *mesh = dynamic_cast<Qt3DExtras::QTorusMesh *>( mCurrentMesh );
         mesh->setRadius( mDialog->getParam( 0 ) );
         mesh->setMinorRadius( mDialog->getParam( 1 ) );
-        mesh->setRings( std::min( 6, static_cast<int>( mDialog->getParam( 2 ) ) ) );
-        mesh->setSlices( std::min( 6, static_cast<int>( mDialog->getParam( 3 ) ) ) );
+        mesh->setRings( std::min( 24, static_cast<int>( mDialog->getParam( 2 ) ) ) );
+        mesh->setSlices( std::min( 24, static_cast<int>( mDialog->getParam( 3 ) ) ) );
         break;
       }
       case Cone:
@@ -306,7 +306,7 @@ void Qgs3DMapToolCreatePrimitive::updatePrimitive()
         mesh->setBottomRadius( mDialog->getParam( 0 ) );
         mesh->setLength( mDialog->getParam( 1 ) );
         mesh->setTopRadius( mDialog->getParam( 2 ) );
-        mesh->setSlices( std::min( 6, static_cast<int>( mDialog->getParam( 3 ) ) ) );
+        mesh->setSlices( std::min( 24, static_cast<int>( mDialog->getParam( 3 ) ) ) );
         rX = 90;
         tZ = 0.5 * mDialog->getParam( 1 );
         break;
@@ -564,7 +564,7 @@ void Qgs3DMapToolCreatePrimitive::createPrimitive()
         translate.setY( translate.y() - 0.5 * mDialog->getParam( 1 ) );
         break;
       case Sphere:
-        geom = QgsSfcgalGeometry::createSphere( mDialog->getParam( 0 ), mDialog->getParam( 1 ), mDialog->getParam( 2 ) );
+        geom = QgsSfcgalGeometry::createSphere( mDialog->getParam( 0 ), static_cast<unsigned int>( mDialog->getParam( 1 ) ) );
         break;
       case Cylinder:
         geom = QgsSfcgalGeometry::createCylinder( mDialog->getParam( 0 ), mDialog->getParam( 1 ) /* * 0.25*/, mDialog->getParam( 2 ) );

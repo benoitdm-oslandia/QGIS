@@ -18,18 +18,18 @@ Qgs3DCreatePrimitiveConeDialog::Qgs3DCreatePrimitiveConeDialog( Qt::WindowFlags 
   labelBottomRadius->setText( tr( "Bottom radius" ) );
   paramFormLayout->setWidget( wdgIdx, QFormLayout::LabelRole, labelBottomRadius );
 
-  // length
+  // height
   ++wdgIdx;
-  mSpinLength = new QDoubleSpinBox( mMainGroupBox );
-  mSpinLength->setObjectName( "mSpinLength" );
-  mSpinLength->setMinimum( 0.0001 );
-  mSpinLength->setMaximum( 99999999.989999994635582 );
-  paramFormLayout->setWidget( wdgIdx, QFormLayout::FieldRole, mSpinLength );
+  mSpinHeight = new QDoubleSpinBox( mMainGroupBox );
+  mSpinHeight->setObjectName( "mSpinHeight" );
+  mSpinHeight->setMinimum( 0.0001 );
+  mSpinHeight->setMaximum( 99999999.989999994635582 );
+  paramFormLayout->setWidget( wdgIdx, QFormLayout::FieldRole, mSpinHeight );
 
-  QLabel *labelLength = new QLabel( mMainGroupBox );
-  labelLength->setObjectName( "labelLength" );
-  labelLength->setText( tr( "Length" ) );
-  paramFormLayout->setWidget( wdgIdx, QFormLayout::LabelRole, labelLength );
+  QLabel *labelHeight = new QLabel( mMainGroupBox );
+  labelHeight->setObjectName( "labelHeight" );
+  labelHeight->setText( tr( "Height" ) );
+  paramFormLayout->setWidget( wdgIdx, QFormLayout::LabelRole, labelHeight );
 
   // top radius
   ++wdgIdx;
@@ -57,6 +57,11 @@ Qgs3DCreatePrimitiveConeDialog::Qgs3DCreatePrimitiveConeDialog( Qt::WindowFlags 
   labelRadial->setText( tr( "Radial" ) );
   paramFormLayout->setWidget( wdgIdx, QFormLayout::LabelRole, labelRadial );
 
+  connect( mSpinBottomRadius, &QgsDoubleSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
+  connect( mSpinHeight, &QgsDoubleSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
+  connect( mSpinTopRadius, &QgsDoubleSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
+  connect( mSpinRadial, &QSpinBox::valueChanged, this, &Qgs3DCreatePrimitiveDialog::valueChanged );
+
   resetData();
 }
 
@@ -64,9 +69,9 @@ void Qgs3DCreatePrimitiveConeDialog::resetData()
 {
   Qgs3DCreatePrimitiveDialog::resetData();
   setBottomRadius( 1.0 );
-  setLength( 1.0 );
-  setTopRadius( 1.0 );
-  setRadial( 4 );
+  setHeight( 1.0 );
+  setTopRadius( 0.0 );
+  setRadial( 12 );
 }
 
 void Qgs3DCreatePrimitiveConeDialog::setBottomRadius( double size )
@@ -79,9 +84,9 @@ void Qgs3DCreatePrimitiveConeDialog::setTopRadius( double size )
   whileBlocking( mSpinTopRadius )->setValue( size );
 }
 
-void Qgs3DCreatePrimitiveConeDialog::setLength( double size )
+void Qgs3DCreatePrimitiveConeDialog::setHeight( double size )
 {
-  whileBlocking( mSpinLength )->setValue( size );
+  whileBlocking( mSpinHeight )->setValue( size );
 }
 
 void Qgs3DCreatePrimitiveConeDialog::setRadial( int size )
@@ -115,7 +120,7 @@ QAbstractSpinBox *Qgs3DCreatePrimitiveConeDialog::getSpinBox( int idx )
   }
   if ( idx == 1 )
   {
-    return mSpinLength;
+    return mSpinHeight;
   }
   if ( idx == 2 )
   {

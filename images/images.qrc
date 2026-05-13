@@ -478,7 +478,7 @@
         <file>themes/default/mActionFirst.svg</file>
         <file>themes/default/mIcon3dAxis.svg</file>
         <file>themes/default/mIcon3DAddCone.svg</file>
-        <file>themes/default/mIcon3DAddCube.svg</file>
+        <file>themes/default/mIcon3DAddBox.svg</file>
         <file>themes/default/mIcon3DAddCylinder.svg</file>
         <file>themes/default/mIcon3DAddSphere.svg</file>
         <file>themes/default/mIcon3DAddTorus.svg</file>

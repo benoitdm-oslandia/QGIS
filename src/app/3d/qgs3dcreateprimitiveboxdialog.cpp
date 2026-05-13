@@ -1,7 +1,7 @@
-#include "qgs3dcreateprimitivecubedialog.h"
+#include "qgs3dcreateprimitiveboxdialog.h"
 
-Qgs3DCreatePrimitiveCubeDialog::Qgs3DCreatePrimitiveCubeDialog( Qt::WindowFlags f )
-  : Qgs3DCreatePrimitiveDialog( "cube", f )
+Qgs3DCreatePrimitiveBoxDialog::Qgs3DCreatePrimitiveBoxDialog( Qt::WindowFlags f )
+  : Qgs3DCreatePrimitiveDialog( "box", f )
 {
   mSpinSizeX = new QDoubleSpinBox( mMainGroupBox );
   mSpinSizeX->setObjectName( "mSpinSizeX" );
@@ -42,7 +42,7 @@ Qgs3DCreatePrimitiveCubeDialog::Qgs3DCreatePrimitiveCubeDialog( Qt::WindowFlags 
   resetData();
 }
 
-void Qgs3DCreatePrimitiveCubeDialog::resetData()
+void Qgs3DCreatePrimitiveBoxDialog::resetData()
 {
   Qgs3DCreatePrimitiveDialog::resetData();
   setSizeX( 1.0 );
@@ -50,20 +50,20 @@ void Qgs3DCreatePrimitiveCubeDialog::resetData()
   setSizeZ( 1.0 );
 }
 
-void Qgs3DCreatePrimitiveCubeDialog::setSizeX( double size )
+void Qgs3DCreatePrimitiveBoxDialog::setSizeX( double size )
 {
   whileBlocking( mSpinSizeX )->setValue( size );
 }
-void Qgs3DCreatePrimitiveCubeDialog::setSizeY( double size )
+void Qgs3DCreatePrimitiveBoxDialog::setSizeY( double size )
 {
   whileBlocking( mSpinSizeY )->setValue( size );
 }
-void Qgs3DCreatePrimitiveCubeDialog::setSizeZ( double size )
+void Qgs3DCreatePrimitiveBoxDialog::setSizeZ( double size )
 {
   whileBlocking( mSpinSizeZ )->setValue( size );
 }
 
-Qgs3DCreatePrimitiveDialog::ConstrainedAxis Qgs3DCreatePrimitiveCubeDialog::constrainedAxisForParam( int idx )
+Qgs3DCreatePrimitiveDialog::ConstrainedAxis Qgs3DCreatePrimitiveBoxDialog::constrainedAxisForParam( int idx )
 {
   if ( idx == 0 )
   {
@@ -81,7 +81,7 @@ Qgs3DCreatePrimitiveDialog::ConstrainedAxis Qgs3DCreatePrimitiveCubeDialog::cons
   return Qgs3DCreatePrimitiveDialog::NONE;
 }
 
-QAbstractSpinBox *Qgs3DCreatePrimitiveCubeDialog::getSpinBox( int idx )
+QAbstractSpinBox *Qgs3DCreatePrimitiveBoxDialog::getSpinBox( int idx )
 {
   if ( idx == 0 )
   {

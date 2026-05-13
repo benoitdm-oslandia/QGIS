@@ -353,8 +353,8 @@ if (WITH_3D)
     3d/qgs3danimationexportdialog.cpp
     3d/qgs3dapputils.cpp
     3d/qgs3dcreateprimitivedialog.cpp
+    3d/qgs3dcreateprimitiveboxdialog.cpp
     3d/qgs3dcreateprimitiveconedialog.cpp
-    3d/qgs3dcreateprimitivecubedialog.cpp
     3d/qgs3dcreateprimitivecylinderdialog.cpp
     3d/qgs3dcreateprimitivespheredialog.cpp
     3d/qgs3dcreateprimitivetorusdialog.cpp
