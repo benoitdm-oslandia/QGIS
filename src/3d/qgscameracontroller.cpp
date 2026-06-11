@@ -1360,6 +1360,8 @@ void QgsCameraController::moveView( float tx, float ty )
 
 bool QgsCameraController::keyboardEventFilter( QKeyEvent *event )
 {
+  qDebug() << "QgsCameraController::keyboardEventFilter:" << event;
+
   if ( !mInputHandlersEnabled )
     return false;
 
