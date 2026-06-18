@@ -1,0 +1,10 @@
+<RCC>
+    <qresource prefix="/plugin" >
+        <file>mIcon3DAddCone.svg</file>
+        <file>mIcon3DAddBox.svg</file>
+        <file>mIcon3DAddCylinder.svg</file>
+        <file>mIcon3DAddSphere.svg</file>
+        <file>mIcon3DAddTorus.svg</file>
+        <file>mActionAddBasicShape.svg</file>
+    </qresource>
+</RCC>

@@ -14,8 +14,8 @@
    <string>Create Primitive</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../../../images/images.qrc">
-    <normaloff>:/images/themes/default/mActionAddBasicShape.svg</normaloff>:/images/themes/default/mActionAddBasicShape.svg</iconset>
+   <iconset resource="resources/images.qrc">
+    <normaloff>:/plugin/mActionAddBasicShape.svg</normaloff>:/plugin/mActionAddBasicShape.svg</iconset>
   </property>
   <property name="modal">
    <bool>false</bool>
@@ -215,7 +215,7 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../../../images/images.qrc"/>
+  <include location="resources/images.qrc"/>
  </resources>
  <connections/>
 </ui>

@@ -352,16 +352,9 @@ if (WITH_3D)
     3d/qgs3danimationwidget.cpp
     3d/qgs3danimationexportdialog.cpp
     3d/qgs3dapputils.cpp
-    3d/qgs3dcreateprimitivedialog.cpp
-    3d/qgs3dcreateprimitiveboxdialog.cpp
-    3d/qgs3dcreateprimitiveconedialog.cpp
-    3d/qgs3dcreateprimitivecylinderdialog.cpp
-    3d/qgs3dcreateprimitivespheredialog.cpp
-    3d/qgs3dcreateprimitivetorusdialog.cpp
     3d/qgs3dicongenerator.cpp
     3d/qgs3dmapconfigwidget.cpp
     3d/qgs3dmapexportwidget.cpp
-    3d/qgs3dmaptoolcreateprimitive.cpp
     3d/qgs3dmaptoolidentify.cpp
     3d/qgs3dmaptoolmeasureline.cpp
     3d/qgs3dmaptoolpointcloudchangeattributepaintbrush.cpp
@@ -372,7 +365,6 @@ if (WITH_3D)
     3d/qgs3dnavigationwidget.cpp
     3d/qgs3doptions.cpp
     3d/qgs3dpointcloudeditingtoolbar.cpp
-    3d/qgs3dprimitiveeditingtoolbar.cpp
     3d/qgsannotationlayer3drendererwidget.cpp
     3d/qgscategorized3drendererwidget.cpp
     3d/qgsgoochmaterialwidget.cpp

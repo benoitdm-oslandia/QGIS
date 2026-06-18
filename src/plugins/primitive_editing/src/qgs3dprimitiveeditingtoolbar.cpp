@@ -17,7 +17,6 @@
 
 #include "qgs3dmapcanvas.h"
 #include "qgs3dmapcanvaswidgetinterface.h"
-#include "qgsapplication.h"
 #include "qgsvectorlayer.h"
 
 #include <QAction>
@@ -33,7 +32,7 @@ Qgs3DPrimitiveEditingToolBar::Qgs3DPrimitiveEditingToolBar( Qgs3DMapCanvasWidget
 {
   addWidget( new QLabel( tr( "PRIMITIVE" ) ) );
 
-  mCreatePrimitiveAction = new QAction( QgsApplication::getThemeIcon( u"mActionAddBasicShape.svg"_s ), tr( "Create new primitive" ), this );
+  mCreatePrimitiveAction = new QAction( QIcon( u":/plugin/mActionAddBasicShape.svg"_s ), tr( "Create new primitive" ), this );
 
   QMenu *createPrimitiveMenu = new QMenu( this );
   mCreatePrimitiveAction->setMenu( createPrimitiveMenu );
@@ -42,11 +41,11 @@ Qgs3DPrimitiveEditingToolBar::Qgs3DPrimitiveEditingToolBar( Qgs3DMapCanvasWidget
   QToolButton *createPrimitiveButton = qobject_cast<QToolButton *>( widgetForAction( mCreatePrimitiveAction ) );
   createPrimitiveButton->setPopupMode( QToolButton::ToolButtonPopupMode::InstantPopup );
 
-  mActions << createPrimitiveMenu->addAction( QIcon( QgsApplication::iconPath( u"mIcon3DAddBox.svg"_s ) ), tr( "Create a box" ), this, &Qgs3DPrimitiveEditingToolBar::createBox );
-  mActions << createPrimitiveMenu->addAction( QIcon( QgsApplication::iconPath( u"mIcon3DAddSphere.svg"_s ) ), tr( "Create a sphere" ), this, &Qgs3DPrimitiveEditingToolBar::createSphere );
-  mActions << createPrimitiveMenu->addAction( QIcon( QgsApplication::iconPath( u"mIcon3DAddTorus.svg"_s ) ), tr( "Create a torus" ), this, &Qgs3DPrimitiveEditingToolBar::createTorus );
-  mActions << createPrimitiveMenu->addAction( QIcon( QgsApplication::iconPath( u"mIcon3DAddCylinder.svg"_s ) ), tr( "Create a cylinder" ), this, &Qgs3DPrimitiveEditingToolBar::createCylinder );
-  mActions << createPrimitiveMenu->addAction( QIcon( QgsApplication::iconPath( u"mIcon3DAddCone.svg"_s ) ), tr( "Create a cone" ), this, &Qgs3DPrimitiveEditingToolBar::createCone );
+  mActions << createPrimitiveMenu->addAction( QIcon( u":/plugin/mIcon3DAddBox.svg"_s ), tr( "Create a box" ), this, &Qgs3DPrimitiveEditingToolBar::createBox );
+  mActions << createPrimitiveMenu->addAction( QIcon( u":/plugin/mIcon3DAddSphere.svg"_s ), tr( "Create a sphere" ), this, &Qgs3DPrimitiveEditingToolBar::createSphere );
+  mActions << createPrimitiveMenu->addAction( QIcon( u":/plugin/mIcon3DAddTorus.svg"_s ), tr( "Create a torus" ), this, &Qgs3DPrimitiveEditingToolBar::createTorus );
+  mActions << createPrimitiveMenu->addAction( QIcon( u":/plugin/mIcon3DAddCylinder.svg"_s ), tr( "Create a cylinder" ), this, &Qgs3DPrimitiveEditingToolBar::createCylinder );
+  mActions << createPrimitiveMenu->addAction( QIcon( u":/plugin/mIcon3DAddCone.svg"_s ), tr( "Create a cone" ), this, &Qgs3DPrimitiveEditingToolBar::createCone );
 }
 
 bool Qgs3DPrimitiveEditingToolBar::accept( QgsMapLayer *layer ) const
