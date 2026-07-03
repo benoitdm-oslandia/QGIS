@@ -17,6 +17,7 @@
 #define QGS3DMAPCANVASWIDGET_H
 
 #include "qgis_app.h"
+#include "qgs3dmapcanvas.h"
 #include "qgsgeometry.h"
 #include "qgsrectangle.h"
 #include "qobjectuniqueptr.h"
@@ -34,6 +35,7 @@ class QgsMapToolClippingPlanes;
 class Qgs3DMapToolPointCloudChangeAttributePaintbrush;
 class QLabel;
 class QProgressBar;
+class QActionGroup;
 
 class Qgs3DAnimationWidget;
 class Qgs3DMapCanvas;
@@ -58,6 +60,7 @@ class QgsSettingsEntryBool;
 class QgsGeometry;
 class QgsElevationProfile;
 class QgsProfilePoint;
+class Qgs3DEditingToolBar;
 
 //! Helper validator for classification classes
 class ClassValidator : public QValidator
@@ -74,7 +77,7 @@ class ClassValidator : public QValidator
     QRegularExpression mRx;
 };
 
-class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
+class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget, public Qgs3DMapCanvasWidgetInterface
 {
     Q_OBJECT
 
@@ -90,13 +93,21 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
 
     void setMainCanvas( QgsMapCanvas *canvas );
 
-    Qgs3DMapCanvas *mapCanvas3D() { return mCanvas; }
+    Qgs3DMapCanvas *mapCanvas3D() override { return mCanvas; }
 
     Qgs3DAnimationWidget *animationWidget() { return mAnimationWidget; }
 
     Qgs3DMapToolMeasureLine *measurementLineTool() { return mMapToolMeasureLine; }
 
     QgsDockableWidgetHelper *dockableWidgetHelper() { return mDockableWidgetHelper; }
+
+    /**
+     * Add new editing toolbar.
+     * Takes ownership
+     * \param newToolBar new toolbar
+     */
+    void addEditingToolBar( Qgs3DEditingToolBar *newToolBar ) override;
+    QList<Qgs3DEditingToolBar *> editingToolBars() const override;
 
     void setCanvasName( const QString &name );
     QString canvasName() const { return mCanvasName; }
@@ -171,6 +182,8 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     void updateProfileRubberBands( QgsElevationProfile *profile );
     void hideProfileRubberBands( QgsElevationProfile *profile );
 
+    void updateEditingToolBar();
+
     QString mCanvasName;
     Qgs3DMapCanvas *mCanvas = nullptr;
     Qgs3DAnimationWidget *mAnimationWidget = nullptr;
@@ -215,7 +228,9 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     QAction *mActionDisableClippingPlanes = nullptr;
     QAction *mActionToggleEditing = nullptr;
     QAction *mActionUndo = nullptr;
+    QMetaObject::Connection mUndoConnection;
     QAction *mActionRedo = nullptr;
+    QMetaObject::Connection mRedoConnection;
     QAction *mEditingToolsAction = nullptr;
     QAction *mActionNudgeLeft = nullptr;
     QAction *mActionNudgeRight = nullptr;
@@ -229,6 +244,10 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     QgsMessageBar *mMessageBar = nullptr;
     bool mGpuMemoryLimitReachedReported = false;
 
+    QAction *mActionEditingToolbar = nullptr;
+    QActionGroup *mActionGroup = nullptr;
+
+    QgsMapLayer *mLayer = nullptr;
     //! Container QWidget that encapsulates 3D QWindow
     QWidget *mContainer = nullptr;
     //! On-Screen Navigation widget.

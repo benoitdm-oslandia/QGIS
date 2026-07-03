@@ -12,6 +12,28 @@
 
 
 
+
+class Qgs3DMapCanvasWidgetInterface
+{
+%Docstring(signature="appended")
+Convenience wrapper to wrap Qgs3DMapCanvasWidget function from
+Qgs3DMapCanvas.
+
+.. versionadded:: 4.4
+%End
+
+%TypeHeaderCode
+#include "qgs3dmapcanvas.h"
+%End
+  public:
+    Qgs3DMapCanvasWidgetInterface();
+    virtual ~Qgs3DMapCanvasWidgetInterface();
+
+
+
+
+};
+
 class Qgs3DMapCanvas : QWindow
 {
 %Docstring(signature="appended")
@@ -37,7 +59,7 @@ used with QGIS.
 #include "qgs3dmapcanvas.h"
 %End
   public:
-    Qgs3DMapCanvas();
+    Qgs3DMapCanvas( Qgs3DMapCanvasWidgetInterface *widgetInterface = 0 );
     ~Qgs3DMapCanvas();
 
     Qgs3DMapSettings *mapSettings();
@@ -56,6 +78,7 @@ Returns access to the view's camera controller. Returns ``None`` if the
 scene has not been initialized yet with
 :py:func:`~Qgs3DMapCanvas.setMapSettings`
 %End
+
 
     void setMapTool( Qgs3DMapTool *tool );
 %Docstring
