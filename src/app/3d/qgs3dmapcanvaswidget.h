@@ -36,6 +36,7 @@ class Qgs3DMapToolPointCloudChangeAttributePaintbrush;
 class QLabel;
 class QProgressBar;
 class QActionGroup;
+class QTabWidget;
 
 class Qgs3DAnimationWidget;
 class Qgs3DMapCanvas;
@@ -131,6 +132,9 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget, public Qgs3DMapCanvasWid
     void removeProfileData( QgsElevationProfile *profile );
 
     void updateProfileCursorPosition( QgsElevationProfile *profile, const QgsPointXY &mapPoint, const QgsProfilePoint &profilePoint );
+
+    //! Returns lateral panel widget
+    QgsLateralPanelWidget *lateralPanel() const override;
 
   private slots:
     void resetView();
@@ -251,6 +255,8 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget, public Qgs3DMapCanvasWid
     Qgs3DMapClippingToleranceWidgetSettingsAction *mClippingToleranceAction = nullptr;
 
     QMenu *mToolbarMenu = nullptr;
+
+    QgsLateralPanelWidget *mLateralPanel = nullptr;
 
     struct ElevationProfileData
     {

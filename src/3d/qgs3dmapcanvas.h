@@ -23,8 +23,8 @@
 #include "qgsrange.h"
 #include "qgsraycastresult.h"
 
-#include <QTabWidget>
 #include <QtGui/QWindow>
+#include <QTabWidget>
 
 #ifndef SIP_RUN
 namespace Qt3DCore
@@ -79,6 +79,77 @@ class Qgs3DMapCanvas;
 
 /**
  * \ingroup qgis_3d
+ * Provide abstraction to lateral panel
+ * \since QGIS 4.4.0
+ */
+class _3D_EXPORT QgsLateralPanelWidget : public QTabWidget SIP_SKIP
+{
+    Q_OBJECT
+  public:
+    //! Default constructor
+    QgsLateralPanelWidget( QAction *toggleAction, QWidget *parent = nullptr );
+
+    /**
+     * Adds a widget to the panel by its name
+     * \param widget the widget to add
+     * \param name widget display name
+     * \return the widget index inside the panel
+     */
+    int addWidget( QWidget *widget, const QString &name );
+
+    /**
+     * Activates the panel and focus on a specific widget.
+     * \param index widget index
+     */
+    void showWidget( int index );
+
+    /**
+     * Activates the panel and focus on a specific widget.
+     * \param name widget display name
+     */
+    void showWidget( const QString &name );
+
+    /**
+     * Hides a specific widget.
+     * \param index widget index
+     */
+    void hideWidget( int index );
+
+    /**
+     * Hides a specific widget.
+     * \param name widget display name
+     */
+    void hideWidget( const QString &name );
+
+    /**
+     * Removes a specific widget.
+     * \param index widget index
+     */
+    void removeWidget( int index );
+
+    /**
+     * Removes a specific widget.
+     * \param name widget display name
+     */
+    void removeWidget( const QString &name );
+
+    /**
+     * Hides the panel
+     */
+    void hide();
+
+    /**
+     * Returns the action to show/hide the panel
+     */
+    QAction *toggleAction();
+
+  private:
+    QAction *mToggleAction = nullptr;
+};
+
+
+/**
+ * \ingroup qgis_3d
  * \brief Convenience wrapper to wrap Qgs3DMapCanvasWidget function from Qgs3DMapCanvas.
  *
  * \since QGIS 4.4
@@ -104,6 +175,12 @@ class _3D_EXPORT Qgs3DMapCanvasWidgetInterface
 
     //! Returns 3D mapCanvas
     virtual Qgs3DMapCanvas *mapCanvas3D() SIP_SKIP //
+    {
+      return nullptr;
+    }
+
+    //! Returns lateral panel widget
+    virtual QgsLateralPanelWidget *lateralPanel() const SIP_SKIP //
     {
       return nullptr;
     }

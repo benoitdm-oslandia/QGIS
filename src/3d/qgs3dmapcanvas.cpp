@@ -27,8 +27,8 @@
 #include "qgswindow3dengine.h"
 
 #include <QString>
-#include <QTabBar>
 #include <QTimer>
+#include <QTabBar>
 #include <Qt3DCore/QAspectEngine>
 #include <Qt3DCore/QCoreAspect>
 #include <Qt3DInput/QInputAspect>
@@ -409,4 +409,94 @@ void Qgs3DMapCanvas::highlightFeature( const QgsFeature &feature, QgsMapLayer *l
 void Qgs3DMapCanvas::clearHighlights()
 {
   mHighlightsHandler->clearHighlights();
+}
+
+// =======================================
+
+QgsLateralPanelWidget::QgsLateralPanelWidget( QAction *toggleAction, QWidget *parent )
+  : QTabWidget( parent )
+{
+  setSizePolicy( QSizePolicy::Preferred, QSizePolicy::Preferred );
+
+  mToggleAction = toggleAction;
+  mToggleAction->setCheckable( true );
+  mToggleAction->setChecked( true );
+  QObject::connect( mToggleAction, &QAction::toggled, this, [this]( const bool visibility ) { setVisible( visibility ); } );
+}
+
+int QgsLateralPanelWidget::addWidget( QWidget *widget, const QString &name )
+{
+  return addTab( widget, name );
+}
+
+void QgsLateralPanelWidget::hideWidget( int index )
+{
+  if ( index < count() && index >= 0 )
+  {
+    setTabVisible( index, false );
+  }
+}
+
+void QgsLateralPanelWidget::hideWidget( const QString &name )
+{
+  for ( int i = 0; i < count(); ++i )
+  {
+    if ( tabBar()->tabText( i ) == name )
+    {
+      hideWidget( i );
+      break;
+    }
+  }
+}
+
+void QgsLateralPanelWidget::showWidget( int index )
+{
+  if ( index < count() && index >= 0 )
+  {
+    setTabVisible( index, true );
+    setCurrentIndex( index );
+    mToggleAction->setChecked( true );
+  }
+}
+
+void QgsLateralPanelWidget::showWidget( const QString &name )
+{
+  for ( int i = 0; i < count(); ++i )
+  {
+    if ( tabBar()->tabText( i ) == name )
+    {
+      showWidget( i );
+      break;
+    }
+  }
+}
+
+void QgsLateralPanelWidget::removeWidget( int index )
+{
+  if ( index < count() && index >= 0 )
+  {
+    removeTab( index );
+  }
+}
+
+void QgsLateralPanelWidget::removeWidget( const QString &name )
+{
+  for ( int i = 0; i < count(); ++i )
+  {
+    if ( tabBar()->tabText( i ) == name )
+    {
+      removeWidget( i );
+      break;
+    }
+  }
+}
+
+QAction *QgsLateralPanelWidget::toggleAction()
+{
+  return mToggleAction;
+}
+
+void QgsLateralPanelWidget::hide()
+{
+  mToggleAction->setChecked( false );
 }
