@@ -62,7 +62,7 @@ class Qgs3DMapToolCreatePrimitive : public Qgs3DMapTool
      * \param canvas 3D canvas parent
      * \param type primitive type to create
      */
-    Qgs3DMapToolCreatePrimitive( Qgs3DMapCanvas *canvas, QgsMapLayer *activeLayer, PrimitiveType type );
+    Qgs3DMapToolCreatePrimitive( Qgs3DMapCanvas *canvas, QgsLateralPanelWidget *panel, QgsMapLayer *activeLayer, PrimitiveType type );
     ~Qgs3DMapToolCreatePrimitive() override;
 
     void activate() override;
@@ -103,6 +103,7 @@ class Qgs3DMapToolCreatePrimitive : public Qgs3DMapTool
     int mCurrentFieldIdx = -1;
 
     std::unique_ptr<Qt3DCore::QEntity> mPrimitiveLineEntity = nullptr;
+    QgsLateralPanelWidget *mPanel = nullptr;
 
     QgsMapLayer *mActiveLayer = nullptr;
 

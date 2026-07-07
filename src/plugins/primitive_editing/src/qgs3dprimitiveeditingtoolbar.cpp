@@ -122,7 +122,7 @@ void Qgs3DPrimitiveEditingToolBar::createPrimitive( const QAction *action, Qgs3D
     mCreatePrimitiveMapTool->deleteLater();
 
   Qgs3DMapCanvasWidgetInterface *canvasWidget = dynamic_cast<Qgs3DMapCanvasWidgetInterface *>( mParentWidget );
-  mCreatePrimitiveMapTool = new Qgs3DMapToolCreatePrimitive( canvasWidget->mapCanvas3D(), mActiveLayer, type );
+  mCreatePrimitiveMapTool = new Qgs3DMapToolCreatePrimitive( canvasWidget->mapCanvas3D(), canvasWidget->lateralPanel(), mActiveLayer, type );
   canvasWidget->mapCanvas3D()->setMapTool( mCreatePrimitiveMapTool );
   mCreatePrimitiveAction->setIcon( action->icon() );
 }

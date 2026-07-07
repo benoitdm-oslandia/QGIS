@@ -31,6 +31,7 @@
 #include "qgsfeatureaction.h"
 #include "qgsframegraph.h"
 #include "qgsgeotransform.h"
+#include "qgslateralpanelwidget.h"
 #include "qgsraycastcontext.h"
 #include "qgsraycasthit.h"
 #include "qgsraycastingutils.h"
@@ -51,9 +52,10 @@
 
 using namespace Qt::StringLiterals;
 
-Qgs3DMapToolCreatePrimitive::Qgs3DMapToolCreatePrimitive( Qgs3DMapCanvas *canvas, QgsMapLayer *activeLayer, PrimitiveType type )
+Qgs3DMapToolCreatePrimitive::Qgs3DMapToolCreatePrimitive( Qgs3DMapCanvas *canvas, QgsLateralPanelWidget *panel, QgsMapLayer *activeLayer, PrimitiveType type )
   : Qgs3DMapTool( canvas )
   , mType( type )
+  , mPanel( panel )
   , mActiveLayer( activeLayer )
 {
   // Dialog
@@ -91,7 +93,11 @@ void Qgs3DMapToolCreatePrimitive::activate()
 
   // Show dialog
   if ( mShowPrimitiveDialog )
-    mDialog->show();
+  {
+    mDialog->hide();
+    mPanel->addWidget( mDialog->topLevelWidget(), u"Primitive parameters"_s );
+    mPanel->showWidget( u"Primitive parameters"_s );
+  }
 }
 
 void Qgs3DMapToolCreatePrimitive::deactivate()
@@ -102,7 +108,7 @@ void Qgs3DMapToolCreatePrimitive::deactivate()
   mCanvas->setCursor( Qt::ArrowCursor );
 
   // Hide dialog
-  mDialog->hide();
+  mPanel->removeWidget( u"Primitive parameters"_s );
 }
 
 void Qgs3DMapToolCreatePrimitive::finish()
@@ -463,7 +469,6 @@ void Qgs3DMapToolCreatePrimitive::mouseReleaseEvent( QMouseEvent *event )
 
   if ( mShowPrimitiveDialog && !mDone && mCurrentFieldIdx != mDialog->creationParamNumber() )
   {
-    mDialog->show();
     qDebug() << u"%1 #%2:"_s.arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "focus on param:" << mCurrentFieldIdx;
     mDialog->focusOnParam( mCurrentFieldIdx );
   }
@@ -484,7 +489,6 @@ void Qgs3DMapToolCreatePrimitive::keyReleaseEvent( QKeyEvent *event )
   {
     if ( mShowPrimitiveDialog && !mDone && mCurrentFieldIdx != mDialog->creationParamNumber() )
     {
-      mDialog->show();
       qDebug() << u"%1 #%2:"_s.arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "focus on param:" << mCurrentFieldIdx;
       mDialog->focusOnParam( mCurrentFieldIdx );
     }
@@ -514,10 +518,8 @@ void Qgs3DMapToolCreatePrimitive::handleNextParameter()
   if ( mCurrentFieldIdx == mDialog->creationParamNumber() )
   {
     mCanvas->setCursor( Qt::WaitCursor );
-    mDialog->hide();
     if ( mShowPrimitiveDialog )
     {
-      mDialog->show();
       mDialog->focusCreateButton();
     }
   }
