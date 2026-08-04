@@ -28,6 +28,7 @@
 
 #include <QString>
 #include <QTimer>
+#include <QTabBar>
 #include <Qt3DCore/QAspectEngine>
 #include <Qt3DCore/QCoreAspect>
 #include <Qt3DInput/QInputAspect>
@@ -41,7 +42,7 @@
 
 using namespace Qt::StringLiterals;
 
-Qgs3DMapCanvas::Qgs3DMapCanvas()
+Qgs3DMapCanvas::Qgs3DMapCanvas( Qgs3DMapCanvasWidgetInterface *widgetInterface )
   : m_aspectEngine( std::make_unique<Qt3DCore::QAspectEngine>() )
   , m_renderAspect( new Qt3DRender::QRenderAspect )
   , m_inputAspect( new Qt3DInput::QInputAspect )
@@ -50,6 +51,8 @@ Qgs3DMapCanvas::Qgs3DMapCanvas()
   , m_defaultCamera( new Qt3DRender::QCamera )
   , m_inputSettings( new Qt3DInput::QInputSettings )
   , m_root( new Qt3DCore::QEntity )
+  , m_widgetInterface( widgetInterface )
+
 {
   setSurfaceType( QSurface::OpenGLSurface );
 
@@ -85,6 +88,11 @@ Qgs3DMapCanvas::~Qgs3DMapCanvas()
   mScene = nullptr;
   mMapSettings->deleteLater();
   mMapSettings = nullptr;
+}
+
+Qgs3DMapCanvasWidgetInterface *Qgs3DMapCanvas::canvasWidgetInterface()
+{
+  return m_widgetInterface;
 }
 
 void Qgs3DMapCanvas::setRootEntity( Qt3DCore::QEntity *root )
@@ -401,4 +409,94 @@ void Qgs3DMapCanvas::highlightFeature( const QgsFeature &feature, QgsMapLayer *l
 void Qgs3DMapCanvas::clearHighlights()
 {
   mHighlightsHandler->clearHighlights();
+}
+
+// =======================================
+
+QgsLateralPanelWidget::QgsLateralPanelWidget( QAction *toggleAction, QWidget *parent )
+  : QTabWidget( parent )
+{
+  setSizePolicy( QSizePolicy::Preferred, QSizePolicy::Preferred );
+
+  mToggleAction = toggleAction;
+  mToggleAction->setCheckable( true );
+  mToggleAction->setChecked( true );
+  QObject::connect( mToggleAction, &QAction::toggled, this, [this]( const bool visibility ) { setVisible( visibility ); } );
+}
+
+int QgsLateralPanelWidget::addWidget( QWidget *widget, const QString &name )
+{
+  return addTab( widget, name );
+}
+
+void QgsLateralPanelWidget::hideWidget( int index )
+{
+  if ( index < count() && index >= 0 )
+  {
+    setTabVisible( index, false );
+  }
+}
+
+void QgsLateralPanelWidget::hideWidget( const QString &name )
+{
+  for ( int i = 0; i < count(); ++i )
+  {
+    if ( tabBar()->tabText( i ) == name )
+    {
+      hideWidget( i );
+      break;
+    }
+  }
+}
+
+void QgsLateralPanelWidget::showWidget( int index )
+{
+  if ( index < count() && index >= 0 )
+  {
+    setTabVisible( index, true );
+    setCurrentIndex( index );
+    mToggleAction->setChecked( true );
+  }
+}
+
+void QgsLateralPanelWidget::showWidget( const QString &name )
+{
+  for ( int i = 0; i < count(); ++i )
+  {
+    if ( tabBar()->tabText( i ) == name )
+    {
+      showWidget( i );
+      break;
+    }
+  }
+}
+
+void QgsLateralPanelWidget::removeWidget( int index )
+{
+  if ( index < count() && index >= 0 )
+  {
+    removeTab( index );
+  }
+}
+
+void QgsLateralPanelWidget::removeWidget( const QString &name )
+{
+  for ( int i = 0; i < count(); ++i )
+  {
+    if ( tabBar()->tabText( i ) == name )
+    {
+      removeWidget( i );
+      break;
+    }
+  }
+}
+
+QAction *QgsLateralPanelWidget::toggleAction()
+{
+  return mToggleAction;
+}
+
+void QgsLateralPanelWidget::hide()
+{
+  mToggleAction->setChecked( false );
 }

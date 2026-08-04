@@ -24,6 +24,7 @@
 #include "qgsraycastresult.h"
 
 #include <QtGui/QWindow>
+#include <QTabWidget>
 
 #ifndef SIP_RUN
 namespace Qt3DCore
@@ -73,7 +74,117 @@ class QgsRectangle;
 class QgsRubberBand3D;
 class QgsTemporalController;
 class QgsWindow3DEngine;
+class Qgs3DEditingToolBar;
+class Qgs3DMapCanvas;
 
+/**
+ * \ingroup qgis_3d
+ * Provide abstraction to lateral panel
+ * \since QGIS 4.4.0
+ */
+class _3D_EXPORT QgsLateralPanelWidget : public QTabWidget SIP_SKIP
+{
+    Q_OBJECT
+  public:
+    //! Default constructor
+    QgsLateralPanelWidget( QAction *toggleAction, QWidget *parent = nullptr );
+
+    /**
+     * Adds a widget to the panel by its name
+     * \param widget the widget to add
+     * \param name widget display name
+     * \return the widget index inside the panel
+     */
+    int addWidget( QWidget *widget, const QString &name );
+
+    /**
+     * Activates the panel and focus on a specific widget.
+     * \param index widget index
+     */
+    void showWidget( int index );
+
+    /**
+     * Activates the panel and focus on a specific widget.
+     * \param name widget display name
+     */
+    void showWidget( const QString &name );
+
+    /**
+     * Hides a specific widget.
+     * \param index widget index
+     */
+    void hideWidget( int index );
+
+    /**
+     * Hides a specific widget.
+     * \param name widget display name
+     */
+    void hideWidget( const QString &name );
+
+    /**
+     * Removes a specific widget.
+     * \param index widget index
+     */
+    void removeWidget( int index );
+
+    /**
+     * Removes a specific widget.
+     * \param name widget display name
+     */
+    void removeWidget( const QString &name );
+
+    /**
+     * Hides the panel
+     */
+    void hide();
+
+    /**
+     * Returns the action to show/hide the panel
+     */
+    QAction *toggleAction();
+
+  private:
+    QAction *mToggleAction = nullptr;
+};
+
+
+/**
+ * \ingroup qgis_3d
+ * \brief Convenience wrapper to wrap Qgs3DMapCanvasWidget function from Qgs3DMapCanvas.
+ *
+ * \since QGIS 4.4
+ */
+class _3D_EXPORT Qgs3DMapCanvasWidgetInterface
+{
+  public:
+    Qgs3DMapCanvasWidgetInterface() = default;
+    virtual ~Qgs3DMapCanvasWidgetInterface() = default;
+
+    virtual void addEditingToolBar( Qgs3DEditingToolBar *newToolBar ) SIP_SKIP //
+    {
+      ( void ) newToolBar;
+    };
+
+    /**
+     * Returns all added editing toolbars
+     */
+    virtual QList<Qgs3DEditingToolBar *> editingToolBars() const SIP_SKIP //
+    {
+      return {};
+    }
+
+    //! Returns 3D mapCanvas
+    virtual Qgs3DMapCanvas *mapCanvas3D() SIP_SKIP //
+    {
+      return nullptr;
+    }
+
+    //! Returns lateral panel widget
+    virtual QgsLateralPanelWidget *lateralPanel() const SIP_SKIP //
+    {
+      return nullptr;
+    }
+};
 
 /**
  * \ingroup qgis_3d
@@ -89,7 +200,7 @@ class _3D_EXPORT Qgs3DMapCanvas : public QWindow
 {
     Q_OBJECT
   public:
-    Qgs3DMapCanvas();
+    Qgs3DMapCanvas( Qgs3DMapCanvasWidgetInterface *widgetInterface = nullptr );
     ~Qgs3DMapCanvas() override;
 
     //! Returns access to the 3D scene configuration
@@ -100,6 +211,9 @@ class _3D_EXPORT Qgs3DMapCanvas : public QWindow
 
     //! Returns access to the view's camera controller. Returns NULLPTR if the scene has not been initialized yet with setMapSettings()
     QgsCameraController *cameraController();
+
+    //! Returns widget interface to Qgs3DMapCanvasWidget
+    Qgs3DMapCanvasWidgetInterface *canvasWidgetInterface() SIP_SKIP;
 
     /**
      * Sets the active map \a tool that will receive events from the 3D canvas. Does not transfer ownership.
@@ -306,6 +420,8 @@ class _3D_EXPORT Qgs3DMapCanvas : public QWindow
     std::unique_ptr<Qgs3DHighlightFeatureHandler> mHighlightsHandler = nullptr;
 
     QgsCrossSection mCrossSection;
+
+    Qgs3DMapCanvasWidgetInterface *m_widgetInterface;
 };
 
 #endif //QGS3DMAPCANVAS_H

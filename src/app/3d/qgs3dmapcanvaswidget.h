@@ -17,6 +17,7 @@
 #define QGS3DMAPCANVASWIDGET_H
 
 #include "qgis_app.h"
+#include "qgs3dmapcanvas.h"
 #include "qgsgeometry.h"
 #include "qgsrectangle.h"
 #include "qobjectuniqueptr.h"
@@ -34,6 +35,8 @@ class QgsMapToolClippingPlanes;
 class Qgs3DMapToolPointCloudChangeAttributePaintbrush;
 class QLabel;
 class QProgressBar;
+class QActionGroup;
+class QTabWidget;
 
 class Qgs3DAnimationWidget;
 class Qgs3DMapCanvas;
@@ -58,6 +61,9 @@ class QgsSettingsEntryBool;
 class QgsGeometry;
 class QgsElevationProfile;
 class QgsProfilePoint;
+class Qgs3DEditingToolBar;
+
+class Qgs3DPointCloudEditingToolBar;
 
 //! Helper validator for classification classes
 class ClassValidator : public QValidator
@@ -74,7 +80,7 @@ class ClassValidator : public QValidator
     QRegularExpression mRx;
 };
 
-class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
+class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget, public Qgs3DMapCanvasWidgetInterface
 {
     Q_OBJECT
 
@@ -90,13 +96,21 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
 
     void setMainCanvas( QgsMapCanvas *canvas );
 
-    Qgs3DMapCanvas *mapCanvas3D() { return mCanvas; }
+    Qgs3DMapCanvas *mapCanvas3D() override { return mCanvas; }
 
     Qgs3DAnimationWidget *animationWidget() { return mAnimationWidget; }
 
     Qgs3DMapToolMeasureLine *measurementLineTool() { return mMapToolMeasureLine; }
 
     QgsDockableWidgetHelper *dockableWidgetHelper() { return mDockableWidgetHelper; }
+
+    /**
+     * Add new editing toolbar.
+     * Takes ownership
+     * \param newToolBar new toolbar
+     */
+    void addEditingToolBar( Qgs3DEditingToolBar *newToolBar ) override;
+    QList<Qgs3DEditingToolBar *> editingToolBars() const override;
 
     void setCanvasName( const QString &name );
     QString canvasName() const { return mCanvasName; }
@@ -119,6 +133,9 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
 
     void updateProfileCursorPosition( QgsElevationProfile *profile, const QgsPointXY &mapPoint, const QgsProfilePoint &profilePoint );
 
+    //! Returns lateral panel widget
+    QgsLateralPanelWidget *lateralPanel() const override;
+
   private slots:
     void resetView();
     void configure();
@@ -128,11 +145,6 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     void cameraControl();
     void identify();
     void measureLine();
-    void changePointCloudAttributeByPaintbrush();
-    void changePointCloudAttributeByPolygon();
-    void changePointCloudAttributeByAboveLine();
-    void changePointCloudAttributeByBelowLine();
-    void changePointCloudAttributePointFilter();
     void exportScene();
     void toggleNavigationWidget( bool visibility );
     void toggleEditingToolbar( bool visibility );
@@ -159,8 +171,6 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     void onExtentChanged();
     void onGpuMemoryLimitReached();
 
-    void onPointCloudChangeAttributeSettingsChanged();
-
     void onCrossSectionToolFinished();
 
   private:
@@ -170,6 +180,8 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     void updateClippingRubberBand();
     void updateProfileRubberBands( QgsElevationProfile *profile );
     void hideProfileRubberBands( QgsElevationProfile *profile );
+
+    void updateEditingToolBar();
 
     QString mCanvasName;
     Qgs3DMapCanvas *mCanvas = nullptr;
@@ -182,7 +194,6 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     QTimer *mLabelNavSpeedHideTimeout = nullptr;
     Qgs3DMapToolIdentify *mMapToolIdentify = nullptr;
     Qgs3DMapToolMeasureLine *mMapToolMeasureLine = nullptr;
-    Qgs3DMapToolPointCloudChangeAttribute *mMapToolChangeAttribute = nullptr;
     QgsGeometry mCrossSectionLine;
     QObjectUniquePtr<QgsRubberBand> mCrossSectionRubberBand;
     std::unique_ptr<QgsMapToolExtent> mMapToolExtent;
@@ -193,7 +204,6 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     QMenu *mCameraMenu = nullptr;
     QMenu *mCrossSectionMenu = nullptr;
     QMenu *mEffectsMenu = nullptr;
-    QMenu *mEditingToolsMenu = nullptr;
     QList<QAction *> mMapThemeMenuPresetActions;
     QAction *mActionEnableShadows = nullptr;
     QAction *mActionEnableEyeDome = nullptr;
@@ -213,14 +223,14 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     QAction *mActionSetSceneExtent = nullptr;
     QAction *mActionSetClippingPlanes = nullptr;
     QAction *mActionDisableClippingPlanes = nullptr;
-    QAction *mActionToggleEditing = nullptr;
     QAction *mActionUndo = nullptr;
+    QMetaObject::Connection mUndoConnection;
     QAction *mActionRedo = nullptr;
-    QAction *mEditingToolsAction = nullptr;
+    QMetaObject::Connection mRedoConnection;
+    Qgs3DPointCloudEditingToolBar *mPointCloudEditingToolbar = nullptr;
     QAction *mActionNudgeLeft = nullptr;
     QAction *mActionNudgeRight = nullptr;
     QAction *mActionDynamicClipping = nullptr;
-    QToolBar *mPointCloudEditingToolbar = nullptr;
     QgsDockableWidgetHelper *mDockableWidgetHelper = nullptr;
     QObjectUniquePtr<QgsRubberBand> mViewFrustumHighlight;
     QObjectUniquePtr<QgsRubberBand> mViewExtentHighlight;
@@ -229,6 +239,10 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     QgsMessageBar *mMessageBar = nullptr;
     bool mGpuMemoryLimitReachedReported = false;
 
+    QAction *mActionEditingToolbar = nullptr;
+    QActionGroup *mActionGroup = nullptr;
+
+    QgsMapLayer *mLayer = nullptr;
     //! Container QWidget that encapsulates 3D QWindow
     QWidget *mContainer = nullptr;
     //! On-Screen Navigation widget.
@@ -237,17 +251,12 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     Qgs3DDebugWidget *mDebugWidget = nullptr;
 
     QToolBar *mEditingToolBar = nullptr;
-    QComboBox *mCboChangeAttribute = nullptr;
-    QComboBox *mCboChangeAttributeValue = nullptr;
-    ClassValidator *mClassValidator = nullptr;
-    QgsDoubleSpinBox *mSpinChangeAttributeValue = nullptr;
-    QAction *mCboChangeAttributeValueAction = nullptr;
-    QAction *mSpinChangeAttributeValueAction = nullptr;
-    QString mChangeAttributePointFilter;
 
     Qgs3DMapClippingToleranceWidgetSettingsAction *mClippingToleranceAction = nullptr;
 
     QMenu *mToolbarMenu = nullptr;
+
+    QgsLateralPanelWidget *mLateralPanel = nullptr;
 
     struct ElevationProfileData
     {
