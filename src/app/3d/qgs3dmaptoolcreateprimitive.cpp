@@ -23,13 +23,20 @@
 #include "qgs3dcreateprimitivetorusdialog.h"
 #include "qgs3drendercontext.h"
 #include "qgs3dutils.h"
+#include "qgsaction.h"
+#include "qgsactionmanager.h"
+#include "qgsattributedialog.h"
+#include "qgsattributeform.h"
 #include "qgscameracontroller.h"
+#include "qgsfeatureaction.h"
 #include "qgsframegraph.h"
 #include "qgsgeotransform.h"
 #include "qgsraycastcontext.h"
 #include "qgsraycasthit.h"
 #include "qgsraycastingutils.h"
 #include "qgsrubberband3d.h"
+#include "qgssfcgalgeometry.h"
+#include "qgsvectorlayer.h"
 #include "qgswindow3dengine.h"
 
 #include <QMouseEvent>
@@ -40,6 +47,7 @@
 #include <Qt3DExtras/QSphereMesh>
 #include <Qt3DExtras/QTorusMesh>
 #include <Qt3DRender/QRenderSettings>
+#include <Qt3DRender/QScreenRayCaster>
 
 using namespace Qt::StringLiterals;
 
@@ -71,6 +79,7 @@ Qgs3DMapToolCreatePrimitive::Qgs3DMapToolCreatePrimitive( Qgs3DMapCanvas *canvas
 
   connect( mDialog.get(), &Qgs3DCreatePrimitiveDialog::valueChanged, this, [this]() { updatePrimitive(); } );
   connect( mDialog.get(), &Qgs3DCreatePrimitiveDialog::createClicked, this, [this]() { createPrimitive(); } );
+  connect( mDialog.get(), &QDialog::finished, this, [this]() { finish(); } );
 }
 
 Qgs3DMapToolCreatePrimitive::~Qgs3DMapToolCreatePrimitive() = default;
@@ -532,6 +541,124 @@ void Qgs3DMapToolCreatePrimitive::handlePreviousParameter()
   }
 }
 
-
 void Qgs3DMapToolCreatePrimitive::createPrimitive()
-{}
+{
+  QgsVectorLayer *vl = dynamic_cast<QgsVectorLayer *>( mActiveLayer );
+  if ( vl != nullptr && QgsWkbTypes::flatType( vl->wkbType() ) == Qgis::WkbType::PolyhedralSurface )
+  {
+    Qgs3DRenderContext renderCtx = Qgs3DRenderContext::fromMapSettings( this->mCanvas->mapSettings() );
+    QgsCoordinateTransform coordTrans = QgsCoordinateTransform( vl->crs3D(), renderCtx.crs(), renderCtx.transformContext() );
+
+    QgsVector3D translate( mDialog->transX(), mDialog->transY(), mDialog->transZ() );
+    translate.setZ( translate.z() / mCanvas->mapSettings()->terrainSettings()->verticalScale() );
+
+    QgsVector3D scale( mDialog->scaleX(), mDialog->scaleY(), mDialog->scaleZ() );
+
+    std::unique_ptr<QgsSfcgalGeometry> geom;
+    switch ( mType )
+    {
+      case Cube:
+      case Box:
+        geom = QgsSfcgalGeometry::createBox( mDialog->getParam( 0 ), mDialog->getParam( 1 ), mDialog->getParam( 2 ) /** 0.5*/ );
+        translate.setX( translate.x() - 0.5 * mDialog->getParam( 0 ) );
+        translate.setY( translate.y() - 0.5 * mDialog->getParam( 1 ) );
+        break;
+      case Sphere:
+        geom = QgsSfcgalGeometry::createSphere( mDialog->getParam( 0 ), mDialog->getParam( 1 ), mDialog->getParam( 2 ) );
+        break;
+      case Cylinder:
+        geom = QgsSfcgalGeometry::createCylinder( mDialog->getParam( 0 ), mDialog->getParam( 1 ) /* * 0.25*/, mDialog->getParam( 2 ) );
+        break;
+      case Torus:
+        geom = QgsSfcgalGeometry::createTorus( mDialog->getParam( 0 ), mDialog->getParam( 1 ), mDialog->getParam( 2 ), mDialog->getParam( 3 ) );
+        break;
+      case Cone:
+        geom = QgsSfcgalGeometry::createCone( mDialog->getParam( 0 ), mDialog->getParam( 1 ) /* * 0.25*/, mDialog->getParam( 2 ), mDialog->getParam( 3 ) );
+        break;
+    }
+
+    QgsVector3D newTrans = coordTrans.transform( translate, Qgis::TransformDirection::Reverse );
+    newTrans.setZ( newTrans.z() / mCanvas->mapSettings()->terrainSettings()->verticalScale() );
+
+    geom = geom->translate( newTrans );
+    geom = geom->scale( scale );
+    //geom = geom->rotate3D( ??? );
+
+    QgsFeature feat;
+    feat.setGeometry( geom->asQgisGeometry() );
+    qDebug() << u"%1 #%2:"_s.arg( __FUNCTION__ ).arg( __LINE__ ).toStdString() << "Will save geom:" << feat.geometry().get()->asWkt( 1 );
+
+    if ( mShowAttributeValuesDlg )
+    {
+      QgsExpressionContext expContext = vl->createExpressionContext();
+      QgsFeature newFeature = QgsAttributeForm::createFeature( vl, feat.geometry(), QgsAttributeMap(), expContext );
+      QgsAttributeEditorContext context;
+      context.setFormMode( QgsAttributeEditorContext::StandaloneDialog );
+      QgsAttributeDialog *dialog = new QgsAttributeDialog( vl, &newFeature, false, nullptr, true, context );
+
+      // Skip this code on windows, because the Qt::Tool flag prevents the maximize button to be shown
+#ifndef Q_OS_WIN
+      dialog->setWindowFlags( dialog->windowFlags() | Qt::Tool );
+#else
+      dialog->setWindowFlags( dialog->windowFlags() | Qt::CustomizeWindowHint | Qt::WindowMaximizeButtonHint );
+      if ( !dialog->parent() )
+        dialog->setWindowFlag( Qt::WindowStaysOnTopHint );
+#endif
+
+      dialog->setObjectName( u"featureactiondlg:%1:%2"_s.arg( vl->id() ).arg( newFeature.id() ) );
+
+      const QList<QgsAction> actions = vl->actions()->actions( u"Feature"_s );
+      if ( !actions.isEmpty() )
+      {
+        dialog->setContextMenuPolicy( Qt::ActionsContextMenu );
+
+        QAction *a = new QAction( tr( "Run Actions" ), dialog );
+        a->setEnabled( false );
+        dialog->addAction( a );
+
+        for ( const QgsAction &action : actions )
+        {
+          if ( !action.runable() )
+            continue;
+
+          if ( !vl->isEditable() && action.isEnabledOnlyWhenEditable() )
+            continue;
+
+          QgsFeature &feat = const_cast<QgsFeature &>( *dialog->feature() );
+          QgsFeatureAction *a = new QgsFeatureAction( action.name(), feat, vl, action.id(), -1, dialog );
+          dialog->addAction( a );
+          connect( a, &QAction::triggered, a, &QgsFeatureAction::execute );
+
+          QAbstractButton *pb = dialog->findChild<QAbstractButton *>( action.name() );
+          if ( pb )
+            connect( pb, &QAbstractButton::clicked, a, &QgsFeatureAction::execute );
+        }
+      }
+
+      // delete the dialog when it is closed
+      dialog->setAttribute( Qt::WA_DeleteOnClose );
+      dialog->setMode( QgsAttributeEditorContext::AddFeatureMode );
+      dialog->setEditCommandMessage( QObject::tr( "Add new primitive" ) );
+
+      connect( dialog->attributeForm(), &QgsAttributeForm::featureSaved, this, [vl]() { vl->triggerRepaint(); } );
+
+      dialog->show();
+      dialog->exec();
+    }
+    else
+    {
+      vl->beginEditCommand( QObject::tr( "Add new primitive" ) );
+      bool featureSaved = vl->addFeature( feat, QgsFeatureSink::FastInsert );
+      if ( featureSaved )
+      {
+        vl->endEditCommand();
+        vl->triggerRepaint();
+      }
+      else
+      {
+        vl->destroyEditCommand();
+      }
+    }
+  }
+  finish();
+}

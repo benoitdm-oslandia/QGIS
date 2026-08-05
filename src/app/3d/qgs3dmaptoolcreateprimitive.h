@@ -83,6 +83,7 @@ class Qgs3DMapToolCreatePrimitive : public Qgs3DMapTool
     void keyReleaseEvent( QKeyEvent *event ) override;
 
   protected:
+    bool mShowAttributeValuesDlg = true;
     bool mShowPrimitiveDialog = true;
 
     PrimitiveType mType;
