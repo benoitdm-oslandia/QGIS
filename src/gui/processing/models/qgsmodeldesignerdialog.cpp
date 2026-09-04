@@ -578,6 +578,8 @@ QgsProcessingParameterWidgetContext QgsModelDesignerDialog::createWidgetContext(
 {
   QgsProcessingParameterWidgetContext context = QgsGui::processingGuiRegistry()->createWidgetContext();
   context.setModel( model() );
+  context.setModelDesignerDialog( this );
+  context.registerProcessingContextGenerator( this );
   return context;
 }
 
@@ -592,6 +594,15 @@ void QgsModelDesignerDialog::activate()
 void QgsModelDesignerDialog::registerProcessingContextGenerator( QgsProcessingContextGenerator *generator )
 {
   mProcessingContextGenerator = generator;
+}
+
+QgsProcessingContext *QgsModelDesignerDialog::processingContext() const
+{
+  if ( mProcessingContextGenerator )
+  {
+    return mProcessingContextGenerator->processingContext();
+  }
+  return nullptr;
 }
 
 void QgsModelDesignerDialog::updateVariablesGui()
@@ -1587,9 +1598,14 @@ QgsModelChildDependenciesWidget::QgsModelChildDependenciesWidget( QWidget *paren
 
 void QgsModelChildDependenciesWidget::setValue( const QList<QgsProcessingModelChildDependency> &value )
 {
+  const bool hasChanged = value != mValue;
   mValue = value;
 
   updateSummaryText();
+  if ( hasChanged )
+  {
+    emit changed();
+  }
 }
 
 void QgsModelChildDependenciesWidget::showDialog()

@@ -4433,6 +4433,18 @@ int QgisEvent = QEvent::User + 1;
     Q_FLAG( InstancedMaterialFlags )
 
     /**
+     * 3D billboard scaling modes.
+     *
+     * \since QGIS 4.4
+     */
+    enum class BillboardScaleMode : int
+    {
+      ViewIndependent, //!< Billboard has a fixed pixel size on the screen, regardless of the camera distance
+      Perspective      //!< Billboard size is scaled with perspective distance from camera, using world units
+    };
+    Q_ENUM( BillboardScaleMode )
+
+    /**
      * Texture filtering qualities.
      *
      * \since QGIS 4.2
@@ -5169,6 +5181,21 @@ int QgisEvent = QEvent::User + 1;
       Superseded, //!< Date superseded
     };
     Q_ENUM( MetadataDateType )
+
+    /**
+     * Type of academic reference.
+     * \since QGIS 4.4
+     */
+    enum class AcademicReferenceType : int
+    {
+      Unknown,        //!< Unknown or generic reference
+      Book,           //!< Book
+      JournalArticle, //!< Journal or periodical article
+      Presentation,   //!< Conference paper, presentation, or proceeding
+      WebPage,        //!< Web page or online resource
+      Preprint        //!< Preprint or repository paper
+    };
+    Q_ENUM( AcademicReferenceType )
 
     /**
      * Raster color interpretation.
@@ -7058,6 +7085,19 @@ int QgisEvent = QEvent::User + 1;
       DockedToolbar,     //!< Toolbars for docked windows
     };
     Q_ENUM( UserInterfaceIconType );
+
+    /**
+     * Mathematical methods to use for solving linear matrix equations.
+     *
+     * \since QGIS 4.4
+     */
+    enum class LinearMatrixMethod : int
+    {
+      Lu = 0,               //!< Fast lower-upper (LU) decomposition (fails on singular/collinear matrices)
+      Svd = 1,              //!< Singular Value Decomposition (handles collinearity and rank deficiency)
+      LuWithSvdFallback = 2 //!< Try LU first; fallback to SVD on singularity
+    };
+    Q_ENUM( LinearMatrixMethod );
 
     /**
      * Identify search radius in mm

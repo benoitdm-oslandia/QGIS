@@ -162,6 +162,8 @@ using namespace Qt::StringLiterals;
 
 #include "qgspersistentmenu.h"
 
+#include "qgsprocessingguiregistry.h"
+
 #ifdef HAVE_3D
 #include "qgs3d.h"
 #include "qgs3danimationsettings.h"
@@ -173,7 +175,6 @@ using namespace Qt::StringLiterals;
 #include "qgsflatterraingenerator.h"
 #include "qgslayoutitem3dmap.h"
 #include "processing/qgs3dalgorithms.h"
-#include "qgsprocessingguiregistry.h"
 #include "qgs3dmaptoolmeasureline.h"
 #include "layout/qgslayout3dmapwidget.h"
 #include "layout/qgslayoutviewrubberband.h"
@@ -1583,6 +1584,7 @@ QgisApp::QgisApp(
 #ifdef Q_OS_MAC
   // action for Window menu (create before generating WindowTitleChange event))
   mWindowAction = new QAction( this );
+  mWindowAction->setObjectName( u"mWindowAction"_s );
   connect( mWindowAction, &QAction::triggered, this, &QgisApp::activate );
 
   // add this window to Window menu
@@ -1676,6 +1678,8 @@ QgisApp::QgisApp(
   //..and listen out for new item types
   connect( QgsGui::annotationItemGuiRegistry(), &QgsAnnotationItemGuiRegistry::typeAdded, this, &QgisApp::annotationItemTypeAdded );
 
+  // must come before plugin startup, as processing plugin sets up connections to it
+  QgsAppProcessingUtils::initProjectModelProvider();
 
   // Create the plugin registry and load plugins
   // load any plugins that were running in the last session
@@ -3201,15 +3205,18 @@ void QgisApp::createActions()
   // Window Menu Items
 
   mActionWindowMinimize = new QAction( tr( "Minimize" ), this );
+  mActionWindowMinimize->setObjectName( u"mActionWindowMinimize"_s );
   mActionWindowMinimize->setShortcut( tr( "Ctrl+M", "Minimize Window" ) );
   mActionWindowMinimize->setStatusTip( tr( "Minimizes the active window to the dock" ) );
   connect( mActionWindowMinimize, &QAction::triggered, this, &QgisApp::showActiveWindowMinimized );
 
   mActionWindowZoom = new QAction( tr( "Zoom" ), this );
+  mActionWindowZoom->setObjectName( u"mActionWindowZoom"_s );
   mActionWindowZoom->setStatusTip( tr( "Toggles between a predefined size and the window size set by the user" ) );
   connect( mActionWindowZoom, &QAction::triggered, this, &QgisApp::toggleActiveWindowMaximized );
 
   mActionWindowAllToFront = new QAction( tr( "Bring All to Front" ), this );
+  mActionWindowAllToFront->setObjectName( u"mActionWindowAllToFront"_s );
   mActionWindowAllToFront->setStatusTip( tr( "Bring forward all open windows" ) );
   connect( mActionWindowAllToFront, &QAction::triggered, this, &QgisApp::bringAllToFront );
 
@@ -3499,6 +3506,7 @@ void QgisApp::createMenus()
   // these duplicate actions will be moved to application menus by Qt
   mProjectMenu->addAction( mActionAbout );
   QAction *actionPrefs = new QAction( tr( "Preferences…" ), this );
+  actionPrefs->setObjectName( u"mActionPreferences"_s );
   actionPrefs->setMenuRole( QAction::PreferencesRole );
   actionPrefs->setIcon( mActionOptions->icon() );
   connect( actionPrefs, &QAction::triggered, this, &QgisApp::options );
@@ -3507,6 +3515,7 @@ void QgisApp::createMenus()
   // Window Menu
 
   mWindowMenu = new QMenu( tr( "Window" ), this );
+  mWindowMenu->setObjectName( u"mWindowMenu"_s );
 
   mWindowMenu->addAction( mActionWindowMinimize );
   mWindowMenu->addAction( mActionWindowZoom );

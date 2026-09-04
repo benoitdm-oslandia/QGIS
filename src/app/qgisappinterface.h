@@ -44,7 +44,7 @@ class APP_EXPORT QgisAppInterface : public QgisInterface
   public:
     /**
      * Constructor.
-     * \param qgis Pointer to the QgisApp object
+     * \param qgisapp Pointer to the QgisApp object
      */
     QgisAppInterface( QgisApp *qgisapp );
 
@@ -300,6 +300,7 @@ class APP_EXPORT QgisAppInterface : public QgisInterface
     QAction *actionPluginListSeparator() override;
     QAction *actionShowPythonDialog() override;
     QAction *actionToggleFullScreen() override;
+    QAction *actionNew3DMapCanvas() override;
     QAction *actionOptions() override;
     QAction *actionCustomProjection() override;
     QAction *actionHelpContents() override;

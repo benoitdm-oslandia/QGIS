@@ -59,7 +59,11 @@ class GUI_EXPORT QgsModelerToolboxModel : public QgsProcessingToolboxProxyModel
  * \warning Not stable API
  * \since QGIS 3.14
  */
-class GUI_EXPORT QgsModelDesignerDialog : public QMainWindow, public QgsProcessingFeedbackGenerator, public QgsProcessingWidgetContextGenerator, public Ui::QgsModelDesignerDialogBase
+class GUI_EXPORT QgsModelDesignerDialog : public QMainWindow,
+                                          public QgsProcessingFeedbackGenerator,
+                                          public QgsProcessingContextGenerator,
+                                          public QgsProcessingWidgetContextGenerator,
+                                          public Ui::QgsModelDesignerDialogBase
 {
     Q_OBJECT
   public:
@@ -157,6 +161,7 @@ class GUI_EXPORT QgsModelDesignerDialog : public QMainWindow, public QgsProcessi
      * a Processing context for the dialog when required.
      */
     void registerProcessingContextGenerator( QgsProcessingContextGenerator *generator );
+    QgsProcessingContext *processingContext() const override;
 
     QToolBar *toolbar() { return mToolbar; }
     QAction *actionOpen() { return mActionOpen; }
@@ -297,6 +302,16 @@ class GUI_EXPORT QgsModelChildDependenciesWidget : public QWidget
     QgsModelChildDependenciesWidget( QWidget *parent, QgsProcessingModelAlgorithm *model, const QString &childId );
     QList<QgsProcessingModelChildDependency> value() const { return mValue; }
     void setValue( const QList<QgsProcessingModelChildDependency> &value );
+
+  signals:
+
+    /**
+     * Emitted when the dependencies are changed in the widget.
+     *
+     * \since QGIS 4.4
+     */
+    void changed();
+
   private slots:
 
     void showDialog();

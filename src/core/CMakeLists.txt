@@ -300,6 +300,7 @@ set(QGIS_CORE_SRCS
   processing/qgsprocessingparametertype.cpp
   processing/qgsprocessingparametervectortilewriterlayers.cpp
   processing/qgsprocessingparameteralignrasterlayers.cpp
+  processing/qgsprocessingprojectmodelprovider.cpp
   processing/qgsprocessingprovider.cpp
   processing/qgsprocessingregistry.cpp
   processing/qgsprocessingutils.cpp
@@ -439,6 +440,7 @@ set(QGIS_CORE_SRCS
   qgis.cpp
   qgsabstractcontentcache.cpp
   qgsabstractgeopdfexporter.cpp
+  qgsacademicreference.cpp
   qgsapplication.cpp
   qgsapplicationthemeregistry.cpp
   qgsaggregatecalculator.cpp
@@ -564,6 +566,7 @@ set(QGIS_CORE_SRCS
   qgsmaskrendersettings.cpp
   qgsmathutils.cpp
   qgsmatrix4x4.cpp
+  qgsmatrixsolver.cpp
   qgsmbtiles.cpp
   qgsmeasureutils.cpp
   qgsmessagelog.cpp
@@ -1003,6 +1006,7 @@ set(QGIS_CORE_SRCS
   fieldformatter/qgscheckboxfieldformatter.cpp
   fieldformatter/qgsrangefieldformatter.cpp
   fieldformatter/qgsdatetimefieldformatter.cpp
+  fieldformatter/qgsenumerationfieldformatter.cpp
   fieldformatter/qgsfallbackfieldformatter.cpp
   fieldformatter/qgskeyvaluefieldformatter.cpp
   fieldformatter/qgslistfieldformatter.cpp
@@ -1172,6 +1176,7 @@ set(QGIS_CORE_HDRS
   qgis_sip.h
   qgsabstractcontentcache.h
   qgsabstractgeopdfexporter.h
+  qgsacademicreference.h
   qgsaggregatecalculator.h
   qgsalignrasterdata.h
   qgsanimatedicon.h
@@ -1312,6 +1317,7 @@ set(QGIS_CORE_HDRS
   qgsmaskrendersettings.h
   qgsmathutils.h
   qgsmatrix4x4.h
+  qgsmatrixsolver.h
   qgsmbtiles.h
   qgsmeasureutils.h
   qgsmessagelog.h
@@ -1562,6 +1568,7 @@ set(QGIS_CORE_HDRS
 
   fieldformatter/qgscheckboxfieldformatter.h
   fieldformatter/qgsdatetimefieldformatter.h
+  fieldformatter/qgsenumerationfieldformatter.h
   fieldformatter/qgsfallbackfieldformatter.h
   fieldformatter/qgskeyvaluefieldformatter.h
   fieldformatter/qgslistfieldformatter.h
@@ -1928,6 +1935,7 @@ set(QGIS_CORE_HDRS
   processing/qgsprocessingparametertypeimpl.h
   processing/qgsprocessingparametervectortilewriterlayers.h
   processing/qgsprocessingparameteralignrasterlayers.h
+  processing/qgsprocessingprojectmodelprovider.h
   processing/qgsprocessingprovider.h
   processing/qgsprocessingregistry.h
   processing/qgsprocessingutils.h
@@ -2773,6 +2781,10 @@ endif()
 if (WITH_EPT)
   target_include_directories(qgis_core PUBLIC
     ${CMAKE_SOURCE_DIR}/src/core/providers/ept)
+endif()
+
+if(HAVE_GSL)
+  target_link_libraries(qgis_core GSL::gsl)
 endif()
 
 if (WITH_COPC)

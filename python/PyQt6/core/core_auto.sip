@@ -1,6 +1,7 @@
 // Include auto-generated SIP files
 %Include auto_generated/qgis.sip
 %Include auto_generated/qgsabstractcontentcache.sip
+%Include auto_generated/qgsacademicreference.sip
 %Include auto_generated/qgsaggregatecalculator.sip
 %Include auto_generated/qgsalignrasterdata.sip
 %Include auto_generated/qgsanimatedicon.sip
@@ -131,6 +132,7 @@
 %Include auto_generated/qgsmaskrendersettings.sip
 %Include auto_generated/qgsmathutils.sip
 %Include auto_generated/qgsmatrix4x4.sip
+%Include auto_generated/qgsmatrixsolver.sip
 %Include auto_generated/qgsmeasureutils.sip
 %Include auto_generated/qgsmessagelog.sip
 %Include auto_generated/qgsmessageoutput.sip
@@ -341,6 +343,7 @@
 %Include auto_generated/expression/qgsexpressionnodeimpl.sip
 %Include auto_generated/fieldformatter/qgscheckboxfieldformatter.sip
 %Include auto_generated/fieldformatter/qgsdatetimefieldformatter.sip
+%Include auto_generated/fieldformatter/qgsenumerationfieldformatter.sip
 %Include auto_generated/fieldformatter/qgsfallbackfieldformatter.sip
 %Include auto_generated/fieldformatter/qgskeyvaluefieldformatter.sip
 %Include auto_generated/fieldformatter/qgslistfieldformatter.sip
@@ -630,6 +633,7 @@
 %Include auto_generated/processing/qgsprocessingparametertype.sip
 %Include auto_generated/processing/qgsprocessingparametervectortilewriterlayers.sip
 %Include auto_generated/processing/qgsprocessingparameteralignrasterlayers.sip
+%Include auto_generated/processing/qgsprocessingprojectmodelprovider.sip
 %Include auto_generated/processing/qgsprocessingprovider.sip
 %Include auto_generated/processing/qgsprocessingregistry.sip
 %Include auto_generated/processing/qgsprocessingutils.sip
